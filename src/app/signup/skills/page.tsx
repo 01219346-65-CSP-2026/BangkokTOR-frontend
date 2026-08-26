@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { AuthShell } from "../../components/auth/AuthShell";
-import { TextField } from "../../components/ui/TextField";
-import { Button } from "../../components/ui/Button";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { TextField } from "@/components/ui/TextField";
+import { Button } from "@/components/ui/Button";
 
 // Static mock data for now — swap with the one from API later.
 const MOCK_SKILLS = [

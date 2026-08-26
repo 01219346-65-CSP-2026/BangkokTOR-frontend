@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type SubmitEvent } from "react";
-import { AuthShell } from "../components/auth/AuthShell";
-import { TextField } from "../components/ui/TextField";
-import { Button } from "../components/ui/Button";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { TextField } from "@/components/ui/TextField";
+import { Button } from "@/components/ui/Button";
 
 export default function SignUpPage() {
   const router = useRouter();

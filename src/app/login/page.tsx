@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useState, type SubmitEvent } from "react";
-import { AuthShell } from "../components/auth/AuthShell";
-import { TextField } from "../components/ui/TextField";
-import { Button } from "../components/ui/Button";
-import { GoogleIcon } from "../components/icons/GoogleIcon";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { TextField } from "@/components/ui/TextField";
+import { Button } from "@/components/ui/Button";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
