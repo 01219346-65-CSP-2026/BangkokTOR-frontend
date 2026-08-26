@@ -1,57 +1,45 @@
 import type { ButtonHTMLAttributes } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
-type ButtonSize = "sm" | "md";
+type ButtonShape = "pill" | "rounded";
 
 type ButtonProps = {
   variant?: ButtonVariant;
-  size?: ButtonSize;
   fullWidth?: boolean;
-  /** Disables the button and swaps the label for a spinner. */
-  isLoading?: boolean;
+  /** "pill" (default, used across login/signup/skills/notifications) or
+   *  "rounded" for the more corporate admin-panel look. */
+  shape?: ButtonShape;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
   primary:
-    "bg-sage-600 font-medium text-white shadow-sm hover:bg-moss-700 hover:shadow-md focus-visible:ring-sage-600/40",
+    "bg-green-600 font-semibold text-white hover:bg-green-700 disabled:opacity-60",
   secondary:
-    "border border-sage-400 bg-white font-medium text-moss-700 hover:border-sage-600 hover:bg-sage-100 focus-visible:ring-sage-600/40",
+    "border border-zinc-200 bg-white font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 disabled:opacity-60",
   ghost:
-    "font-medium text-sage-600 hover:bg-sage-100 hover:text-moss-700 focus-visible:ring-sage-600/40",
+    "font-medium text-zinc-600 hover:text-zinc-900 hover:underline disabled:opacity-60",
 };
 
-const SIZE_STYLES: Record<ButtonSize, string> = {
-  sm: "px-3 py-1.5 text-xs",
-  md: "px-5 py-2.5 text-sm",
+const SHAPE_STYLES: Record<ButtonShape, string> = {
+  pill: "rounded-full",
+  rounded: "rounded-lg",
 };
 
 export function Button({
   variant = "primary",
-  size = "md",
   fullWidth = false,
-  isLoading = false,
+  shape = "pill",
   className,
   children,
-  disabled,
   ...props
 }: ButtonProps) {
   return (
     <button
-      disabled={disabled || isLoading}
-      aria-busy={isLoading || undefined}
-      className={`inline-flex items-center justify-center gap-2 rounded-field transition duration-200 ease-soft outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-mist-50 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55 disabled:active:scale-100 ${
-        SIZE_STYLES[size]
-      } ${fullWidth ? "w-full" : ""} ${VARIANT_STYLES[variant]} ${
-        className ?? ""
-      }`}
+      className={`inline-flex items-center justify-center gap-2 ${SHAPE_STYLES[shape]} py-3 text-sm transition-colors disabled:cursor-not-allowed ${
+        fullWidth ? "w-full" : "px-6"
+      } ${VARIANT_STYLES[variant]} ${className ?? ""}`}
       {...props}
     >
-      {isLoading && (
-        <span
-          aria-hidden="true"
-          className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
-        />
-      )}
       {children}
     </button>
   );

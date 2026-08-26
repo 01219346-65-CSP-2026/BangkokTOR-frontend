@@ -1,51 +1,41 @@
 import type { InputHTMLAttributes } from "react";
 
+type TextFieldVariant = "default" | "minimal";
+
 type TextFieldProps = {
   label: string;
-  /** Renders below the field and marks the input invalid for assistive tech. */
-  error?: string;
-  /** Persistent guidance shown below the field when there's no error. */
-  hint?: string;
+  /** "default" (existing green pill look) or "minimal" (thin gray border,
+   *  moderate corners — used in the admin panel). */
+  variant?: TextFieldVariant;
 } & InputHTMLAttributes<HTMLInputElement>;
+
+const VARIANT_STYLES: Record<TextFieldVariant, string> = {
+  default:
+    "rounded-full border-2 border-green-400 bg-green-300/50 px-5 py-3 placeholder:text-emerald-800/60 focus:border-green-600",
+  minimal:
+    "rounded-lg border border-zinc-200 bg-white px-4 py-2.5 placeholder:text-zinc-400 focus:border-green-600 focus:ring-1 focus:ring-green-600",
+};
 
 export function TextField({
   label,
-  error,
-  hint,
   id,
+  variant = "default",
   className,
   ...props
 }: TextFieldProps) {
-  const messageId = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
-
   return (
     <div>
       <label
         htmlFor={id}
-        className="mb-1.5 block text-sm font-medium text-moss-700"
+        className="mb-1.5 block text-sm font-medium text-zinc-800"
       >
         {label}
       </label>
       <input
         id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={messageId}
-        className={`w-full rounded-field border bg-white px-3.5 py-2.5 text-sm text-moss-700 transition duration-200 ease-soft outline-none placeholder:text-zinc-400 focus-visible:ring-[3px] focus-visible:ring-sage-600/20 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 ${
-          error
-            ? "border-clay-500 focus-visible:border-clay-500"
-            : "border-sage-400/70 hover:border-sage-600 focus-visible:border-sage-600"
-        } ${className ?? ""}`}
+        className={`w-full text-sm text-zinc-900 outline-none transition-colors disabled:opacity-60 ${VARIANT_STYLES[variant]} ${className ?? ""}`}
         {...props}
       />
-      {error ? (
-        <p id={messageId} className="mt-1.5 text-xs text-clay-500">
-          {error}
-        </p>
-      ) : hint ? (
-        <p id={messageId} className="mt-1.5 text-xs text-zinc-500">
-          {hint}
-        </p>
-      ) : null}
     </div>
   );
 }
