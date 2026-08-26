@@ -23,12 +23,13 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell maxWidthClassName="max-w-md">
-      <h1 className="font-display mt-6 text-4xl tracking-tight text-green-600">
+    <AuthShell maxWidthClassName="max-w-[23rem]">
+      <h1 className="font-display text-3xl tracking-tight text-moss-700">
         {t.heading}
       </h1>
+      <p className="mt-2 text-sm text-zinc-600">{t.subheading}</p>
 
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5" noValidate>
+      <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4" noValidate>
         <TextField
           id="email"
           name="email"
@@ -56,7 +57,7 @@ export default function LoginPage() {
           />
           <Link
             href="/forgot-password"
-            className="mt-1.5 inline-block text-xs text-zinc-600 hover:text-zinc-900 hover:underline"
+            className="mt-1.5 inline-block text-xs text-zinc-600 underline-offset-4 hover:text-moss-700 hover:underline"
           >
             {t.forgotPassword}
           </Link>
@@ -65,6 +66,14 @@ export default function LoginPage() {
         <Button type="submit" fullWidth>
           {t.submit}
         </Button>
+
+        <div className="flex items-center gap-3">
+          <span aria-hidden="true" className="h-px flex-1 bg-sage-100" />
+          <span className="font-mono text-xs tracking-widest text-zinc-400 uppercase">
+            or
+          </span>
+          <span aria-hidden="true" className="h-px flex-1 bg-sage-100" />
+        </div>
 
         <Button
           type="button"
@@ -81,7 +90,7 @@ export default function LoginPage() {
         {t.noAccount}{" "}
         <Link
           href="/signup"
-          className="font-semibold text-green-600 hover:underline"
+          className="font-medium text-sage-600 underline-offset-4 hover:text-moss-700 hover:underline"
         >
           {t.createOne}
         </Link>

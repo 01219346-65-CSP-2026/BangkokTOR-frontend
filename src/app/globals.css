@@ -1,30 +1,132 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * BangkokTOR design tokens — the "Ledger" system.
+ * Sage/eucalyptus sampled from public/loginbackground.png so the interface and the
+ * artwork finally agree. Never use raw Tailwind color utilities in components.
+ */
+@theme {
+  /* Brand — deep to light */
+  --color-moss-700: #2f4739;
+  --color-sage-600: #4a6b55;
+  --color-sage-400: #7d9c87;
+  --color-sage-100: #e4ede6;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Surfaces */
+  --color-paper-50: #f7f5ef;
+  /* Light green wash for the form side, so the brand reads across both columns */
+  --color-mist-50: #f4f8f4;
+
+  /* Kept only for the untouched create-next-app landing page (src/app/page.tsx).
+     Delete both once that page is rebuilt. */
+  --color-background: #ffffff;
+  --color-foreground: #171717;
+
+  /* Feedback */
+  --color-clay-500: #b4553c;
+
+  /* Shape — one radius for every interactive control.
+     Named --radius-* so Tailwind generates the `rounded-field` utility. */
+  --radius-field: 10px;
+  --radius-card: 16px;
+
+  /* Type */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-playfair);
   --font-thai: var(--font-noto-thai);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Motion — one shared curve so everything decelerates alike.
+     Named --ease-* so Tailwind generates the `ease-soft` utility. */
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper-50);
+  color: var(--color-moss-700);
+}
+
+/*
+ * Page-load sequence. One orchestrated entrance: the form column rises in order
+ * while the brand panel settles behind it. Elements opt in with .rise and stagger
+ * via --rise-delay, so the order is declared in the markup, not scattered here.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 0.55s var(--ease-soft) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+.settle {
+  animation: settle 1.1s var(--ease-soft) both;
+}
+
+/*
+ * Mascot hover: a quick lift and slight tilt, as if the sheet is picked up.
+ * Kept in CSS (not React state) so it responds on the very first frame.
+ */
+.mascot {
+  transform-origin: 50% 85%;
+  transition:
+    transform 0.22s var(--ease-soft),
+    filter 0.22s var(--ease-soft);
+  will-change: transform;
+}
+
+.mascot:hover {
+  transform: translateY(-10px) rotate(-1.6deg) scale(1.02);
+  filter: drop-shadow(0 14px 22px rgba(15, 28, 20, 0.32));
+}
+
+.mascot:active {
+  transform: translateY(-4px) rotate(-0.6deg) scale(1.005);
+  transition-duration: 0.09s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .settle {
+    animation: none;
+  }
+
+  .mascot,
+  .mascot:hover,
+  .mascot:active {
+    transform: none;
+    filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 :lang(th) {

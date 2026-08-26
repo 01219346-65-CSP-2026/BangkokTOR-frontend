@@ -77,24 +77,27 @@ export default function SkillsPage() {
   }
 
   return (
-    <AuthShell maxWidthClassName="max-w-xl">
-      <h1 className="font-display mt-6 text-4xl tracking-tight text-green-600">
+    <AuthShell
+      maxWidthClassName="max-w-[26rem]"
+      step={{ current: 2, total: 2, label: "Skills" }}
+    >
+      <h1 className="font-display text-3xl tracking-tight text-moss-700">
         {t.heading}
       </h1>
       <p className="mt-2 text-sm text-zinc-600">{t.subheading}</p>
 
-      <div className="mt-8">
-        <h2 className="mb-2 text-sm font-medium text-zinc-800">
+      <div className="mt-7">
+        <h2 className="mb-2 text-sm font-medium text-moss-700">
           {t.yourSkillsLabel}
         </h2>
-        <div className="flex min-h-[2.75rem] flex-wrap gap-2 rounded-2xl border border-dashed border-zinc-200 p-3">
+        <div className="flex min-h-[3rem] flex-wrap items-center gap-2 rounded-field border border-dashed border-sage-400 bg-sage-100/40 p-2.5">
           {selectedSkillIds.length === 0 ? (
-            <p className="text-sm text-zinc-400">{t.noSkillsYet}</p>
+            <p className="px-1 text-sm text-zinc-500">{t.noSkillsYet}</p>
           ) : (
             selectedSkillIds.map((id) => (
               <span
                 key={id}
-                className="flex items-center gap-2 rounded-full border-2 border-green-400 bg-green-300/50 px-4 py-1.5 text-sm text-zinc-800"
+                className="flex items-center gap-1.5 rounded-field border border-sage-400 bg-white py-1 pr-1 pl-3 text-sm text-moss-700"
               >
                 {t.skillNames[id]}
                 <button
@@ -104,7 +107,7 @@ export default function SkillsPage() {
                     "{skill}",
                     t.skillNames[id]
                   )}
-                  className="text-zinc-600 transition-colors hover:text-zinc-900"
+                  className="flex h-5 w-5 items-center justify-center rounded text-zinc-500 transition-colors outline-none hover:bg-sage-100 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600/40"
                 >
                   ×
                 </button>
@@ -125,29 +128,30 @@ export default function SkillsPage() {
         />
 
         {query.trim() && (
-          <div className="mt-3 max-h-56 divide-y divide-zinc-100 overflow-y-auto rounded-2xl border border-zinc-200">
+          <div className="mt-3 max-h-56 divide-y divide-sage-100 overflow-y-auto rounded-field border border-sage-400">
             {suggestions.length === 0 ? (
-              <p className="p-3 text-sm text-zinc-400">{t.noMatches}</p>
+              <p className="p-3.5 text-sm text-zinc-500">{t.noMatches}</p>
             ) : (
               suggestions.map((id) => (
                 <div
                   key={id}
-                  className="flex items-center justify-between px-4 py-2.5"
+                  className="flex items-center justify-between gap-3 px-3.5 py-2"
                 >
-                  <span className="text-sm text-zinc-800">
+                  <span className="text-sm text-moss-700">
                     {t.skillNames[id]}
                   </span>
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
+                    variant="secondary"
                     onClick={() => addSkill(id)}
                     aria-label={t.addSkillLabel.replace(
                       "{skill}",
                       t.skillNames[id]
                     )}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white transition-colors hover:bg-green-700"
                   >
-                    +
-                  </button>
+                    Add
+                  </Button>
                 </div>
               ))
             )}
@@ -155,7 +159,7 @@ export default function SkillsPage() {
         )}
       </div>
 
-      <div className="mt-10 flex items-center justify-between">
+      <div className="mt-9 flex items-center justify-between gap-3 border-t border-sage-100 pt-6">
         <Button type="button" variant="ghost" onClick={handleSkip}>
           {t.skip}
         </Button>

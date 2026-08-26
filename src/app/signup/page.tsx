@@ -35,13 +35,19 @@ export default function SignUpPage() {
   }
 
   return (
-    <AuthShell maxWidthClassName="max-w-lg">
-      <h1 className="font-display mt-6 text-4xl tracking-tight text-green-600">
+    <AuthShell
+      maxWidthClassName="max-w-[25rem]"
+      step={{ current: 1, total: 2, label: "Account" }}
+    >
+      <h1 className="font-display text-3xl tracking-tight text-moss-700">
         {t.heading}
       </h1>
+      <p className="mt-2 text-sm text-zinc-600">
+        You&rsquo;ll pick the skills you work on next.
+      </p>
 
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5" noValidate>
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4" noValidate>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField
             id="firstName"
             name="firstName"
@@ -102,25 +108,25 @@ export default function SignUpPage() {
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           placeholder={t.confirmPasswordPlaceholder}
+          error={hasPasswordMismatch ? t.passwordMismatch : undefined}
         />
 
         {hasPasswordMismatch && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="sr-only">
             {t.passwordMismatch}
           </p>
         )}
 
-        <Button type="submit" fullWidth>
+        <Button type="submit" fullWidth className="mt-2">
           {t.submit}
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm">
-        <span className="text-green-600">{t.alreadyHaveAccount}</span>
-        <br />
+      <p className="mt-6 text-center text-sm text-zinc-600">
+        {t.alreadyHaveAccount}{" "}
         <Link
           href="/login"
-          className="font-medium text-zinc-800 hover:underline"
+          className="font-medium text-sage-600 underline-offset-4 hover:text-moss-700 hover:underline"
         >
           {t.logIn}
         </Link>
