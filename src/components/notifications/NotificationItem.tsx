@@ -1,14 +1,15 @@
+"use client";
+
 import type { KeyboardEvent } from "react";
 import { BookmarkIcon } from "@/components/icons/BookmarkIcon";
 import { BriefcaseIcon } from "@/components/icons/BriefcaseIcon";
 import { ChevronRightIcon } from "@/components/icons/ChevronRightIcon";
+import { useTranslations } from "@/i18n/LanguageProvider";
 
 export type Notification = {
   id: string;
-  /** The notification's own headline, e.g. "New Job Match". */
   title: string;
   company: string;
-  /** The role being matched to — the actionable bit the user cares about. */
   jobTitle: string;
   timestamp: string;
   isUnread: boolean;
@@ -26,12 +27,10 @@ export function NotificationItem({
   onClick,
   onToggleSave,
 }: NotificationItemProps) {
+  const t = useTranslations("notifications");
   const { title, company, jobTitle, timestamp, isUnread, isSaved } = notification;
 
-  // A plain <div role="button"> instead of a native <button> here, because
-  // this row needs to contain its own nested, independently-clickable
-  // bookmark button — and <button> can't contain another <button>.
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       onClick?.();
@@ -61,7 +60,7 @@ export function NotificationItem({
             {isUnread && (
               <span
                 className="h-2 w-2 rounded-full bg-green-500"
-                aria-label="Unread"
+                aria-label={t.unreadAriaLabel}
               />
             )}
             {timestamp}
@@ -80,7 +79,7 @@ export function NotificationItem({
             event.stopPropagation();
             onToggleSave?.();
           }}
-          aria-label={isSaved ? "Remove from saved" : "Save notification"}
+          aria-label={isSaved ? t.removeSavedAriaLabel : t.saveAriaLabel}
           aria-pressed={isSaved}
           className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
             isSaved

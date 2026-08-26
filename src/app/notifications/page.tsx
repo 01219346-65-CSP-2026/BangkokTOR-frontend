@@ -7,24 +7,33 @@ import {
 } from "@/components/notifications/NotificationItem";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { useTranslations } from "@/i18n/LanguageProvider";
+import type { JobTitleId, TimeAgoId } from "@/i18n/Translations";
 
-// Static mock data for now — swap for real notifications once there's a backend.
-const MOCK_NOTIFICATIONS: Notification[] = [
+type NotificationData = {
+  id: string;
+  company: string;
+  jobTitleId: JobTitleId;
+  timeAgoId: TimeAgoId;
+  isUnread: boolean;
+  isSaved: boolean;
+};
+
+const MOCK_NOTIFICATIONS: NotificationData[] = [
   {
     id: "1",
-    title: "New Job Match",
     company: "Acme Corp",
-    jobTitle: "Senior Frontend Developer",
-    timestamp: "2h ago",
+    jobTitleId: "seniorFrontendDeveloper",
+    timeAgoId: "twoHoursAgo",
     isUnread: true,
     isSaved: false,
   },
   {
     id: "2",
-    title: "New Job Match",
     company: "Northwind Studio",
-    jobTitle: "Product Designer",
-    timestamp: "1d ago",
+    jobTitleId: "productDesigner",
+    timeAgoId: "oneDayAgo",
     isUnread: false,
     isSaved: false,
   },
@@ -32,16 +41,10 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 
 type TabId = "new" | "viewed" | "saved";
 
-const EMPTY_STATE_COPY: Record<TabId, string> = {
-  new: "You're all caught up — no new notifications.",
-  viewed: "Nothing viewed yet.",
-  saved:
-    "You haven't saved any notifications yet. Tap the bookmark icon to save one for later.",
-};
-
 export default function NotificationsPage() {
+  const t = useTranslations("notifications");
   const [notifications, setNotifications] =
-    useState<Notification[]>(MOCK_NOTIFICATIONS);
+    useState<NotificationData[]>(MOCK_NOTIFICATIONS);
   const [activeTab, setActiveTab] = useState<TabId>("new");
 
   const newCount = notifications.filter((n) => n.isUnread).length;
@@ -74,23 +77,32 @@ export default function NotificationsPage() {
     setNotifications((prev) => prev.map((n) => ({ ...n, isUnread: false })));
   }
 
+  const emptyStateCopy: Record<TabId, string> = {
+    new: t.emptyNew,
+    viewed: t.emptyViewed,
+    saved: t.emptySaved,
+  };
+
   return (
     <div className="min-h-screen bg-white px-6 py-12">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <h1 className="font-display text-4xl tracking-tight text-green-600">
-            Notifications
+            {t.heading}
           </h1>
-          <Button type="button" variant="ghost" onClick={handleMarkAllRead}>
-            Mark all as read
-          </Button>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <Button type="button" variant="ghost" onClick={handleMarkAllRead}>
+              {t.markAllRead}
+            </Button>
+          </div>
         </div>
 
         <Tabs
           tabs={[
-            { id: "new", label: "New", count: newCount },
-            { id: "viewed", label: "Already Viewed", count: viewedCount },
-            { id: "saved", label: "Saved", count: savedCount },
+            { id: "new", label: t.tabNew, count: newCount },
+            { id: "viewed", label: t.tabViewed, count: viewedCount },
+            { id: "saved", label: t.tabSaved, count: savedCount },
           ]}
           activeTab={activeTab}
           onChange={setActiveTab}
@@ -99,13 +111,21 @@ export default function NotificationsPage() {
         <div className="flex flex-col gap-3">
           {visibleNotifications.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-zinc-200 p-6 text-center text-sm text-zinc-400">
-              {EMPTY_STATE_COPY[activeTab]}
+              {emptyStateCopy[activeTab]}
             </p>
           ) : (
             visibleNotifications.map((notification) => (
               <NotificationItem
                 key={notification.id}
-                notification={notification}
+                notification={{
+                  id: notification.id,
+                  title: t.newJobMatchTitle,
+                  company: notification.company,
+                  jobTitle: t.jobTitles[notification.jobTitleId],
+                  timestamp: t.timeAgo[notification.timeAgoId],
+                  isUnread: notification.isUnread,
+                  isSaved: notification.isSaved,
+                }}
                 onClick={() => handleNotificationClick(notification.id)}
                 onToggleSave={() => handleToggleSave(notification.id)}
               />
