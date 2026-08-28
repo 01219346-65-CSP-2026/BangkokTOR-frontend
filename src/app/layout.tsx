@@ -8,26 +8,37 @@ import {
 import "./globals.css";
 import { LanguageProvider } from "@/i18n/LanguageProvider";
 
+/*
+ * Every face declares its weights explicitly. Without a `weight` array the
+ * Google loader ships 400 alone, and every `font-medium` / `font-semibold` in
+ * the app becomes a browser-synthesized fake bold — smeared strokes, wrong
+ * letterfit. That was shipping across all four families.
+ */
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 // Thai coverage matters: the procurement data this app surfaces is Thai, and the
-// Latin display face has no Thai glyphs.
+// Latin display face has no Thai glyphs. Thai titles carry the page, so they
+// need genuine weight contrast rather than a synthesized one.
 const notoSansThai = Noto_Sans_Thai({
   variable: "--font-noto-thai",
   subsets: ["thai"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -39,7 +50,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      // Thai is the default; LanguageProvider updates this when the reader
+      // switches, and on hydration from their stored choice.
+      lang="th"
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${notoSansThai.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">

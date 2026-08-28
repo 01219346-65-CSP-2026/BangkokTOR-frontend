@@ -43,31 +43,33 @@ function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
       tabIndex={0}
       onClick={onClick}
       onKeyDown={handleKeyDown}
-      className={`group flex w-full cursor-pointer items-start gap-4 rounded-2xl border p-4 text-left shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
+      className={`group flex w-full cursor-pointer items-start gap-4 rounded-field border px-5 py-4 text-left transition duration-200 ease-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-600 ${
         isUnread
-          ? "border-green-200 bg-green-50/50 hover:bg-green-50"
-          : "border-zinc-100 bg-white hover:bg-zinc-50"
+          ? "border-sage-400 bg-mist-50 hover:border-sage-600"
+          : "border-sage-100 bg-white hover:border-sage-400"
       }`}
     >
-      <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-green-100 text-green-600">
+      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-field bg-sage-100 text-sage-600">
         <BriefcaseIcon />
       </span>
 
       <span className="min-w-0 flex-1">
         <span className="flex items-start justify-between gap-3">
-          <span className="text-base font-semibold text-zinc-900">{title}</span>
-          <span className="flex flex-none items-center gap-1.5 pt-0.5 text-xs text-zinc-400">
+          <span className="text-[0.9375rem] font-medium text-moss-700">
+            {title}
+          </span>
+          <span className="flex flex-none items-center gap-1.5 pt-0.5 font-mono text-xs text-ink-500">
             {isUnread && (
               <span
-                className="h-2 w-2 rounded-full bg-green-500"
+                className="h-1.5 w-1.5 rounded-full bg-sage-600"
                 aria-label={t.unreadAriaLabel}
               />
             )}
             {timestamp}
           </span>
         </span>
-        <span className="mt-1 block text-sm text-zinc-600">{company}</span>
-        <span className="mt-0.5 block text-sm font-medium text-green-700">
+        <span className="mt-1 block text-sm text-ink-600">{company}</span>
+        <span className="mt-0.5 block text-sm font-medium text-sage-600">
           {jobTitle}
         </span>
       </span>
@@ -81,15 +83,13 @@ function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
           }}
           aria-label={isSaved ? t.removeSavedAriaLabel : t.saveAriaLabel}
           aria-pressed={isSaved}
-          className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-            isSaved
-              ? "text-green-600 hover:text-green-700"
-              : "text-zinc-300 hover:text-green-500"
+          className={`flex h-8 w-8 items-center justify-center rounded-field transition duration-200 ease-soft hover:bg-sage-100 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none ${
+            isSaved ? "text-sage-600" : "text-sage-400 hover:text-sage-600"
           }`}
         >
           <BookmarkIcon filled={isSaved} />
         </button>
-        <span className="flex items-center text-zinc-300 transition-colors group-hover:text-green-500">
+        <span className="flex items-center text-sage-400 transition duration-200 ease-soft group-hover:text-sage-600">
           <ChevronRightIcon />
         </span>
       </span>

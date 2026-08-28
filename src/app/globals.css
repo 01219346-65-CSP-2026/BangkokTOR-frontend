@@ -22,13 +22,32 @@
   --color-background: #ffffff;
   --color-foreground: #171717;
 
+  /* Text — the tier the palette was missing.
+     moss-700 is a 10:1 near-black and belongs to headings alone. Without a
+     muted tier below it, every author reached for either moss-700 (too heavy
+     for prose) or a raw zinc-* utility this file forbids, and the interface
+     drifted dark. These name what the auth flow already ships. */
+  --color-ink-600: #52525b; /* body copy      7.7:1 on white */
+  /* A shade darker than Tailwind's zinc-500, which lands at 4.43:1 on the
+     paper-50 canvas and fails AA. This clears 4.5:1 on every ground we use:
+     white, paper-50, mist-50 and the sage-100 chip. */
+  --color-ink-500: #6b6b74; /* labels, meta   5.3:1 on white */
+
   /* Feedback */
   --color-clay-500: #b4553c;
 
-  /* Shape — one radius for every interactive control.
+  /* The one accent that survives on the moss panel.
+     Measured against moss-700: sage-400 lands at 3.35:1 and the mockup's own
+     mint (#4bbfa4) at 4.46:1 — both under AA for text, and sage-400 reads
+     muddy at fit-dial size. This value clears AA at 5.01:1 while staying
+     visually the mockup's mint.
+     Dark-ground only; light-surface accents stay sage-600. */
+  --color-mint-400: #5cc9b0;
+
+  /* Shape — one radius, everywhere. Cards and controls share it so a chip
+     inside a panel can never look mismatched against the panel's own corner.
      Named --radius-* so Tailwind generates the `rounded-field` utility. */
   --radius-field: 10px;
-  --radius-card: 16px;
 
   /* Type */
   --font-sans: var(--font-geist-sans);
@@ -41,9 +60,20 @@
   --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
+/*
+ * Reserve the scrollbar gutter on every page. Without it, navigating from a
+ * short page (no scrollbar) to a long one shifts the whole layout sideways by
+ * the scrollbar's width, and the sticky navbar visibly jumps.
+ */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--color-paper-50);
-  color: var(--color-moss-700);
+  /* Body copy, not a heading — anything that inherits should read as support.
+     Headings set moss-700 explicitly. */
+  color: var(--color-ink-600);
 }
 
 /*

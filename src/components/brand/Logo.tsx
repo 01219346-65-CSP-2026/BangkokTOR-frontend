@@ -64,7 +64,7 @@ export function Logo({
           letterSpacing="0.02em"
           fontFamily="var(--font-geist-sans), system-ui, sans-serif"
         >
-          BKK
+          BKT
         </text>
       </svg>
 

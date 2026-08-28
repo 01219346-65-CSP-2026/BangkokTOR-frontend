@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatDate, formatRelativeTime } from "@/i18n/format";
+import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
-import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { ConfirmDeleteButton } from "@/components/admin/ConfirmDeleteButton";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -85,15 +85,19 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="flex items-center justify-between gap-4">
+    <div>
+      {/* Matches the sources header, so the two admin screens read as one area.
+          The language switcher moved into AdminNav with the rest of the chrome. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div>
-          <h1 className="font-display text-3xl tracking-tight text-green-950">
+          <p className="font-mono text-xs tracking-widest text-clay-500 uppercase">
+            {t.users.eyebrow}
+          </p>
+          <h1 className="font-display mt-2 text-2xl tracking-tight text-moss-700">
             {t.users.heading}
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">{t.users.subheading}</p>
+          <p className="mt-1 text-sm text-ink-500">{t.users.subheading}</p>
         </div>
-        <LanguageSwitcher />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -105,13 +109,13 @@ export default function UsersPage() {
           activeTab={activeTab}
           onChange={setActiveTab}
         />
-        <p className="text-xs text-zinc-400">{t.users.inactiveNote}</p>
+        <p className="text-xs text-ink-500">{t.users.inactiveNote}</p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
-            <tr>
+      <div className="mt-4 overflow-x-auto rounded-field border border-sage-100 bg-white">
+        <table className="w-full min-w-[48rem] text-left text-sm">
+          <thead className="border-b border-sage-100 bg-mist-50">
+            <tr className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
               <th className="px-5 py-3 font-medium">{t.users.tableName}</th>
               <th className="px-5 py-3 font-medium">{t.users.tableEmail}</th>
               <th className="px-5 py-3 font-medium">{t.users.tableJoined}</th>
@@ -124,39 +128,36 @@ export default function UsersPage() {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-sage-100">
             {visibleUsers.map((user) => {
               const inactive = isInactive(user);
               return (
                 <tr
                   key={user.id}
-                  className="transition-colors hover:bg-zinc-50/60"
+                  className="transition duration-200 ease-soft hover:bg-mist-50/60"
                 >
-                  <td className="px-5 py-4 font-medium text-zinc-900">
+                  <td className="px-5 py-4 font-medium text-moss-700">
                     {user.name}
                   </td>
-                  <td className="px-5 py-4 text-zinc-600">{user.email}</td>
-                  <td className="px-5 py-4 text-zinc-600">
+                  {/* Mono for machine-readable values, as 1i sets them. */}
+                  <td className="px-5 py-4 font-mono text-xs text-ink-600">
+                    {user.email}
+                  </td>
+                  <td className="px-5 py-4 font-mono text-xs text-ink-600 tabular-nums">
                     {formatDate(user.joinedAt, locale)}
                   </td>
-                  <td className="px-5 py-4 text-zinc-600">
+                  <td className="px-5 py-4 font-mono text-xs text-ink-600 tabular-nums">
                     {formatRelativeTime(user.lastActiveAt, locale)}
                   </td>
                   <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                        inactive
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          inactive ? "bg-amber-500" : "bg-green-600"
-                        }`}
-                      />
+                    {/*
+                      Inactive is `caution`, not an alarm: a stale account is an
+                      observation, and clay is the palette's only warning value —
+                      the old amber was outside the system entirely.
+                    */}
+                    <Badge tone={inactive ? "caution" : "accent"} withDot>
                       {inactive ? t.users.statusInactive : t.users.statusActive}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex justify-end">
@@ -175,7 +176,7 @@ export default function UsersPage() {
         </table>
 
         {visibleUsers.length === 0 && (
-          <p className="p-8 text-center text-sm text-zinc-400">
+          <p className="p-8 text-center text-sm text-ink-500">
             {t.users.empty}
           </p>
         )}

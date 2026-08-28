@@ -27,14 +27,14 @@ export function ConfirmDeleteButton({
             setIsConfirming(false);
             onConfirm();
           }}
-          className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700"
+          className="rounded-field bg-clay-500 px-2.5 py-1 text-xs font-semibold text-white transition duration-200 ease-soft hover:brightness-95 focus-visible:ring-2 focus-visible:ring-clay-500 focus-visible:outline-none"
         >
           {confirmLabel}
         </button>
         <button
           type="button"
           onClick={() => setIsConfirming(false)}
-          className="rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-800"
+          className="rounded-field px-2.5 py-1 text-xs font-medium text-ink-500 transition duration-200 ease-soft hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
         >
           {cancelLabel}
         </button>
@@ -47,7 +47,7 @@ export function ConfirmDeleteButton({
       type="button"
       onClick={() => setIsConfirming(true)}
       aria-label={ariaLabel}
-      className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600"
+      className="flex h-8 w-8 items-center justify-center rounded-field text-sage-400 transition duration-200 ease-soft hover:bg-clay-500/10 hover:text-clay-500 focus-visible:ring-2 focus-visible:ring-clay-500 focus-visible:outline-none"
     >
       <TrashIcon />
     </button>

@@ -19,7 +19,9 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en");
+  // Thai is the product's primary language: the records are Thai and so are
+  // most readers. English is the alternate, not the default.
+  const [locale, setLocaleState] = useState<Locale>("th");
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
