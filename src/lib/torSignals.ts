@@ -9,7 +9,18 @@ import type { Tor } from "@/types/tor";
  *
  * They describe the RECORD, not the tender's propriety. Wording stays advisory
  * per FR-19: never "rigged", "fraudulent", or "corrupt". When the detector
- * lands, its findings join this list rather than replacing it.
+ * lands, its findings join `notable` rather than replacing it.
+ *
+ * ── Why observations are split in two ──
+ * Measured across the 50 ingested records: 34 are scanned TORs, while a price
+ * gap, a missing TOR and unattached files fire twice each. Rendering all of
+ * them as one flagged list meant 74% of records showed a single warning row
+ * whose content was "this PDF is a scan" — the most common and least
+ * surprising fact about Thai procurement documents.
+ *
+ * So `routine` is the document's condition, stated plainly wherever the
+ * documents are described, and `notable` is what actually deserves a flag.
+ * The split is by how often a thing occurs, not by how serious it is.
  */
 
 export type SignalTone = "caution" | "info";
@@ -25,34 +36,55 @@ export type TorSignal = {
   values?: Record<string, string>;
 };
 
+export type TorObservations = {
+  /**
+   * Uncommon findings worth surfacing under their own heading: a wide
+   * budget/reference gap, an absent TOR, announced documents with no file, a
+   * TOR too short to specify much.
+   */
+  notable: TorSignal[];
+  /**
+   * The document's readability — scanned, or partially unreadable. True of
+   * most records, so it reads as an attribute rather than a warning.
+   */
+  routine: TorSignal[];
+};
+
 /** Above this, the budget/reference gap is worth pointing at. */
 const PRICE_GAP_THRESHOLD = 0.15;
 /** A TOR shorter than this is thin enough to note. */
 const SHORT_TOR_PAGES = 3;
 
-export function deriveSignals(tor: Tor): TorSignal[] {
-  const signals: TorSignal[] = [];
+export function deriveObservations(tor: Tor): TorObservations {
+  const notable: TorSignal[] = [];
+  const routine: TorSignal[] = [];
 
+  /*
+   * An absent TOR is rare (2/50) and changes what the reader can evaluate at
+   * all, so it is notable. A scanned one is the norm (34/50) — it constrains
+   * search, but it is a property of the file, not a finding about the tender.
+   */
   if (tor.torTextLayer === "missing") {
-    signals.push({
+    notable.push({
       id: "no-tor",
       tone: "caution",
       titleKey: "signalNoTor",
       bodyKey: "signalNoTorBody",
     });
   } else if (tor.torTextLayer === "scanned") {
-    signals.push({
+    routine.push({
       id: "scanned-tor",
-      tone: "caution",
+      tone: "info",
       titleKey: "signalScannedTor",
       bodyKey: "signalScannedTorBody",
     });
   }
 
+  // Also a readability fact, and it travels with the scan status above.
   if (tor.extractionIncomplete) {
-    signals.push({
+    routine.push({
       id: "extraction",
-      tone: "caution",
+      tone: "info",
       titleKey: "signalExtraction",
       bodyKey: "signalExtractionBody",
     });
@@ -60,7 +92,7 @@ export function deriveSignals(tor: Tor): TorSignal[] {
 
   const missingFiles = tor.documents.filter((doc) => doc.url === null).length;
   if (missingFiles > 0) {
-    signals.push({
+    notable.push({
       id: "missing-files",
       tone: "info",
       titleKey: "signalMissingFiles",
@@ -73,9 +105,9 @@ export function deriveSignals(tor: Tor): TorSignal[] {
   if (tor.referencePrice > 0 && tor.budget > tor.referencePrice) {
     const gap = (tor.budget - tor.referencePrice) / tor.referencePrice;
     if (gap >= PRICE_GAP_THRESHOLD) {
-      signals.push({
+      notable.push({
         id: "price-gap",
-        tone: "info",
+        tone: "caution",
         titleKey: "signalPriceGap",
         bodyKey: "signalPriceGapBody",
         values: { percent: String(Math.round(gap * 100)) },
@@ -89,7 +121,7 @@ export function deriveSignals(tor: Tor): TorSignal[] {
     tor.torPages > 0 &&
     tor.torPages < SHORT_TOR_PAGES
   ) {
-    signals.push({
+    notable.push({
       id: "short-tor",
       tone: "info",
       titleKey: "signalShortTor",
@@ -98,5 +130,5 @@ export function deriveSignals(tor: Tor): TorSignal[] {
     });
   }
 
-  return signals;
+  return { notable, routine };
 }

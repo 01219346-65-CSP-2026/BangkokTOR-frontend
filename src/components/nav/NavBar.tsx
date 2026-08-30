@@ -6,12 +6,27 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "@/i18n/LanguageProvider";
 import { Logo } from "@/components/brand/Logo";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { AccountMenu, type Account } from "@/components/nav/AccountMenu";
 
+/**
+ * ⚠ Placeholder session. There is no auth yet, so the header renders the
+ * signed-in state against the fictional consultancy the mockups use — the same
+ * one `torMatching.ts` scores against. Replace with the real session when it
+ * exists; `null` renders the signed-out Log in / Sign up pair.
+ */
+const ACCOUNT: Account | null = {
+  name: "Sathorn Labs",
+  email: "team@sathornlabs.co.th",
+};
+
+/**
+ * The public nav band. Notifications and settings are account-scoped, so they
+ * live in the avatar menu instead — this band is the same for every reader,
+ * signed in or not.
+ */
 const NAV_ITEMS = [
   { href: "/", key: "home" as const },
   { href: "/tor", key: "browse" as const },
-  { href: "/notifications", key: "notifications" as const },
-  { href: "/skills", key: "skills" as const}
 ];
 
 /**
@@ -67,7 +82,9 @@ export function NavBar() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <LanguageSwitcher />
+            {/* Signed in, the language control moves inside the account menu —
+                two language affordances in one row would compete. */}
+            {ACCOUNT ? <AccountMenu account={ACCOUNT} /> : <LanguageSwitcher />}
 
             <button
               type="button"
@@ -117,21 +134,25 @@ export function NavBar() {
             })}
           </nav>
 
-          <div className="flex items-center gap-1">
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 rounded-field px-3 py-1.5 text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
-            >
-              <UserIcon />
-              {t.login}
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-field bg-white/95 px-3 py-1.5 text-xs font-semibold tracking-wider text-moss-700 uppercase transition duration-200 ease-soft hover:bg-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
-            >
-              {t.signup}
-            </Link>
-          </div>
+          {/* Signed in, the account menu in the row above carries identity and
+              sign-out, so this side of the band stays empty. */}
+          {!ACCOUNT && (
+            <div className="flex items-center gap-1">
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 rounded-field px-3 py-1.5 text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+              >
+                <UserIcon />
+                {t.login}
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-field bg-white/95 px-3 py-1.5 text-xs font-semibold tracking-wider text-moss-700 uppercase transition duration-200 ease-soft hover:bg-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+              >
+                {t.signup}
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -164,18 +185,29 @@ export function NavBar() {
             })}
 
             <div className="mt-3 flex items-center gap-2 border-t border-white/15 pt-3">
-              <Link
-                href="/login"
-                className="flex-1 rounded-field px-3 py-2 text-center text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white"
-              >
-                {t.login}
-              </Link>
-              <Link
-                href="/signup"
-                className="flex-1 rounded-field bg-white/95 px-3 py-2 text-center text-xs font-semibold tracking-wider text-moss-700 uppercase transition duration-200 ease-soft hover:bg-white"
-              >
-                {t.signup}
-              </Link>
+              {ACCOUNT ? (
+                <Link
+                  href="/login"
+                  className="flex-1 rounded-field px-3 py-2 text-center text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white"
+                >
+                  {t.accountLogout}
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="flex-1 rounded-field px-3 py-2 text-center text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white"
+                  >
+                    {t.login}
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="flex-1 rounded-field bg-white/95 px-3 py-2 text-center text-xs font-semibold tracking-wider text-moss-700 uppercase transition duration-200 ease-soft hover:bg-white"
+                  >
+                    {t.signup}
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>

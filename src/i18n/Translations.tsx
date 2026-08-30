@@ -25,6 +25,12 @@ const en = {
     primaryLabel: "Primary",
     skipToContent: "Skip to content",
     tagline: "Procurement Records",
+    // The signed-in account menu.
+    accountMenuLabel: "Account menu",
+    accountUnread: "{count} unread notifications",
+    accountSettings: "Skill profile & settings",
+    accountLanguage: "Language",
+    accountLogout: "Log out",
   },
   login: {
     eyebrow: "Sign in",
@@ -259,8 +265,6 @@ const en = {
     budgetRange: "{from} – {to}",
     budgetMinHandle: "Minimum budget",
     budgetMaxHandle: "Maximum budget",
-    budgetFrom: "From {amount}",
-    budgetRange: "{from} – {to}",
     publishedLabel: "Published",
     publishedAll: "Any time",
     methodLabel: "Method",
@@ -286,8 +290,11 @@ const en = {
     signalsNote:
       "Observations about how readable and complete this record is — not a judgement of the tender or the agency.",
     signalsNoneHeading: "Nothing flagged",
+    // Says only what the check actually covers. It must not claim the
+    // documents are searchable — a scanned TOR with no other finding lands
+    // here, and its readability is stated on the documents card instead.
     signalsNoneBody:
-      "This record is complete and its documents are searchable. That is not a verdict on the tender itself.",
+      "Nothing about this record stood out for a closer look. That is not a verdict on the tender itself.",
     signalScannedTor: "The TOR document is a scan",
     signalScannedTorBody:
       "Its text cannot be searched, so conditions inside it are not covered by search on this site.",
@@ -504,6 +511,11 @@ const th: typeof en = {
     primaryLabel: "เมนูหลัก",
     skipToContent: "ข้ามไปยังเนื้อหา",
     tagline: "ข้อมูลจัดซื้อจัดจ้าง",
+    accountMenuLabel: "เมนูบัญชี",
+    accountUnread: "การแจ้งเตือนที่ยังไม่ได้อ่าน {count} รายการ",
+    accountSettings: "โปรไฟล์ทักษะและการตั้งค่า",
+    accountLanguage: "ภาษา",
+    accountLogout: "ออกจากระบบ",
   },
   login: {
     eyebrow: "เข้าสู่ระบบ",
@@ -719,6 +731,8 @@ const th: typeof en = {
     budgetUpTo: "ไม่เกิน {amount}",
     budgetFrom: "ตั้งแต่ {amount}",
     budgetRange: "{from} – {to}",
+    budgetMinHandle: "งบประมาณขั้นต่ำ",
+    budgetMaxHandle: "งบประมาณสูงสุด",
     publishedLabel: "วันที่ประกาศ",
     publishedAll: "ทุกช่วงเวลา",
     methodLabel: "วิธีจัดซื้อจัดจ้าง",
@@ -742,7 +756,7 @@ const th: typeof en = {
       "ข้อสังเกตเกี่ยวกับความครบถ้วนและความอ่านได้ของข้อมูลชุดนี้ ไม่ใช่การตัดสินโครงการหรือหน่วยงาน",
     signalsNoneHeading: "ไม่พบประเด็นที่ต้องตรวจสอบ",
     signalsNoneBody:
-      "ข้อมูลชุดนี้ครบถ้วนและเอกสารค้นหาได้ ทั้งนี้ไม่ใช่การรับรองตัวโครงการ",
+      "ไม่พบประเด็นในข้อมูลชุดนี้ที่ควรตรวจสอบเพิ่มเติม ทั้งนี้ไม่ใช่การรับรองตัวโครงการ",
     signalScannedTor: "เอกสารขอบเขตของงานเป็นไฟล์สแกน",
     signalScannedTorBody:
       "ไม่สามารถค้นหาข้อความภายในได้ เงื่อนไขในเอกสารจึงไม่อยู่ในขอบเขตการค้นหาของเว็บไซต์นี้",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
@@ -52,27 +52,26 @@ export default function SkillsPage() {
   const { locale } = useLanguage();
   const router = useRouter();
 
-  const [step, setStep] = useState(0);
-  const [furthestReached, setFurthestReached] = useState(0);
-  const [profile, setProfile] = useState<SkillProfile>(DEFAULT_PROFILE);
+  /*
+   * The saved profile is read once, lazily, on the client's first render.
+   *
+   * `loadProfile` returns null on the server (no localStorage), so the server
+   * renders step 1 with defaults. The client's initializer runs before paint
+   * and picks up the stored profile — a returning reader never sees the empty
+   * wizard flash past. Reading it in an effect instead would render the default
+   * first and then overwrite it, which is the flash this avoids.
+   */
+  const [initial] = useState(() => loadProfile());
+
+  // A reader with a profile is here to change something, not to be walked
+  // through onboarding again — open them on the review step, all steps unlocked.
+  const [step, setStep] = useState(initial ? 3 : 0);
+  const [furthestReached, setFurthestReached] = useState(initial ? 3 : 0);
+  const [profile, setProfile] = useState<SkillProfile>(
+    initial ?? DEFAULT_PROFILE,
+  );
   const [query, setQuery] = useState("");
   const [hasSavedThisVisit, setHasSavedThisVisit] = useState(false);
-
-  /*
-   * The saved profile is read after mount, not during render: localStorage does
-   * not exist on the server, and seeding state from it directly would make the
-   * server and client markup disagree and hydrate wrong.
-   */
-  useEffect(() => {
-    const stored = loadProfile();
-    if (!stored) return;
-
-    setProfile(stored);
-    // A reader with a profile is here to change something, not to be walked
-    // through onboarding again — open on the review step, all steps unlocked.
-    setStep(3);
-    setFurthestReached(3);
-  }, []);
 
   /*
    * `now` is captured once per mount rather than read inline. Called during
@@ -87,22 +86,18 @@ export default function SkillsPage() {
   );
 
   /*
-   * Autosave. The wizard advertises "Saved automatically", so every change is
-   * persisted — but not the initial mount, which would stamp `savedAt` on a
-   * profile the reader has not touched and make step 4 claim a save that never
-   * happened.
+   * Autosave. The wizard advertises "Saved automatically", so every edit
+   * persists as it happens.
+   *
+   * This writes from the event rather than from an effect watching `profile`.
+   * An effect would also fire for the mount and for the load above, stamping
+   * `savedAt` on a profile the reader never touched — which would make step 4
+   * report a save that never happened.
    */
-  const [hasHydrated, setHasHydrated] = useState(false);
-  useEffect(() => {
-    if (!hasHydrated) {
-      setHasHydrated(true);
-      return;
-    }
-    saveProfile(profile);
-  }, [profile, hasHydrated]);
-
   function update(changes: Partial<SkillProfile>) {
-    setProfile((previous) => ({ ...previous, ...changes }));
+    const next = { ...profile, ...changes };
+    setProfile(next);
+    saveProfile(next);
   }
 
   function goToStep(next: number) {
@@ -111,12 +106,11 @@ export default function SkillsPage() {
   }
 
   function toggleSkill(id: SkillId) {
-    setProfile((previous) => ({
-      ...previous,
-      skills: previous.skills.includes(id)
-        ? previous.skills.filter((skill) => skill !== id)
-        : [...previous.skills, id],
-    }));
+    update({
+      skills: profile.skills.includes(id)
+        ? profile.skills.filter((skill) => skill !== id)
+        : [...profile.skills, id],
+    });
   }
 
   const steps = [
@@ -383,7 +377,11 @@ export default function SkillsPage() {
                     )}
                     value={profile.budgetMin}
                     format={formatStop}
-                    onSelect={(value) => update({ budgetMin: value })}
+                    // The null stop is filtered out of `stops` above, so this
+                    // branch is unreachable — it satisfies the shared signature.
+                    onSelect={(value) =>
+                      update({ budgetMin: value ?? 0 })
+                    }
                     error={isBudgetInvalid ? t.budgetInvalid : undefined}
                   />
 
@@ -689,7 +687,8 @@ function StopSelect({
   stops: (number | null)[];
   value: number | null;
   format: (amount: number | null) => string;
-  onSelect: (value: number) => void;
+  /** Receives null for the "no maximum" stop, so the caller handles it openly. */
+  onSelect: (value: number | null) => void;
   error?: string;
 }) {
   const messageId = error ? `${id}-error` : undefined;
@@ -708,12 +707,10 @@ function StopSelect({
         aria-invalid={error ? true : undefined}
         aria-describedby={messageId}
         onChange={(event) =>
-          // "none" is the no-maximum stop; the caller's setter takes the raw
-          // value and NaN would silently poison the profile.
+          // "none" is the no-maximum stop. Passing it through as null rather
+          // than letting Number("none") produce NaN into the saved profile.
           onSelect(
-            event.target.value === "none"
-              ? (null as unknown as number)
-              : Number(event.target.value),
+            event.target.value === "none" ? null : Number(event.target.value),
           )
         }
         className={`w-full rounded-field border bg-white px-3.5 py-2.5 text-sm text-moss-700 transition duration-200 ease-soft outline-none focus-visible:ring-[3px] focus-visible:ring-sage-600/20 ${

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { FitDial } from "@/components/tor/FitDial";
 import { DeadlineLabel } from "@/components/tor/TorCard";
 import { MOCK_TORS } from "@/data/torListings";
-import { deriveSignals, type TorSignal } from "@/lib/torSignals";
+import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, withMatch } from "@/lib/torMatching";
 
 /**
@@ -54,7 +54,7 @@ export default function TorDetailPage({
   const tor = withMatch(record, TODAY_UTC);
 
   const published = formatDate(new Date(tor.publishedAt).getTime(), locale);
-  const signals = deriveSignals(tor);
+  const { notable, routine } = deriveObservations(tor);
   const missingSkills = tor.requiredSkills.filter((skill) => !skill.matched);
   const bandLabel = {
     strong: t.fitStrong,
@@ -291,6 +291,20 @@ export default function TorDetailPage({
                 })}
               </ul>
 
+              {/*
+                Readability sits with the documents it describes, stated as a
+                condition rather than flagged as a finding. On most records this
+                one line replaces what used to be a warning panel — see the
+                header of `lib/torSignals.ts` for the counts behind that.
+              */}
+              {routine.length > 0 && (
+                <dl className="mt-4 border-t border-sage-100 pt-4">
+                  {routine.map((observation) => (
+                    <ConditionRow key={observation.id} signal={observation} t={t} />
+                  ))}
+                </dl>
+              )}
+
               <p className="mt-3 max-w-prose text-xs leading-relaxed text-ink-500">
                 {t.documentsNote}
               </p>
@@ -406,55 +420,49 @@ export default function TorDetailPage({
 
             {/*
               FR-19: advisory language only. These are observations about the
-              record's completeness and readability — never an accusation. When
-              nothing applies we say so explicitly rather than leaving the rail
-              blank (UC-05 alt flow a).
+              record's completeness — never an accusation.
+
+              The flagged panel now renders ONLY when something uncommon fired.
+              Document readability moved to the documents card, which is what
+              used to fill this block on 34 of 50 records and made almost every
+              record look flagged — a panel that appears on everything cannot
+              signal anything. Its absence now carries meaning too.
+
+              UC-05 alt flow a still holds: when nothing applies we say so,
+              just as one plain line instead of a full panel with a heading and
+              a disclaimer. The reassurance survives; the chrome does not.
             */}
-            {/*
-              1f gives this panel a clay top rule when something is flagged, so
-              the rail's one advisory block is findable without reading it. When
-              nothing is flagged it stays a plain panel — a permanent warning
-              stripe would read as an accusation the copy is careful not to make.
-            */}
-            <section
-              className={`mt-6 overflow-hidden rounded-field border border-sage-100 bg-white ${
-                signals.length > 0 ? "border-t-2 border-t-clay-500" : ""
-              }`}
-            >
-              <div className="flex items-center gap-2 border-b border-sage-100 bg-mist-50 px-5 py-3.5">
-                {signals.length > 0 && (
+            {notable.length > 0 ? (
+              <section className="mt-6 overflow-hidden rounded-field border border-sage-100 border-t-2 border-t-clay-500 bg-white">
+                <div className="flex items-center gap-2 border-b border-sage-100 bg-mist-50 px-5 py-3.5">
                   <span aria-hidden="true" className="text-sm text-clay-500">
                     ⚑
                   </span>
-                )}
-                <h2 className="font-display text-lg tracking-tight text-moss-700">
-                  {t.signalsHeading}
-                </h2>
-              </div>
-
-              {signals.length === 0 ? (
-                <div className="px-5 py-5">
-                  <p className="text-sm font-medium text-ink-600">
-                    {t.signalsNoneHeading}
-                  </p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-ink-500">
-                    {t.signalsNoneBody}
-                  </p>
+                  <h2 className="font-display text-lg tracking-tight text-moss-700">
+                    {t.signalsHeading}
+                  </h2>
                 </div>
-              ) : (
+
                 <ul className="divide-y divide-sage-100">
-                  {signals.map((signal) => (
+                  {notable.map((signal) => (
                     <li key={signal.id} className="px-5 py-4">
                       <SignalRow signal={signal} t={t} />
                     </li>
                   ))}
                 </ul>
-              )}
 
-              <p className="border-t border-sage-100 px-5 py-3 text-xs leading-relaxed text-ink-500">
-                {t.signalsNote}
+                <p className="border-t border-sage-100 px-5 py-3 text-xs leading-relaxed text-ink-500">
+                  {t.signalsNote}
+                </p>
+              </section>
+            ) : (
+              <p className="mt-6 flex items-baseline gap-2 px-1 text-xs leading-relaxed text-ink-500">
+                <span aria-hidden="true" className="text-sage-600">
+                  ✓
+                </span>
+                {t.signalsNoneBody}
               </p>
-            </section>
+            )}
           </aside>
         </div>
       </div>
@@ -502,6 +510,38 @@ function SignalRow({
           {line(signal.bodyKey)}
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * A routine document condition, on the documents card. Same data shape as a
+ * signal but rendered as a term/description pair with no dot, no flag and no
+ * panel — this is an attribute of the file, not a finding about the tender.
+ */
+function ConditionRow({
+  signal,
+  t,
+}: {
+  signal: TorSignal;
+  t: Record<string, string | Record<string, string>>;
+}) {
+  function line(key: string): string {
+    const value = t[key];
+    return typeof value === "string" ? value : key;
+  }
+
+  const title = Object.entries(signal.values ?? {}).reduce(
+    (text, [key, value]) => text.replace(`{${key}}`, value),
+    line(signal.titleKey),
+  );
+
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+      <dt className="text-xs font-medium text-ink-600">{title}</dt>
+      <dd className="text-xs leading-relaxed text-ink-500">
+        {line(signal.bodyKey)}
+      </dd>
     </div>
   );
 }

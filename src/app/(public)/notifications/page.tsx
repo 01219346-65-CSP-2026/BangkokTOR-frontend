@@ -1,42 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  NotificationItem,
-  type Notification,
-} from "@/components/notifications/NotificationItem";
+import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { useTranslations } from "@/i18n/LanguageProvider";
-import type { JobTitleId, TimeAgoId } from "@/i18n/Translations";
-
-type NotificationData = {
-  id: string;
-  company: string;
-  jobTitleId: JobTitleId;
-  timeAgoId: TimeAgoId;
-  isUnread: boolean;
-  isSaved: boolean;
-};
-
-const MOCK_NOTIFICATIONS: NotificationData[] = [
-  {
-    id: "1",
-    company: "Acme Corp",
-    jobTitleId: "seniorFrontendDeveloper",
-    timeAgoId: "twoHoursAgo",
-    isUnread: true,
-    isSaved: false,
-  },
-  {
-    id: "2",
-    company: "Northwind Studio",
-    jobTitleId: "productDesigner",
-    timeAgoId: "oneDayAgo",
-    isUnread: false,
-    isSaved: false,
-  },
-];
+import {
+  MOCK_NOTIFICATIONS,
+  type NotificationData,
+} from "@/data/notifications";
 
 type TabId = "new" | "viewed" | "saved";
 
