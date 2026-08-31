@@ -1,43 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  NotificationItem,
-  type Notification,
-} from "@/components/notifications/NotificationItem";
+import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { useTranslations } from "@/i18n/LanguageProvider";
-import type { JobTitleId, TimeAgoId } from "@/i18n/Translations";
-
-type NotificationData = {
-  id: string;
-  company: string;
-  jobTitleId: JobTitleId;
-  timeAgoId: TimeAgoId;
-  isUnread: boolean;
-  isSaved: boolean;
-};
-
-const MOCK_NOTIFICATIONS: NotificationData[] = [
-  {
-    id: "1",
-    company: "Acme Corp",
-    jobTitleId: "seniorFrontendDeveloper",
-    timeAgoId: "twoHoursAgo",
-    isUnread: true,
-    isSaved: false,
-  },
-  {
-    id: "2",
-    company: "Northwind Studio",
-    jobTitleId: "productDesigner",
-    timeAgoId: "oneDayAgo",
-    isUnread: false,
-    isSaved: false,
-  },
-];
+import {
+  MOCK_NOTIFICATIONS,
+  type NotificationData,
+} from "@/data/notifications";
 
 type TabId = "new" | "viewed" | "saved";
 
@@ -84,18 +55,24 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white px-6 py-12">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="font-display text-4xl tracking-tight text-green-600">
-            {t.heading}
-          </h1>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-            <Button type="button" variant="ghost" onClick={handleMarkAllRead}>
-              {t.markAllRead}
-            </Button>
+    // On the paper canvas, so this page sits on the same ground as the listing
+    // rather than its own white slab.
+    <div className="flex-1 bg-paper-50 px-6 pt-6 pb-12">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+        {/* 1c's header rhythm: eyebrow over heading, actions on the right. */}
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div>
+            <p className="font-mono text-xs tracking-widest text-sage-600 uppercase">
+              {t.eyebrow}
+            </p>
+            <h1 className="font-display mt-2 text-2xl tracking-tight text-moss-700">
+              {t.heading}
+            </h1>
           </div>
+          {/* The language switcher now lives in the shared NavBar. */}
+          <Button type="button" variant="ghost" onClick={handleMarkAllRead}>
+            {t.markAllRead}
+          </Button>
         </div>
 
         <Tabs
@@ -110,7 +87,7 @@ export default function NotificationsPage() {
 
         <div className="flex flex-col gap-3">
           {visibleNotifications.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-zinc-200 p-6 text-center text-sm text-zinc-400">
+            <p className="rounded-field border border-dashed border-sage-400 p-6 text-center text-sm text-ink-500">
               {emptyStateCopy[activeTab]}
             </p>
           ) : (

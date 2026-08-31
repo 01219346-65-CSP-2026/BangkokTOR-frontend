@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatRelativeTime } from "@/i18n/format";
 import type { FrequencyId } from "@/i18n/Translations";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
-import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { ConfirmDeleteButton } from "@/components/admin/ConfirmDeleteButton";
 import { PlusIcon } from "@/components/icons/PlusIcon";
 
@@ -17,6 +17,19 @@ type Source = {
   isActive: boolean;
   frequencyId: FrequencyId;
   lastScrapedHoursAgo: number;
+};
+
+/**
+ * How long each schedule is allowed to go between runs before the source is
+ * behind. Mockup 1i shows a "needs attention" panel driven by scraper failures;
+ * we hold no failure log, but the schedule and the last run are both real, so
+ * "overdue against its own interval" is a fact we can actually state.
+ */
+const FREQUENCY_HOURS: Record<FrequencyId, number> = {
+  hourly: 1,
+  every6Hours: 6,
+  daily: 24,
+  weekly: 24 * 7,
 };
 
 const now = Date.now();
@@ -85,32 +98,124 @@ export default function SourcesPage() {
     setSources((prev) => prev.filter((source) => source.id !== id));
   }
 
+  /*
+   * Everything in the KPI strip and the attention panel is counted from the
+   * sources list itself. 1i also shows ingest volumes and a queue depth; we
+   * hold neither, and a stat with nothing behind it is worse than no stat.
+   */
+  const stats = useMemo(() => {
+    const active = sources.filter((source) => source.isActive);
+    return {
+      total: sources.length,
+      active: active.length,
+      paused: sources.length - active.length,
+      // The freshest scrape across active sources — "when did this system last
+      // hear anything", which is the question the strip is really answering.
+      lastRunHoursAgo: active.length
+        ? Math.min(...active.map((source) => source.lastScrapedHoursAgo))
+        : null,
+    };
+  }, [sources]);
+
+  const overdue = useMemo(
+    () =>
+      sources.filter(
+        (source) =>
+          source.isActive &&
+          source.lastScrapedHoursAgo > FREQUENCY_HOURS[source.frequencyId],
+      ),
+    [sources],
+  );
+
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="flex items-center justify-between gap-4">
+    <div>
+      {/* 1i's header: a restricted-area eyebrow over the title, actions right.
+          The language switcher moved into AdminNav with the rest of the chrome. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div>
-          <h1 className="font-display text-3xl tracking-tight text-green-950">
+          <p className="font-mono text-xs tracking-widest text-clay-500 uppercase">
+            {t.sources.eyebrow}
+          </p>
+          <h1 className="font-display mt-2 text-2xl tracking-tight text-moss-700">
             {t.sources.heading}
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">{t.sources.subheading}</p>
+          <p className="mt-1 text-sm text-ink-500">{t.sources.subheading}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher />
-          <Button
-            type="button"
-            shape="rounded"
-            onClick={() => setIsAdding((prev) => !prev)}
-          >
-            <PlusIcon />
-            {t.sources.addSource}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          shape="rounded"
+          onClick={() => setIsAdding((prev) => !prev)}
+        >
+          <PlusIcon />
+          {t.sources.addSource}
+        </Button>
       </div>
+
+      {/* The KPI strip. Same 1px-gap construction as the TOR detail stat grid,
+          so the two dense surfaces in the app are built the same way. */}
+      <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-field border border-sage-100 bg-sage-100 md:grid-cols-4">
+        <Stat label={t.sources.statTotal} value={String(stats.total)} />
+        <Stat label={t.sources.statActive} value={String(stats.active)} />
+        <Stat
+          label={t.sources.statPaused}
+          value={String(stats.paused)}
+          muted={stats.paused === 0}
+        />
+        <Stat
+          label={t.sources.statLastRun}
+          value={
+            stats.lastRunHoursAgo === null
+              ? t.sources.statNever
+              : formatRelativeTime(
+                  now - stats.lastRunHoursAgo * 60 * 60 * 1000,
+                  locale,
+                )
+          }
+        />
+      </dl>
+
+      {/* Advisory panel, and only when something is actually behind. */}
+      {overdue.length > 0 && (
+        <section className="mt-6 rounded-field border border-sage-100 border-t-2 border-t-clay-500 bg-white px-5 py-4">
+          <h2 className="text-sm font-medium text-moss-700">
+            {t.sources.attentionHeading}
+          </h2>
+          <p className="mt-1 text-sm text-ink-600">
+            {t.sources.attentionBody.replace(
+              "{count}",
+              String(overdue.length),
+            )}
+          </p>
+          <ul className="mt-3 divide-y divide-sage-100 border-t border-sage-100">
+            {overdue.map((source) => (
+              <li key={source.id} className="py-2.5">
+                <p className="text-[0.8125rem] font-medium text-moss-700">
+                  {source.name}
+                </p>
+                <p className="mt-0.5 font-mono text-xs text-ink-500">
+                  {t.sources.attentionOverdue
+                    .replace(
+                      "{time}",
+                      formatRelativeTime(
+                        now - source.lastScrapedHoursAgo * 60 * 60 * 1000,
+                        locale,
+                      ),
+                    )
+                    .replace(
+                      "{frequency}",
+                      t.sources.frequencyLabels[source.frequencyId],
+                    )}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {isAdding && (
         <form
           onSubmit={handleAddSource}
-          className="mt-6 flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-6 sm:flex-row sm:items-end"
+          className="mt-6 flex flex-col gap-4 rounded-field border border-sage-100 bg-white p-6 sm:flex-row sm:items-end"
         >
           <div className="flex-1">
             <TextField
@@ -151,10 +256,12 @@ export default function SourcesPage() {
         </form>
       )}
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
-            <tr>
+      {/* Scrolls inside its own container: at 375px five columns cannot fit,
+          and the page body must never scroll sideways (CLAUDE.md §7). */}
+      <div className="mt-6 overflow-x-auto rounded-field border border-sage-100 bg-white">
+        <table className="w-full min-w-[44rem] text-left text-sm">
+          <thead className="border-b border-sage-100 bg-mist-50">
+            <tr className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
               <th className="px-5 py-3 font-medium">{t.sources.tableName}</th>
               <th className="px-5 py-3 font-medium">{t.sources.tableStatus}</th>
               <th className="px-5 py-3 font-medium">
@@ -168,41 +275,41 @@ export default function SourcesPage() {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-sage-100">
             {sources.map((source) => (
               <tr
                 key={source.id}
-                className="transition-colors hover:bg-zinc-50/60"
+                className="transition duration-200 ease-soft hover:bg-mist-50/60"
               >
                 <td className="px-5 py-4">
-                  <p className="font-medium text-zinc-900">{source.name}</p>
-                  <p className="text-xs text-zinc-400">{source.url}</p>
+                  <p className="font-medium text-moss-700">{source.name}</p>
+                  {/* Mono for the URL, as 1i sets every machine-readable value. */}
+                  <p className="mt-0.5 font-mono text-xs text-ink-500">
+                    {source.url}
+                  </p>
                 </td>
                 <td className="px-5 py-4">
                   <button
                     type="button"
                     onClick={() => toggleActive(source.id)}
                     aria-label={t.sources.toggleAriaLabel}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                      source.isActive
-                        ? "bg-green-100 text-green-700 hover:bg-green-200"
-                        : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
-                    }`}
+                    aria-pressed={source.isActive}
+                    className="rounded-field transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
                   >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        source.isActive ? "bg-green-600" : "bg-zinc-400"
-                      }`}
-                    />
-                    {source.isActive
-                      ? t.sources.statusActive
-                      : t.sources.statusPaused}
+                    <Badge
+                      tone={source.isActive ? "accent" : "neutral"}
+                      withDot
+                    >
+                      {source.isActive
+                        ? t.sources.statusActive
+                        : t.sources.statusPaused}
+                    </Badge>
                   </button>
                 </td>
-                <td className="px-5 py-4 text-zinc-600">
+                <td className="px-5 py-4 text-ink-600">
                   {t.sources.frequencyLabels[source.frequencyId]}
                 </td>
-                <td className="px-5 py-4 text-zinc-600">
+                <td className="px-5 py-4 font-mono text-xs text-ink-600 tabular-nums">
                   {formatRelativeTime(
                     now - source.lastScrapedHoursAgo * 60 * 60 * 1000,
                     locale
@@ -224,11 +331,39 @@ export default function SourcesPage() {
         </table>
 
         {sources.length === 0 && (
-          <p className="p-8 text-center text-sm text-zinc-400">
+          <p className="p-8 text-center text-sm text-ink-500">
             {t.sources.empty}
           </p>
         )}
       </div>
+    </div>
+  );
+}
+/**
+ * One KPI cell. White ground over the grid's sage-100 gaps, which is what draws
+ * the rules between cells — the same construction as the TOR detail stat grid.
+ */
+function Stat({
+  label,
+  value,
+  muted = false,
+}: {
+  label: string;
+  value: ReactNode;
+  muted?: boolean;
+}) {
+  return (
+    <div className="bg-white px-4 py-3.5">
+      <dt className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
+        {label}
+      </dt>
+      <dd
+        className={`mt-1.5 font-mono text-lg font-semibold tabular-nums ${
+          muted ? "text-ink-500" : "text-moss-700"
+        }`}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
