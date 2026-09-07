@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/i18n/LanguageProvider";
+import { Providers } from "./providers";
 
 /*
  * Every face declares its weights explicitly. Without a `weight` array the
@@ -56,7 +57,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${notoSansThai.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">
-        <LanguageProvider>{children}</LanguageProvider>
+        <Providers>
+          <LanguageProvider>{children}</LanguageProvider>
+        </Providers>
       </body>
     </html>
   );
