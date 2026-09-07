@@ -32,6 +32,9 @@ const en = {
     accountLanguage: "Language",
     accountLogout: "Log out",
   },
+  landing: {
+    a: "BangkokTOR reads every software terms-of-reference published across Bangkok procurement portals, structures the Thai PDFs, and tells you which tender your team can actually win.",
+  },
   login: {
     eyebrow: "Sign in",
     heading: "Log in",
@@ -516,6 +519,9 @@ const th: typeof en = {
     accountSettings: "โปรไฟล์ทักษะและการตั้งค่า",
     accountLanguage: "ภาษา",
     accountLogout: "ออกจากระบบ",
+  },
+  landing: {
+    
   },
   login: {
     eyebrow: "เข้าสู่ระบบ",
