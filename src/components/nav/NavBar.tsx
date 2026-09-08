@@ -2,22 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "@/i18n/LanguageProvider";
 import { Logo } from "@/components/brand/Logo";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { AccountMenu, type Account } from "@/components/nav/AccountMenu";
-
-/**
- * ⚠ Placeholder session. There is no auth yet, so the header renders the
- * signed-in state against the fictional consultancy the mockups use — the same
- * one `torMatching.ts` scores against. Replace with the real session when it
- * exists; `null` renders the signed-out Log in / Sign up pair.
- */
-const ACCOUNT: Account | null = {
-  name: "Sathorn Labs",
-  email: "team@sathornlabs.co.th",
-};
 
 /**
  * The public nav band. Notifications and settings are account-scoped, so they
@@ -41,6 +31,17 @@ export function NavBar() {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { data: session, status } = useSession();
+
+  // Treat "loading" as signed-out rather than flashing the signed-in chrome
+  // for a moment on every navigation.
+  const account: Account | null =
+    status === "authenticated" && session.user
+      ? {
+          name: session.user.name ?? session.user.email ?? t.accountFallbackName,
+          email: session.user.email ?? "",
+        }
+      : null;
 
   // A route change leaves the panel mounted otherwise — on mobile you'd tap a
   // link and land on the new page with the menu still covering it.
@@ -84,7 +85,7 @@ export function NavBar() {
           <div className="flex items-center gap-2">
             {/* Signed in, the language control moves inside the account menu —
                 two language affordances in one row would compete. */}
-            {ACCOUNT ? <AccountMenu account={ACCOUNT} /> : <LanguageSwitcher />}
+            {account ? <AccountMenu account={account} /> : <LanguageSwitcher />}
 
             <button
               type="button"
@@ -136,7 +137,7 @@ export function NavBar() {
 
           {/* Signed in, the account menu in the row above carries identity and
               sign-out, so this side of the band stays empty. */}
-          {!ACCOUNT && (
+          {!account && (
             <div className="flex items-center gap-1">
               <Link
                 href="/login"
@@ -185,13 +186,14 @@ export function NavBar() {
             })}
 
             <div className="mt-3 flex items-center gap-2 border-t border-white/15 pt-3">
-              {ACCOUNT ? (
-                <Link
-                  href="/login"
+              {account ? (
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/login" })}
                   className="flex-1 rounded-field px-3 py-2 text-center text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white"
                 >
                   {t.accountLogout}
-                </Link>
+                </button>
               ) : (
                 <>
                   <Link

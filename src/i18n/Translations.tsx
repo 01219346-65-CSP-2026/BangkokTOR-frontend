@@ -31,6 +31,7 @@ const en = {
     accountSettings: "Skill profile & settings",
     accountLanguage: "Language",
     accountLogout: "Log out",
+    accountFallbackName: "Account",
   },
   login: {
     eyebrow: "Sign in",
@@ -516,6 +517,7 @@ const th: typeof en = {
     accountSettings: "โปรไฟล์ทักษะและการตั้งค่า",
     accountLanguage: "ภาษา",
     accountLogout: "ออกจากระบบ",
+    accountFallbackName: "บัญชี",
   },
   login: {
     eyebrow: "เข้าสู่ระบบ",

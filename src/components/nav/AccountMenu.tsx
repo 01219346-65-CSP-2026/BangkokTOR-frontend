@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import type { Locale } from "@/i18n/Translations";
@@ -9,11 +10,8 @@ import { MOCK_NOTIFICATIONS, countUnread } from "@/data/notifications";
 
 /**
  * The signed-in account control: an avatar that opens a menu holding the
- * settings link and the language choice.
- *
- * ⚠ There is no session yet. `account` is passed in by NavBar from a
- * placeholder — see its call site. When auth lands, that becomes the session
- * and this component is unchanged.
+ * settings link and the language choice. `account` is derived from the real
+ * session by NavBar — see its call site.
  */
 
 export type Account = {
@@ -199,13 +197,14 @@ export function AccountMenu({ account }: { account: Account }) {
           </div>
 
           <div className="border-t border-sage-100 py-1">
-            <Link
-              href="/login"
+            <button
+              type="button"
               role="menuitem"
-              className="block px-4 py-2.5 text-sm text-ink-600 transition duration-200 ease-soft hover:bg-sage-100 hover:text-moss-700 focus-visible:bg-sage-100 focus-visible:text-moss-700 focus-visible:outline-none"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="block w-full px-4 py-2.5 text-left text-sm text-ink-600 transition duration-200 ease-soft hover:bg-sage-100 hover:text-moss-700 focus-visible:bg-sage-100 focus-visible:text-moss-700 focus-visible:outline-none"
             >
               {t.accountLogout}
-            </Link>
+            </button>
           </div>
         </div>
       )}
