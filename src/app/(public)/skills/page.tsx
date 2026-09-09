@@ -204,7 +204,7 @@ export default function SkillsPage() {
 
           {step === 0 && (
             <section>
-              <h1 className="font-display text-3xl tracking-tight text-moss-700">
+              <h1 className="text-3xl tracking-tight text-moss-700">
                 {t.stackHeading}
               </h1>
               <p className="mt-3 max-w-[52ch] text-sm leading-relaxed text-ink-600">
@@ -297,7 +297,7 @@ export default function SkillsPage() {
 
           {step === 1 && (
             <section>
-              <h1 className="font-display text-3xl tracking-tight text-moss-700">
+              <h1 className=" text-3xl tracking-tight text-moss-700">
                 {t.sizeHeading}
               </h1>
               <p className="mt-3 max-w-[52ch] text-sm leading-relaxed text-ink-600">
@@ -353,7 +353,7 @@ export default function SkillsPage() {
 
           {step === 2 && (
             <section>
-              <h1 className="font-display text-3xl tracking-tight text-moss-700">
+              <h1 className=" text-3xl tracking-tight text-moss-700">
                 {t.budgetHeading}
               </h1>
               <p className="mt-3 max-w-[52ch] text-sm leading-relaxed text-ink-600">
@@ -361,7 +361,7 @@ export default function SkillsPage() {
               </p>
 
               <div className="mt-8 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
-                <p className="font-display text-2xl tracking-tight text-moss-700 tabular-nums">
+                <p className=" text-2xl tracking-tight text-moss-700 tabular-nums">
                   {formatBudgetTHB(profile.budgetMin, locale)} —{" "}
                   {formatStop(profile.budgetMax)}
                 </p>
@@ -412,7 +412,7 @@ export default function SkillsPage() {
           {step === 3 && (
             <section>
               <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h1 className="font-display text-3xl tracking-tight text-moss-700">
+                <h1 className=" text-3xl tracking-tight text-moss-700">
                   {t.reviewHeading}
                 </h1>
                 <p className="font-mono text-xs tracking-wider text-ink-500 uppercase">
@@ -482,7 +482,7 @@ export default function SkillsPage() {
                   editLabel={t.edit}
                   onEdit={() => setStep(2)}
                 >
-                  <p className="font-display text-xl tracking-tight text-moss-700 tabular-nums">
+                  <p className=" text-xl tracking-tight text-moss-700 tabular-nums">
                     {formatBudgetTHB(profile.budgetMin, locale)} —{" "}
                     {formatStop(profile.budgetMax)}
                   </p>
@@ -528,7 +528,7 @@ export default function SkillsPage() {
                 />
                 <div className="relative flex flex-wrap items-center justify-between gap-5">
                   <p className="flex items-baseline gap-3">
-                    <span className="font-display text-3xl leading-none text-mint-400">
+                    <span className=" text-3xl leading-none text-mint-400">
                       {preview.reachableCount}
                     </span>
                     <span className="max-w-[34ch] text-xs leading-relaxed text-sage-100/85">
@@ -748,7 +748,7 @@ function ReviewCard({
   return (
     <div className="rounded-field border border-sage-100 bg-white p-5">
       <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2 className="font-display text-lg tracking-tight text-moss-700">
+        <h2 className=" text-lg tracking-tight text-moss-700">
           {title}
         </h2>
         {onEdit && (

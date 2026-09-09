@@ -197,7 +197,7 @@ export default function TorDetailPage({
               card with a display heading, as the design sets them.
             */}
             <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
-              <h2 className="font-display text-xl tracking-tight text-moss-700">
+              <h2 className=" text-xl tracking-tight text-moss-700">
                 {t.detailSummary}
               </h2>
               <p className="mt-3 max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
@@ -216,7 +216,7 @@ export default function TorDetailPage({
 
             <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
               <div className="flex items-baseline justify-between gap-4">
-                <h2 className="font-display text-xl tracking-tight text-moss-700">
+                <h2 className=" text-xl tracking-tight text-moss-700">
                   {t.detailDocuments}
                 </h2>
                 {/* The design pairs each card heading with a mono provenance
@@ -438,7 +438,7 @@ export default function TorDetailPage({
                   <span aria-hidden="true" className="text-sm text-clay-500">
                     ⚑
                   </span>
-                  <h2 className="font-display text-lg tracking-tight text-moss-700">
+                  <h2 className=" text-lg tracking-tight text-moss-700">
                     {t.signalsHeading}
                   </h2>
                 </div>

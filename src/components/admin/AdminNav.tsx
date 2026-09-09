@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 
 const NAV_ITEMS = [
   { href: "/admin/sources", key: "sources" as const },
+  { href: "/admin/pipeline", key: "pipeline" as const },
   { href: "/admin/users", key: "users" as const },
 ];
 

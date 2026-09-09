@@ -93,7 +93,7 @@ export default function UsersPage() {
           <p className="font-mono text-xs tracking-widest text-clay-500 uppercase">
             {t.users.eyebrow}
           </p>
-          <h1 className="font-display mt-2 text-2xl tracking-tight text-moss-700">
+          <h1 className=" mt-2 text-2xl tracking-tight text-moss-700">
             {t.users.heading}
           </h1>
           <p className="mt-1 text-sm text-ink-500">{t.users.subheading}</p>

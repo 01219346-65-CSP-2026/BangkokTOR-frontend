@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatRelativeTime } from "@/i18n/format";
 import type { FrequencyId } from "@/i18n/Translations";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { ConfirmDeleteButton } from "@/components/admin/ConfirmDeleteButton";
+import { Stat } from "@/components/admin/Stat";
 import { PlusIcon } from "@/components/icons/PlusIcon";
 
 type Source = {
@@ -136,7 +137,7 @@ export default function SourcesPage() {
           <p className="font-mono text-xs tracking-widest text-clay-500 uppercase">
             {t.sources.eyebrow}
           </p>
-          <h1 className="font-display mt-2 text-2xl tracking-tight text-moss-700">
+          <h1 className=" mt-2 text-2xl tracking-tight text-moss-700">
             {t.sources.heading}
           </h1>
           <p className="mt-1 text-sm text-ink-500">{t.sources.subheading}</p>
@@ -336,34 +337,6 @@ export default function SourcesPage() {
           </p>
         )}
       </div>
-    </div>
-  );
-}
-/**
- * One KPI cell. White ground over the grid's sage-100 gaps, which is what draws
- * the rules between cells — the same construction as the TOR detail stat grid.
- */
-function Stat({
-  label,
-  value,
-  muted = false,
-}: {
-  label: string;
-  value: ReactNode;
-  muted?: boolean;
-}) {
-  return (
-    <div className="bg-white px-4 py-3.5">
-      <dt className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
-        {label}
-      </dt>
-      <dd
-        className={`mt-1.5 font-mono text-lg font-semibold tabular-nums ${
-          muted ? "text-ink-500" : "text-moss-700"
-        }`}
-      >
-        {value}
-      </dd>
     </div>
   );
 }
