@@ -433,7 +433,8 @@ const en = {
       eyebrow: "Restricted",
       heading: "Sources",
       subheading: "Manage where TOR documents are scraped from.",
-      addSource: "Add Source",
+      detailsEyebrow: "Source details",
+      closeDetails: "Close source details",
       // KPI strip. Every figure is counted from the sources list itself —
       // nothing here is a stand-in for a metric we don't hold.
       statTotal: "Sources configured",
@@ -992,7 +993,8 @@ const th: typeof en = {
       eyebrow: "เฉพาะผู้ดูแลระบบ",
       heading: "แหล่งข้อมูล",
       subheading: "จัดการแหล่งที่ใช้ดึงข้อมูลเอกสาร TOR",
-      addSource: "เพิ่มแหล่งข้อมูล",
+      detailsEyebrow: "รายละเอียดแหล่งข้อมูล",
+      closeDetails: "ปิดรายละเอียดแหล่งข้อมูล",
       statTotal: "แหล่งข้อมูลที่ตั้งค่าไว้",
       statActive: "ใช้งานอยู่",
       statPaused: "หยุดชั่วคราว",

@@ -31,7 +31,7 @@ export type TorSignalRef = {
 };
 
 /** Exactly what `GET /api/tors` sends per item. Unknown fields are ignored. */
-type BackendTor = {
+export type BackendTor = {
   id: string;
   projectId: string;
   projectName: string | null;
@@ -61,6 +61,8 @@ export type TorListResponse = {
   total: number;
   pages: number;
 };
+
+export type TorDetailResponse = BackendTor;
 
 /** A `Tor` plus the fields the backend adds that the shared type has no slot for. */
 export type ApiTor = Tor & {

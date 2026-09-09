@@ -243,14 +243,14 @@ function PipelineBody({ data, now }: { data: PipelineStatus; now: number }) {
         </StagePanel>
       </section>
 
-      <section className="mt-10">
+      <section className="mt-10 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-lg tracking-tight text-moss-700">
             {t.pipeline.funnelHeading}
           </h2>
           <p className="text-[0.8125rem] text-sage-600">{t.pipeline.funnelNote}</p>
         </div>
-        <div className="mt-4 border-t border-sage-100">
+        <div className="mt-5 border-t border-sage-100 pt-4">
           <FunnelBar rows={funnel} emptyLabel={t.pipeline.funnelEmpty} />
         </div>
       </section>
@@ -258,7 +258,7 @@ function PipelineBody({ data, now }: { data: PipelineStatus; now: number }) {
       <QueueInspector now={now} />
 
       {data.recentErrors.length > 0 && (
-        <section className="mt-10 border-t-2 border-t-clay-500 pt-4">
+        <section className="mt-8 rounded-field border border-clay-500/30 border-t-2 border-t-clay-500 bg-white p-5 sm:p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 className="text-lg tracking-tight text-moss-700">
               {t.pipeline.errorsHeading}
@@ -266,10 +266,10 @@ function PipelineBody({ data, now }: { data: PipelineStatus; now: number }) {
             <p className="text-[0.8125rem] text-clay-500">{t.pipeline.errorsNote}</p>
           </div>
 
-          <ul className="mt-4 space-y-4">
+          <ul className="mt-4 grid gap-3 md:grid-cols-2">
             {data.recentErrors.map((entry) => (
-              <li key={entry.id}>
-                <p className="flex flex-wrap items-baseline gap-x-3">
+              <li key={entry.id} className="rounded-field border border-sage-100 bg-paper-50 px-4 py-3">
+                <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="font-mono text-[0.8125rem] text-clay-500">{entry.kind}</span>
                   {entry.projectId && (
                     <span className="font-mono text-[0.8125rem] text-ink-600">
@@ -283,7 +283,7 @@ function PipelineBody({ data, now }: { data: PipelineStatus; now: number }) {
                     )}
                   </span>
                 </p>
-                <p className="mt-1 text-[0.8125rem] break-words text-ink-600">{entry.message}</p>
+                <p className="mt-2 text-[0.8125rem] leading-5 break-words text-ink-600">{entry.message}</p>
               </li>
             ))}
           </ul>

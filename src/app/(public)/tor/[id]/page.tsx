@@ -2,13 +2,13 @@
 
 import { use, type ReactNode } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
+import { useEndpoint } from "@/api/useEndpoint";
+import { toTor, type ApiTor, type TorDetailResponse } from "@/api/tors";
 import { formatBudgetTHB, formatDate } from "@/i18n/format";
 import { Badge } from "@/components/ui/Badge";
 import { FitDial } from "@/components/tor/FitDial";
 import { DeadlineLabel } from "@/components/tor/TorCard";
-import { MOCK_TORS } from "@/data/torListings";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, withMatch } from "@/lib/torMatching";
 
@@ -47,8 +47,42 @@ export default function TorDetailPage({
   const t = useTranslations("tor");
   const { locale } = useLanguage();
 
-  const record = MOCK_TORS.find((item) => item.id === id);
-  if (!record) notFound();
+  const { data: record, error, isLoading, refresh } = useEndpoint<
+    TorDetailResponse,
+    ApiTor
+  >(`/api/tors/${encodeURIComponent(id)}`, { select: toTor });
+
+  if (isLoading && !record) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-paper-50 px-6 py-24">
+        <p className="font-mono text-xs tracking-widest text-ink-500 uppercase">
+          {t.loading}
+        </p>
+      </div>
+    );
+  }
+
+  if (error || !record) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-paper-50 px-6 py-24">
+        <section className="max-w-md text-center">
+          <h1 className="text-xl tracking-tight text-moss-700">
+            {t.loadErrorHeading}
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-ink-500">
+            {error ?? t.loadErrorBody}
+          </p>
+          <button
+            type="button"
+            onClick={refresh}
+            className="mt-5 rounded-field bg-sage-600 px-4 py-2.5 text-sm font-medium text-white transition duration-200 ease-soft hover:bg-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none active:scale-[0.985]"
+          >
+            {t.retry}
+          </button>
+        </section>
+      </div>
+    );
+  }
 
   // Placeholder matching layer — see src/lib/torMatching.ts.
   const tor = withMatch(record, TODAY_UTC);

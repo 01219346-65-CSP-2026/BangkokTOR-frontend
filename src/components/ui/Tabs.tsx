@@ -13,7 +13,7 @@ type TabsProps<T extends string> = {
 /**
  * Segmented control. Was built on `rounded-full` and raw `green-*`/`zinc-*`,
  * both of which CLAUDE.md §1–2 forbid; it now takes `rounded-field` and the
- * sage tokens like every other control. Used by notifications and admin/users.
+ * sage tokens like every other control. Used by notifications and admin lists.
  */
 export function Tabs<T extends string>({ tabs, activeTab, onChange }: TabsProps<T>) {
   return (
