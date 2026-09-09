@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/Button";
@@ -18,15 +18,15 @@ import { useTranslations } from "@/i18n/LanguageProvider";
  */
 export default function LoginPage() {
   const t = useTranslations("login");
-  const router = useRouter();
   const [isPending, setIsPending] = useState(false);
 
   function handleGoogleLogin() {
-    // TODO: replace with the real OAuth redirect once the backend exposes it.
-    // The callback decides where to land: /skills for a profile-less account,
-    // otherwise wherever the reader was headed.
+    // the proxy sets callbackUrl when it bounces an unauthenticated visitor
+    // off a protected route; honor it so they land back where they were.
+    const callbackUrl =
+      new URLSearchParams(window.location.search).get("callbackUrl") ?? "/skills";
     setIsPending(true);
-    router.push("/skills");
+    signIn("google", { callbackUrl }).catch(() => setIsPending(false));
   }
 
   return (

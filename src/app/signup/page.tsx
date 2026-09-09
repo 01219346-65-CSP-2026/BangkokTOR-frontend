@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/Button";
@@ -18,14 +18,14 @@ import { useTranslations } from "@/i18n/LanguageProvider";
  */
 export default function SignUpPage() {
   const t = useTranslations("signup");
-  const router = useRouter();
   const [isPending, setIsPending] = useState(false);
 
   function handleGoogleSignUp() {
-    // TODO: real OAuth redirect. A newly created account has no profile, so the
-    // callback sends it to /skills to build one.
+    // A newly created account has no profile, so send it straight to /skills
+    // to build one. (Once the backend exists, this should instead branch on
+    // whether the account already has a saved profile — see auth.ts.)
     setIsPending(true);
-    router.push("/skills");
+    signIn("google", { callbackUrl: "/skills" }).catch(() => setIsPending(false));
   }
 
   return (

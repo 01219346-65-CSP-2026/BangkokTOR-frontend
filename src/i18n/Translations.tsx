@@ -31,6 +31,7 @@ const en = {
     accountSettings: "Skill profile & settings",
     accountLanguage: "Language",
     accountLogout: "Log out",
+    accountFallbackName: "Account",
   },
   landing: {
     a: "BangkokTOR reads every software terms-of-reference published across Bangkok procurement portals, structures the Thai PDFs, and tells you which tender your team can actually win.",
@@ -519,6 +520,7 @@ const th: typeof en = {
     accountSettings: "โปรไฟล์ทักษะและการตั้งค่า",
     accountLanguage: "ภาษา",
     accountLogout: "ออกจากระบบ",
+    accountFallbackName: "บัญชี",
   },
   landing: {
     
