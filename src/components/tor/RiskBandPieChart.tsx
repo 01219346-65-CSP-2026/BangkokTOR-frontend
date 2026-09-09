@@ -20,14 +20,16 @@ export function RiskBandPieChart({ data }: { data: RiskBandSlice[] }) {
           outerRadius={85}
           paddingAngle={2}
           stroke="none"
-          label={({ name, percent }) => `${name}: ${Math.round((percent ?? 0) * 100)}%`}
+          // Frozen-animation / no-inline-label rationale — see BudgetRangePieChart.tsx.
+          isAnimationActive={false}
         >
           {data.map((slice, i) => (
             <Cell key={slice.band} fill={BAND_COLORS[i]} />
           ))}
         </Pie>
         <Tooltip formatter={(value, _name, item) => [`${value} TORs`, item.payload.label]} />
-        <Legend />
+        {/* itemSorter — see BudgetRangePieChart.tsx for why this is needed. */}
+        <Legend itemSorter={null} />
       </PieChart>
     </ResponsiveContainer>
   );

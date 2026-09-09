@@ -21,14 +21,22 @@ export function BudgetRangePieChart({ data }: { data: RangeSlice[] }) {
           outerRadius={85}
           paddingAngle={2}
           stroke="none"
-          label={({ name, percent }) => `${name}: ${Math.round((percent ?? 0) * 100)}%`}
+          // ResponsiveContainer inside this flex box re-measures on mount and
+          // keeps restarting the entrance animation, freezing the ring at a
+          // partial sweep. Animation adds nothing here, so it's off rather
+          // than chased. No inline label either — at this radius, long slice
+          // names overflow the SVG viewbox and clip; legend + tooltip carry
+          // the name/percent instead.
+          isAnimationActive={false}
         >
           {data.map((slice, i) => (
             <Cell key={slice.range} fill={RANGE_COLORS[i]} />
           ))}
         </Pie>
         <Tooltip formatter={(value, _name, item) => [`${value} TORs`, item.payload.label]} />
-        <Legend />
+        {/* itemSorter defaults to "value" (alphabetical), which breaks the
+            light→dark = low→high budget order — keep data order instead. */}
+        <Legend itemSorter={null} />
       </PieChart>
     </ResponsiveContainer>
   );
