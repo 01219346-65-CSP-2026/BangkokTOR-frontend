@@ -85,8 +85,16 @@ Everything reusable lives in `src/app/components/ui/`. **Extend these rather tha
 inline in a page.** If you need a new variant, add it to the component.
 
 - Variants are hand-rolled `Record<Variant, string>` lookups.
-  **Do not add `cva`, `clsx`, or `tailwind-merge`** — this repo has exactly three runtime
-  dependencies (`next`, `react`, `react-dom`) and keeps it that way.
+  **Do not add `cva`, `clsx`, or `tailwind-merge`** — this repo keeps its runtime
+  dependency list short on purpose.
+
+  A charting dependency (recharts) was briefly added for the admin pipeline
+  monitor and then removed: the final design's visuals — segmented meters and a
+  scaled funnel — are a few divs each, and a charting runtime earned nothing.
+  Chart-ish components live in `src/components/admin/charts/`, hand-rolled.
+  `charts/tokens.ts` holds literal hexes mirroring `@theme`, because inline
+  `style` backgrounds cannot take a Tailwind class; that file is the only
+  sanctioned place for a raw color value under §1.
 - `Button`: `variant` (primary/secondary/ghost), `size` (sm/md), `fullWidth`, `isLoading`.
 - `TextField`: `label` (required), `error`, `hint`. Passing `error` wires up
   `aria-invalid` and `aria-describedby` automatically — use it instead of rendering your

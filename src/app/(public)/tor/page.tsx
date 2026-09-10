@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useTranslations } from "@/i18n/LanguageProvider";
 import { TorCard } from "@/components/tor/TorCard";
 import { TorTable } from "@/components/tor/TorTable";
@@ -8,7 +8,8 @@ import { TorFilters } from "@/components/tor/TorFilters";
 import { TorActiveFilters } from "@/components/tor/TorActiveFilters";
 import { TorSortSelect } from "@/components/tor/TorSortSelect";
 import { TorPagination } from "@/components/tor/TorPagination";
-import { MOCK_TORS } from "@/data/torListings";
+import { useEndpoint } from "@/api/useEndpoint";
+import { toTors, type ApiTor, type TorListResponse } from "@/api/tors";
 import { withMatches } from "@/lib/torMatching";
 import {
   agencyOptions,
@@ -40,12 +41,26 @@ const TODAY_UTC = (() => {
 type DensityId = "cards" | "table";
 
 /**
+ * One page of rows, filtered in memory afterwards. Right while the corpus is
+ * small — every filter stays instant and the facet counts are honest. When it
+ * outgrows this, pass `filters` into the query string instead: the backend
+ * already accepts q, agency, category, minBudget, maxBudget, page and limit.
+ */
+const FETCH_LIMIT = 100;
+
+/**
  * The discovery dashboard (FR-12, FR-13) — the product's main screen and the
  * only one a guest can use without signing in.
  *
- * Runs against MOCK_TORS: there is no TOR API yet, so filtering, sorting and
- * pagination all happen in memory. When the endpoint exists, this component
- * keeps its shape and the `useMemo` below becomes the fetch.
+ * Data comes from `GET /api/tors`, the server-side proxy over the backend
+ * (src/app/api/tors/route.ts). The rows are fetched once and then filtered,
+ * sorted and paginated in memory, which is right while the corpus is small:
+ * every filter stays instant and the facet counts can be computed honestly.
+ * When the corpus outgrows one page of results, the same shape moves
+ * server-side by passing `filters` into the query string instead.
+ *
+ * What arrives carries NO grade — the backend strips it (FR-19). `signalCount`
+ * and the neutral `signals[]` are the whole public surface, by design.
  */
 /** Declares the entrance order in the markup, exactly as AuthShell does. */
 const delay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperties;
@@ -58,24 +73,33 @@ export default function TorListingsPage() {
   const [sort, setSort] = useState<SortId>("bestMatch");
   const [page, setPage] = useState(1);
   const [density, setDensity] = useState<DensityId>("cards");
-  const [isLoading, setIsLoading] = useState(true);
+  // The whole request lives in one hook (src/api/useEndpoint.ts): stale-response
+  // guarding, aborting and error shape are decided there rather than per page.
+  // `select` maps the backend shape at the boundary, so nothing below this line
+  // ever sees a raw BackendTor.
+  const {
+    data,
+    error,
+    isLoading,
+    refresh,
+  } = useEndpoint<TorListResponse, ApiTor[]>(`/api/tors?limit=${FETCH_LIMIT}`, {
+    select: toTors,
+  });
 
-  // NFR-04: the seam where a real request will go. Without it the page would
-  // have no loading state to inherit once the data is remote.
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 250);
-    return () => clearTimeout(timer);
-  }, []);
+  // Null until the first response lands. Kept explicit here rather than hidden
+  // inside the hook: "no data yet" and "an empty result" are different states,
+  // and only the second should render the empty message.
+  const tors = useMemo(() => data ?? [], [data]);
 
-  const agencies = useMemo(() => agencyOptions(MOCK_TORS), []);
-  const categories = useMemo(() => categoryOptions(MOCK_TORS), []);
-  const methods = useMemo(() => methodOptions(MOCK_TORS), []);
+  const agencies = useMemo(() => agencyOptions(tors), [tors]);
+  const categories = useMemo(() => categoryOptions(tors), [tors]);
+  const methods = useMemo(() => methodOptions(tors), [tors]);
 
   /*
    * The placeholder matching layer is attached once, before filtering, so fit
    * and deadline are available to both the filters and the sort.
    */
-  const matched = useMemo(() => withMatches(MOCK_TORS, TODAY_UTC), []);
+  const matched = useMemo(() => withMatches(tors, TODAY_UTC), [tors]);
 
   const results = useMemo(
     () => sortTors(filterTors(matched, filters), sort),
@@ -129,7 +153,7 @@ export default function TorListingsPage() {
           style={delay(40)}
         >
           <div>
-            <h1 className="font-display text-2xl tracking-tight text-moss-700">
+            <h1 className=" text-2xl tracking-tight text-moss-700">
               {t.heading}
             </h1>
             <p
@@ -141,7 +165,7 @@ export default function TorListingsPage() {
                 .replace("{total}", String(results.length))}
               {" · "}
               {t.subheading
-                .replace("{count}", String(MOCK_TORS.length))
+                .replace("{count}", String(tors.length))
                 .replace("{agencies}", String(agencies.length))}
             </p>
           </div>
@@ -223,6 +247,21 @@ export default function TorListingsPage() {
                   />
                 ))}
               </ul>
+            ) : error ? (
+              /* A failed request is NOT an empty result. Showing "no matches,
+                 clear your filters" here would blame the reader for an outage
+                 and hide the fact that nothing was searched at all. */
+              <div className="px-6 py-16 text-center">
+                <p className="font-medium text-moss-700">{t.loadErrorHeading}</p>
+                <p className="mt-1.5 text-sm text-ink-500">{t.loadErrorBody}</p>
+                <button
+                  type="button"
+                  onClick={refresh}
+                  className="mt-4 rounded-field text-sm font-medium text-sage-600 underline-offset-4 transition duration-200 ease-soft hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                >
+                  {t.retry}
+                </button>
+              </div>
             ) : visible.length === 0 ? (
               /* UC-03a: name the fix, don't just report the absence. */
               <div className="px-6 py-16 text-center">

@@ -19,16 +19,22 @@ const NAV_ITEMS = [
   { href: "/tor", key: "browse" as const },
 ];
 
+const ADMIN_NAV_ITEMS = [
+  { href: "/admin/sources", key: "sources" as const },
+  { href: "/admin/pipeline", key: "pipeline" as const },
+];
+
 /**
  * Two-tier public header, in the shape institutional data portals use: an
  * identity row (logo, tagline, language) over a solid nav band.
  *
  * Splitting the rows is what keeps it even — brand and navigation each own a
  * row instead of competing for one, so nothing has to be nudged to sit
- * straight. Admin keeps AdminNav and is deliberately not wrapped in this.
+ * straight. Admin uses the same header with its restricted links appended.
  */
-export function NavBar() {
+export function NavBar({ admin = false }: { admin?: boolean }) {
   const t = useTranslations("nav");
+  const adminT = useTranslations("admin");
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session, status } = useSession();
@@ -101,19 +107,9 @@ export function NavBar() {
         </div>
       </div>
 
-      {/*
-        Tier 2 — the nav band. It carries the login panel's own gradient rather
-        than a flat moss-700 slab: moss-700 is the darkest value in the palette
-        and, laid across the full width, it read far heavier than anything on
-        the auth screens. The gradient opens 3.5x lighter and is the same ramp
-        AuthShell uses, so the two surfaces are recognisably one product.
-      */}
-      <div className="relative hidden overflow-hidden bg-moss-700 md:block">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,#5c8168_0%,#3d5c49_55%,#22362a_100%)]"
-        />
-        <div className="relative mx-auto flex h-11 max-w-[110rem] items-stretch justify-between px-6">
+      {/* Tier 2 — one consistent institutional green across public and admin. */}
+      <div className="hidden bg-moss-700 md:block">
+        <div className="mx-auto flex h-11 max-w-[110rem] items-stretch justify-between px-6">
           <nav aria-label={t.primaryLabel} className="flex items-stretch">
             {NAV_ITEMS.map(({ href, key }) => {
               const active = isActive(href);
@@ -133,6 +129,25 @@ export function NavBar() {
                 </Link>
               );
             })}
+            {admin &&
+              ADMIN_NAV_ITEMS.map(({ href, key }) => {
+                const active = pathname === href || pathname.startsWith(`${href}/`);
+
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex items-center px-4 text-xs font-semibold tracking-wider uppercase transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 focus-visible:outline-none ${
+                      active
+                        ? "bg-white/15 text-white"
+                        : "text-sage-100 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {adminT.nav[key]}
+                  </Link>
+                );
+              })}
           </nav>
 
           {/* Signed in, the account menu in the row above carries identity and
@@ -154,13 +169,18 @@ export function NavBar() {
               </Link>
             </div>
           )}
+          {admin && (
+            <span className="self-center rounded-field bg-clay-500 px-2 py-1 font-mono text-[0.625rem] font-medium tracking-widest text-white uppercase">
+              {adminT.nav.adminMode}
+            </span>
+          )}
         </div>
       </div>
 
       {isMenuOpen && (
         <div
           id="nav-mobile-menu"
-          className="bg-[linear-gradient(160deg,#5c8168_0%,#3d5c49_55%,#22362a_100%)] md:hidden"
+          className="bg-moss-700 md:hidden"
         >
           <nav
             aria-label={t.primaryLabel}
@@ -184,6 +204,25 @@ export function NavBar() {
                 </Link>
               );
             })}
+            {admin &&
+              ADMIN_NAV_ITEMS.map(({ href, key }) => {
+                const active = pathname === href || pathname.startsWith(`${href}/`);
+
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    className={`rounded-field px-3 py-2.5 text-xs font-semibold tracking-wider uppercase transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none ${
+                      active
+                        ? "bg-white/15 text-white"
+                        : "text-sage-100 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {adminT.nav[key]}
+                  </Link>
+                );
+              })}
 
             <div className="mt-3 flex items-center gap-2 border-t border-white/15 pt-3">
               {account ? (

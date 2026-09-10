@@ -65,7 +65,7 @@ export default function NotificationsPage() {
             <p className="font-mono text-xs tracking-widest text-sage-600 uppercase">
               {t.eyebrow}
             </p>
-            <h1 className="font-display mt-2 text-2xl tracking-tight text-moss-700">
+            <h1 className="mt-2 text-2xl tracking-tight text-moss-700">
               {t.heading}
             </h1>
           </div>

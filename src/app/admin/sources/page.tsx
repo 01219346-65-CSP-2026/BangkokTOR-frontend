@@ -1,23 +1,13 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatRelativeTime } from "@/i18n/format";
 import type { FrequencyId } from "@/i18n/Translations";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { TextField } from "@/components/ui/TextField";
-import { ConfirmDeleteButton } from "@/components/admin/ConfirmDeleteButton";
-import { PlusIcon } from "@/components/icons/PlusIcon";
-
-type Source = {
-  id: string;
-  name: string;
-  url: string;
-  isActive: boolean;
-  frequencyId: FrequencyId;
-  lastScrapedHoursAgo: number;
-};
+import { Stat } from "@/components/admin/Stat";
+import { SourceDetailsModal } from "@/components/admin/sources/SourceDetailsModal";
+import { SourceTable } from "@/components/admin/sources/SourceTable";
+import type { Source } from "@/components/admin/sources/types";
 
 /**
  * How long each schedule is allowed to go between runs before the source is
@@ -66,25 +56,7 @@ export default function SourcesPage() {
   const t = useTranslations("admin");
   const { locale } = useLanguage();
   const [sources, setSources] = useState<Source[]>(INITIAL_SOURCES);
-  const [isAdding, setIsAdding] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newUrl, setNewUrl] = useState("");
-
-  function handleAddSource(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const newSource: Source = {
-      id: crypto.randomUUID(),
-      name: newName,
-      url: newUrl,
-      isActive: true,
-      frequencyId: "daily",
-      lastScrapedHoursAgo: 0,
-    };
-    setSources((prev) => [newSource, ...prev]);
-    setNewName("");
-    setNewUrl("");
-    setIsAdding(false);
-  }
+  const [selectedSource, setSelectedSource] = useState<Source | null>(null);
 
   function toggleActive(id: string) {
     setSources((prev) =>
@@ -136,19 +108,11 @@ export default function SourcesPage() {
           <p className="font-mono text-xs tracking-widest text-clay-500 uppercase">
             {t.sources.eyebrow}
           </p>
-          <h1 className="font-display mt-2 text-2xl tracking-tight text-moss-700">
+          <h1 className=" mt-2 text-2xl tracking-tight text-moss-700">
             {t.sources.heading}
           </h1>
           <p className="mt-1 text-sm text-ink-500">{t.sources.subheading}</p>
         </div>
-        <Button
-          type="button"
-          shape="rounded"
-          onClick={() => setIsAdding((prev) => !prev)}
-        >
-          <PlusIcon />
-          {t.sources.addSource}
-        </Button>
       </div>
 
       {/* The KPI strip. Same 1px-gap construction as the TOR detail stat grid,
@@ -212,158 +176,23 @@ export default function SourcesPage() {
         </section>
       )}
 
-      {isAdding && (
-        <form
-          onSubmit={handleAddSource}
-          className="mt-6 flex flex-col gap-4 rounded-field border border-sage-100 bg-white p-6 sm:flex-row sm:items-end"
-        >
-          <div className="flex-1">
-            <TextField
-              id="source-name"
-              label={t.sources.nameLabel}
-              variant="minimal"
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
-              placeholder={t.sources.namePlaceholder}
-              required
-            />
-          </div>
-          <div className="flex-1">
-            <TextField
-              id="source-url"
-              label={t.sources.urlLabel}
-              type="url"
-              variant="minimal"
-              value={newUrl}
-              onChange={(event) => setNewUrl(event.target.value)}
-              placeholder={t.sources.urlPlaceholder}
-              required
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button type="submit" shape="rounded">
-              {t.sources.save}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              shape="rounded"
-              onClick={() => setIsAdding(false)}
-            >
-              {t.sources.cancel}
-            </Button>
-          </div>
-        </form>
-      )}
-
-      {/* Scrolls inside its own container: at 375px five columns cannot fit,
-          and the page body must never scroll sideways (CLAUDE.md §7). */}
-      <div className="mt-6 overflow-x-auto rounded-field border border-sage-100 bg-white">
-        <table className="w-full min-w-[44rem] text-left text-sm">
-          <thead className="border-b border-sage-100 bg-mist-50">
-            <tr className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
-              <th className="px-5 py-3 font-medium">{t.sources.tableName}</th>
-              <th className="px-5 py-3 font-medium">{t.sources.tableStatus}</th>
-              <th className="px-5 py-3 font-medium">
-                {t.sources.tableFrequency}
-              </th>
-              <th className="px-5 py-3 font-medium">
-                {t.sources.tableLastScraped}
-              </th>
-              <th className="px-5 py-3 text-right font-medium">
-                {t.sources.tableActions}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-sage-100">
-            {sources.map((source) => (
-              <tr
-                key={source.id}
-                className="transition duration-200 ease-soft hover:bg-mist-50/60"
-              >
-                <td className="px-5 py-4">
-                  <p className="font-medium text-moss-700">{source.name}</p>
-                  {/* Mono for the URL, as 1i sets every machine-readable value. */}
-                  <p className="mt-0.5 font-mono text-xs text-ink-500">
-                    {source.url}
-                  </p>
-                </td>
-                <td className="px-5 py-4">
-                  <button
-                    type="button"
-                    onClick={() => toggleActive(source.id)}
-                    aria-label={t.sources.toggleAriaLabel}
-                    aria-pressed={source.isActive}
-                    className="rounded-field transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
-                  >
-                    <Badge
-                      tone={source.isActive ? "accent" : "neutral"}
-                      withDot
-                    >
-                      {source.isActive
-                        ? t.sources.statusActive
-                        : t.sources.statusPaused}
-                    </Badge>
-                  </button>
-                </td>
-                <td className="px-5 py-4 text-ink-600">
-                  {t.sources.frequencyLabels[source.frequencyId]}
-                </td>
-                <td className="px-5 py-4 font-mono text-xs text-ink-600 tabular-nums">
-                  {formatRelativeTime(
-                    now - source.lastScrapedHoursAgo * 60 * 60 * 1000,
-                    locale
-                  )}
-                </td>
-                <td className="px-5 py-4 text-right">
-                  <div className="flex justify-end">
-                    <ConfirmDeleteButton
-                      onConfirm={() => handleDelete(source.id)}
-                      ariaLabel={t.sources.deleteAriaLabel}
-                      confirmLabel={t.sources.confirmDeleteYes}
-                      cancelLabel={t.sources.confirmDeleteCancel}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {sources.length === 0 && (
-          <p className="p-8 text-center text-sm text-ink-500">
-            {t.sources.empty}
-          </p>
-        )}
+      <div className="mt-6">
+        <SourceTable
+          sources={sources}
+          now={now}
+          onSelect={setSelectedSource}
+          onToggle={toggleActive}
+          onDelete={handleDelete}
+        />
       </div>
-    </div>
-  );
-}
-/**
- * One KPI cell. White ground over the grid's sage-100 gaps, which is what draws
- * the rules between cells — the same construction as the TOR detail stat grid.
- */
-function Stat({
-  label,
-  value,
-  muted = false,
-}: {
-  label: string;
-  value: ReactNode;
-  muted?: boolean;
-}) {
-  return (
-    <div className="bg-white px-4 py-3.5">
-      <dt className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
-        {label}
-      </dt>
-      <dd
-        className={`mt-1.5 font-mono text-lg font-semibold tabular-nums ${
-          muted ? "text-ink-500" : "text-moss-700"
-        }`}
-      >
-        {value}
-      </dd>
+
+      {selectedSource && (
+        <SourceDetailsModal
+          source={selectedSource}
+          now={now}
+          onClose={() => setSelectedSource(null)}
+        />
+      )}
     </div>
   );
 }
