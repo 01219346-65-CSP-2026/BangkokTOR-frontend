@@ -5,17 +5,17 @@ import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { useTranslations } from "@/i18n/LanguageProvider";
-import {
-  MOCK_NOTIFICATIONS,
-  type NotificationData,
-} from "@/data/notifications";
+import { useNotifications } from "@/components/notifications/NotificationsProvider";
 
 type TabId = "new" | "viewed" | "saved";
 
 export default function NotificationsPage() {
   const t = useTranslations("notifications");
-  const [notifications, setNotifications] =
-    useState<NotificationData[]>(MOCK_NOTIFICATIONS);
+  // The feed is shared with the nav bell rather than seeded separately here —
+  // two copies meant marking something read on this page left the badge still
+  // counting it.
+  const { notifications, markRead, markAllRead, toggleSave } =
+    useNotifications();
   const [activeTab, setActiveTab] = useState<TabId>("new");
 
   const newCount = notifications.filter((n) => n.isUnread).length;
@@ -32,20 +32,7 @@ export default function NotificationsPage() {
 
   function handleNotificationClick(id: string) {
     // TODO: navigate to the job listing once routing/backend exists.
-    console.log("Notification clicked:", id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isUnread: false } : n))
-    );
-  }
-
-  function handleToggleSave(id: string) {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isSaved: !n.isSaved } : n))
-    );
-  }
-
-  function handleMarkAllRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isUnread: false })));
+    markRead(id);
   }
 
   const emptyStateCopy: Record<TabId, string> = {
@@ -70,7 +57,7 @@ export default function NotificationsPage() {
             </h1>
           </div>
           {/* The language switcher now lives in the shared NavBar. */}
-          <Button type="button" variant="ghost" onClick={handleMarkAllRead}>
+          <Button type="button" variant="ghost" onClick={markAllRead}>
             {t.markAllRead}
           </Button>
         </div>
@@ -104,7 +91,7 @@ export default function NotificationsPage() {
                   isSaved: notification.isSaved,
                 }}
                 onClick={() => handleNotificationClick(notification.id)}
-                onToggleSave={() => handleToggleSave(notification.id)}
+                onToggleSave={() => toggleSave(notification.id)}
               />
             ))
           )}
