@@ -23,6 +23,7 @@ export type TorDocumentKindId =
   | "referencePrice"
   | "invitation"
   | "draftBidding"
+  | "bundle"
   | "other";
 
 export type TorStatusId =
@@ -70,6 +71,24 @@ export type TorDocument = {
   pages: number;
 };
 
+/**
+ * One machine-written point about what the documents state.
+ *
+ * Replaced TorExtractedSection, which carried raw PDF chunk text. The PDF is
+ * linked from `documents`, so the record does not also need to reproduce it —
+ * what it owes the reader here is the gist.
+ *
+ * `filename` is null when the point can no longer be traced to a page, which
+ * happens if the documents were re-extracted after the summary was written.
+ */
+export type TorSummaryPoint = {
+  id: string;
+  text: string;
+  filename: string | null;
+  pageStart: number;
+  pageEnd: number;
+};
+
 export type Tor = {
   id: string;
   projectNumber: string;
@@ -96,6 +115,7 @@ export type Tor = {
   /** The original portal listing, for FR-12's link back to source. */
   sourceUrl: string;
   documents: TorDocument[];
+  summaryPoints?: TorSummaryPoint[];
   /** Derived: earliest document publish date. ISO 8601. */
   publishedAt: string;
   /** FR-11: the TOR document is absent, unattached, or has no readable text. */

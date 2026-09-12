@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, type ReactNode } from "react";
+import { use, type ReactNode } from "react";
 import Link from "next/link";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { useEndpoint } from "@/api/useEndpoint";
@@ -11,7 +11,6 @@ import { FitDial } from "@/components/tor/FitDial";
 import { DeadlineLabel } from "@/components/tor/TorCard";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, withMatch } from "@/lib/torMatching";
-import type { TorExtractedSection } from "@/types/tor";
 
 /**
  * Day-resolution clock — see the note in the listings page. Flooring to midnight
@@ -47,7 +46,6 @@ export default function TorDetailPage({
   const { id } = use(params);
   const t = useTranslations("tor");
   const { locale } = useLanguage();
-  const [allExtractedOpen, setAllExtractedOpen] = useState(false);
 
   const { data: record, error, isLoading, refresh } = useEndpoint<
     TorDetailResponse,
@@ -88,7 +86,7 @@ export default function TorDetailPage({
 
   // Placeholder matching layer — see src/lib/torMatching.ts.
   const tor = withMatch(record, TODAY_UTC);
-  const extractedSections = tor.extractedSections ?? [];
+  const summaryPoints = tor.summaryPoints ?? [];
 
   const published = formatDate(new Date(tor.publishedAt).getTime(), locale);
   const { notable, routine } = deriveObservations(tor);
@@ -250,58 +248,72 @@ export default function TorDetailPage({
               </p>
             </section>
 
-            {extractedSections.length > 0 && (
-              <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <h2 className="text-xl tracking-tight text-moss-700">
-                    {t.detailExtractedDetails}
-                  </h2>
-                  <div className="flex items-baseline gap-3">
-                    <span className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
-                      {t.extractedSectionCount.replace(
-                        "{count}",
-                        String(extractedSections.length),
-                      )}
-                    </span>
-                    {/*
-                      One control for the whole list, replacing the old
-                      "show the first six / show all fifty" toggle. Expanding
-                      everything at once is what made this section read as a
-                      wall of text, so the default is every row collapsed and
-                      the reader opens what they want.
-                    */}
-                    <button
-                      type="button"
-                      onClick={() => setAllExtractedOpen((open) => !open)}
-                      className="rounded-field border border-sage-400/70 px-2.5 py-1 text-xs font-medium text-sage-600 transition duration-200 ease-soft hover:border-sage-600 hover:bg-mist-50 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
-                    >
-                      {allExtractedOpen ? t.collapseAll : t.expandAll}
-                    </button>
-                  </div>
-                </div>
+            {/*
+              What the documents say, as points rather than as the documents.
+              This used to render the raw extracted chunks — up to 24 sections
+              of PDF text in an accordion. The PDFs are linked in the card
+              below, so reproducing them here only buried the substance.
+            */}
+            <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <h2 className="text-xl tracking-tight text-moss-700">
+                  {t.detailExtractedDetails}
+                </h2>
+                {summaryPoints.length > 0 && (
+                  <span className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
+                    {t.summaryPointCount.replace(
+                      "{count}",
+                      String(summaryPoints.length),
+                    )}
+                  </span>
+                )}
+              </div>
 
-                {/*
-                  Each section is its own disclosure rather than a bullet in a
-                  list. The backend used to truncate these at 360 characters,
-                  which cut Thai mid-word and made the whole block look like
-                  scrambled text; it now sends the full chunk with its
-                  paragraph breaks intact, so the collapsed state carries a
-                  two-line preview and the expanded state renders real
-                  paragraphs.
-                */}
-                <ul className="mt-4 divide-y divide-sage-100 border-t border-sage-100">
-                  {extractedSections.map((section) => (
-                    <li key={section.id}>
-                      <ExtractedSection
-                        section={section}
-                        open={allExtractedOpen}
-                        pageRangeLabel={t.pageRange}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+              {summaryPoints.length === 0 ? (
+                /* A record graded before summaries existed, or one whose points
+                   were all screened out. Say so rather than render an empty
+                   card that reads as a loading failure. */
+                <p className="mt-3 text-sm leading-relaxed text-ink-500">
+                  {t.summaryPointsEmpty}
+                </p>
+              ) : (
+                <>
+                  <ul className="mt-4 divide-y divide-sage-100 border-t border-sage-100">
+                    {summaryPoints.map((point) => (
+                      <li key={point.id} className="flex gap-3 py-3.5">
+                        <span
+                          aria-hidden="true"
+                          className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sage-600"
+                        />
+                        <p
+                          lang="th"
+                          className="min-w-0 flex-1 text-[0.9375rem] leading-relaxed text-ink-600"
+                        >
+                          {point.text}
+                        </p>
+                        {/* The citation is what makes a generated point
+                            checkable against the source. Absent when the point
+                            can no longer be traced to a page. */}
+                        {point.filename && point.pageStart > 0 && (
+                          <span className="shrink-0 pt-0.5 font-mono text-[0.625rem] tracking-wide whitespace-nowrap text-ink-500">
+                            {t.pageRange
+                              .replace("{from}", String(point.pageStart))
+                              .replace("{to}", String(point.pageEnd))}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* These are machine-written. Saying so is both honest and
+                      what keeps the section from reading as the platform's own
+                      assertion about the agency. */}
+                  <p className="mt-4 max-w-prose border-t border-sage-100 pt-3 text-xs leading-relaxed text-ink-500">
+                    {t.summaryProvenanceNote}
+                  </p>
+                </>
+              )}
+            </section>
 
             <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
               <div className="flex items-baseline justify-between gap-4">
@@ -721,79 +733,5 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
         {children}
       </dd>
     </div>
-  );
-}
-
-
-/**
- * One extracted document section, as a disclosure.
- *
- * `open` is the "expand all" switch rather than the row's own state, and it is
- * passed through `key` on the <details> so flipping the switch re-mounts each
- * row at the new state — without that, a row the reader opened by hand would
- * fight the group control.
- *
- * The text arrives with real paragraph breaks now that the backend no longer
- * flattens and truncates it, so paragraphs render as separate <p> elements;
- * a single blob of Thai with no breaks is exactly what made this unreadable.
- */
-function ExtractedSection({
-  section,
-  open,
-  pageRangeLabel,
-}: {
-  section: TorExtractedSection;
-  open: boolean;
-  pageRangeLabel: string;
-}) {
-  const paragraphs = section.text.split("\n\n").filter(Boolean);
-  const provenance =
-    section.pageStart > 0
-      ? `${section.filename} · ${pageRangeLabel
-          .replace("{from}", String(section.pageStart))
-          .replace("{to}", String(section.pageEnd))}`
-      : section.filename;
-
-  return (
-    <details key={String(open)} open={open} className="group py-4">
-      <summary className="flex cursor-pointer list-none items-baseline gap-3 rounded-field focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none">
-        {/* A caret rather than the browser's default marker, which differs
-            between engines and cannot be styled to the token palette. */}
-        <span
-          aria-hidden="true"
-          className="mt-1.5 shrink-0 text-[0.625rem] text-sage-600 transition-transform duration-200 ease-soft group-open:rotate-90"
-        >
-          ▶
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-moss-700">
-            {section.heading}
-          </span>
-          {/* The preview is hidden once open, so the first paragraph is not
-              printed twice. */}
-          <span
-            lang="th"
-            className="mt-1 line-clamp-2 block text-sm leading-relaxed text-ink-600 group-open:hidden"
-          >
-            {paragraphs[0] ?? ""}
-          </span>
-        </span>
-        <span className="shrink-0 font-mono text-[0.625rem] tracking-wide whitespace-nowrap text-ink-500">
-          {provenance}
-        </span>
-      </summary>
-
-      <div className="mt-3 ml-6 flex max-w-prose flex-col gap-3">
-        {paragraphs.map((paragraph, index) => (
-          <p
-            key={index}
-            lang="th"
-            className="text-sm leading-relaxed text-ink-600"
-          >
-            {paragraph}
-          </p>
-        ))}
-      </div>
-    </details>
   );
 }

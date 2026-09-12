@@ -5,6 +5,7 @@ import type {
   TorContractId,
   TorMethodId,
   TorStatusId,
+  TorDocumentKindId,
 } from "@/types/tor";
 
 /**
@@ -52,6 +53,22 @@ export type BackendTor = {
   sourceUrl: string | null;
   signalCount: number | null;
   signals?: TorSignalRef[];
+  documents?: Array<{
+    id: string;
+    kind: TorDocumentKindId;
+    filename: string | null;
+    url: string;
+    textLayer: "digital" | "scanned" | "unreadable" | "missing";
+    pages: number;
+    fetchedAt: string | null;
+  }>;
+  summaryPoints?: Array<{
+    id: string;
+    text: string;
+    filename: string | null;
+    pageStart: number;
+    pageEnd: number;
+  }>;
 };
 
 export type TorListResponse = {
@@ -129,7 +146,15 @@ export function toTor(row: BackendTor): ApiTor {
     // invention, so it reports the honest absence.
     torTextLayer: "missing" as TextLayer,
     torPages: 0,
-    documents: [],
+    documents: row.documents?.map((document) => ({
+      kind: document.kind,
+      published: document.fetchedAt ?? "",
+      filename: document.filename,
+      url: document.url,
+      textLayer: document.textLayer === "unreadable" ? "missing" : document.textLayer,
+      pages: document.pages,
+    })) ?? [],
+    summaryPoints: row.summaryPoints ?? [],
 
     status: procurementStatus(row),
     sourceUrl: row.sourceUrl ?? "",
