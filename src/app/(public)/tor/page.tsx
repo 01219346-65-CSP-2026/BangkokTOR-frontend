@@ -217,7 +217,10 @@ export default function TorListingsPage() {
             controls read as a distinct surface rather than floating on the
             page ground.
           */}
-          <div className="rounded-field border border-sage-100 bg-white p-4">
+          <div
+            className="rounded-field border border-sage-100 bg-white p-4"
+            data-tour="search"
+          >
             <TorFilters
               filters={filters}
               onChange={handleFilterChange}

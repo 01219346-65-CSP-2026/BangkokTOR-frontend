@@ -131,7 +131,11 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
       {/* Tier 2 — one consistent institutional green across public and admin. */}
       <div className="hidden bg-moss-700 md:block">
         <div className="mx-auto flex h-11 max-w-[110rem] items-stretch justify-between px-6">
-          <nav aria-label={t.primaryLabel} className="flex items-stretch">
+          <nav
+            aria-label={t.primaryLabel}
+            className="flex items-stretch"
+            data-tour="nav"
+          >
             {navItems.map(({ href, key }) => {
               const active = isActive(href);
 

@@ -410,7 +410,10 @@ export default function TorDetailPage({
               ⚠ Every figure in it is placeholder — see src/lib/torMatching.ts
               — hence the footnote inside the panel.
             */}
-            <section className="rounded-field border border-sage-400/60 bg-white p-6">
+            <section
+              className="rounded-field border border-sage-400/60 bg-white p-6"
+              data-tour="fit"
+            >
               <div className="flex items-center gap-4">
                 <FitDial score={tor.fitScore} size="lg" caption={t.fitCaption} />
                 <div className="min-w-0">

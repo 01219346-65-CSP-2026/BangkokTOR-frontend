@@ -13,6 +13,21 @@ const en = {
     brandBenefitRead: "Thai listings read back in plain English",
     brandBenefitRecord: "Budget, agency and documents on every record",
   },
+  tour: {
+    stepOf: "Step {step} of {total}",
+    skip: "Skip",
+    next: "Next",
+    done: "Done",
+    tourNavTitle: "Start here",
+    tourNavBody:
+      "Browse every tender in the record, or open your dashboard and skill profile. Switch between Thai and English any time from the toggle above.",
+    tourSearchTitle: "Narrow it down",
+    tourSearchBody:
+      "Filter by agency, budget and category. The counts next to each option update as you go, so you can see what is left before you click.",
+    tourFitTitle: "Read the record",
+    tourFitBody:
+      "Every tender opens with a plain-language summary, the documents it published, and any observations about how complete that record is.",
+  },
   nav: {
     home: "Home",
     browse: "Browse TORs",
@@ -696,6 +711,21 @@ const th: typeof en = {
     brandBenefitSearch: "ค้นหาทุกเว็บไซต์จัดซื้อจัดจ้างได้จากที่เดียว",
     brandBenefitRead: "อ่านประกาศภาษาไทยเป็นภาษาอังกฤษที่เข้าใจง่าย",
     brandBenefitRecord: "งบประมาณ หน่วยงาน และเอกสารครบในทุกรายการ",
+  },
+  tour: {
+    stepOf: "ขั้นตอนที่ {step} จาก {total}",
+    skip: "ข้าม",
+    next: "ถัดไป",
+    done: "เสร็จสิ้น",
+    tourNavTitle: "เริ่มต้นที่นี่",
+    tourNavBody:
+      "ค้นหาขอบเขตของงานทั้งหมด หรือเปิดแดชบอร์ดและโปรไฟล์ทักษะของคุณ สลับภาษาไทยและอังกฤษได้ตลอดเวลาจากปุ่มด้านบน",
+    tourSearchTitle: "กรองให้แคบลง",
+    tourSearchBody:
+      "กรองตามหน่วยงาน งบประมาณ และหมวดหมู่ จำนวนข้างแต่ละตัวเลือกจะอัปเดตตามที่คุณเลือก ทำให้เห็นผลลัพธ์ก่อนคลิก",
+    tourFitTitle: "อ่านข้อมูลโครงการ",
+    tourFitBody:
+      "ทุกโครงการเปิดด้วยคำอธิบายอย่างง่าย เอกสารที่เผยแพร่ และข้อสังเกตเกี่ยวกับความครบถ้วนของข้อมูลชุดนั้น",
   },
   nav: {
     home: "หน้าแรก",

@@ -521,17 +521,21 @@ export default function SkillsPage() {
                 </ReviewCard>
               </div>
 
-              <div className="relative mt-8 overflow-hidden rounded-field bg-moss-700 p-6">
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,#5c8168_0%,#3d5c49_55%,#22362a_100%)]"
-                />
-                <div className="relative flex flex-wrap items-center justify-between gap-5">
+              {/*
+                The save bar. It used to sit on a hardcoded three-stop gradient
+                in raw hex, which is the one thing the design system forbids
+                outright — none of those values were tokens, so the panel could
+                not follow a palette change and did not match any other surface
+                in the app. A flat sage border on paper does the same job of
+                separating the bar from the cards above it.
+              */}
+              <div className="mt-8 rounded-field border border-sage-400/60 bg-mist-50 p-6">
+                <div className="flex flex-wrap items-center justify-between gap-5">
                   <p className="flex items-baseline gap-3">
-                    <span className=" text-3xl leading-none text-mint-400">
+                    <span className="text-3xl leading-none text-moss-700">
                       {preview.reachableCount}
                     </span>
-                    <span className="max-w-[34ch] text-xs leading-relaxed text-sage-100/85">
+                    <span className="max-w-[34ch] text-xs leading-relaxed text-ink-500">
                       {t.previewMatchesToday}
                     </span>
                   </p>
