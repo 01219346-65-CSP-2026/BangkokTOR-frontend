@@ -1,6 +1,6 @@
 "use client";
 
-import { use, type ReactNode } from "react";
+import { use, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { useEndpoint } from "@/api/useEndpoint";
@@ -11,6 +11,7 @@ import { FitDial } from "@/components/tor/FitDial";
 import { DeadlineLabel } from "@/components/tor/TorCard";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, withMatch } from "@/lib/torMatching";
+import type { TorExtractedSection } from "@/types/tor";
 
 /**
  * Day-resolution clock — see the note in the listings page. Flooring to midnight
@@ -46,6 +47,7 @@ export default function TorDetailPage({
   const { id } = use(params);
   const t = useTranslations("tor");
   const { locale } = useLanguage();
+  const [allExtractedOpen, setAllExtractedOpen] = useState(false);
 
   const { data: record, error, isLoading, refresh } = useEndpoint<
     TorDetailResponse,
@@ -86,6 +88,7 @@ export default function TorDetailPage({
 
   // Placeholder matching layer — see src/lib/torMatching.ts.
   const tor = withMatch(record, TODAY_UTC);
+  const extractedSections = tor.extractedSections ?? [];
 
   const published = formatDate(new Date(tor.publishedAt).getTime(), locale);
   const { notable, routine } = deriveObservations(tor);
@@ -240,13 +243,65 @@ export default function TorDetailPage({
                   .replace("{agency}", tor.agency)
                   .replace("{category}", t.categories[tor.category])
                   .replace("{budget}", formatBudgetTHB(tor.budget, locale))
-                  .replace("{date}", published)
-                  .replace("{number}", tor.projectNumber)}
+                  .replace("{date}", published)}
               </p>
               <p className="mt-3 max-w-prose border-t border-sage-100 pt-3 text-xs leading-relaxed text-ink-500">
                 {t.detailInterpretationNote}
               </p>
             </section>
+
+            {extractedSections.length > 0 && (
+              <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <h2 className="text-xl tracking-tight text-moss-700">
+                    {t.detailExtractedDetails}
+                  </h2>
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
+                      {t.extractedSectionCount.replace(
+                        "{count}",
+                        String(extractedSections.length),
+                      )}
+                    </span>
+                    {/*
+                      One control for the whole list, replacing the old
+                      "show the first six / show all fifty" toggle. Expanding
+                      everything at once is what made this section read as a
+                      wall of text, so the default is every row collapsed and
+                      the reader opens what they want.
+                    */}
+                    <button
+                      type="button"
+                      onClick={() => setAllExtractedOpen((open) => !open)}
+                      className="rounded-field border border-sage-400/70 px-2.5 py-1 text-xs font-medium text-sage-600 transition duration-200 ease-soft hover:border-sage-600 hover:bg-mist-50 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                    >
+                      {allExtractedOpen ? t.collapseAll : t.expandAll}
+                    </button>
+                  </div>
+                </div>
+
+                {/*
+                  Each section is its own disclosure rather than a bullet in a
+                  list. The backend used to truncate these at 360 characters,
+                  which cut Thai mid-word and made the whole block look like
+                  scrambled text; it now sends the full chunk with its
+                  paragraph breaks intact, so the collapsed state carries a
+                  two-line preview and the expanded state renders real
+                  paragraphs.
+                */}
+                <ul className="mt-4 divide-y divide-sage-100 border-t border-sage-100">
+                  {extractedSections.map((section) => (
+                    <li key={section.id}>
+                      <ExtractedSection
+                        section={section}
+                        open={allExtractedOpen}
+                        pageRangeLabel={t.pageRange}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
               <div className="flex items-baseline justify-between gap-4">
@@ -348,29 +403,27 @@ export default function TorDetailPage({
           {/* The rail: reference material, out of the reading path. */}
           <aside>
             {/*
-              The fit panel, on the moss ground the mockups use to lift it out
-              of the rail. ⚠ Every figure in it is placeholder — see
-              src/lib/torMatching.ts — hence the footnote inside the panel.
+              The fit panel. It used the same moss-700 as the nav band, which
+              made the rail read as a second header competing with the real one
+              — so it sits on white like every other card and earns its
+              prominence from the sage border and the dial instead.
+              ⚠ Every figure in it is placeholder — see src/lib/torMatching.ts
+              — hence the footnote inside the panel.
             */}
-            <section className="rounded-field bg-moss-700 p-6">
+            <section className="rounded-field border border-sage-400/60 bg-white p-6">
               <div className="flex items-center gap-4">
-                <FitDial
-                  score={tor.fitScore}
-                  size="lg"
-                  onDark
-                  caption={t.fitCaption}
-                />
+                <FitDial score={tor.fitScore} size="lg" caption={t.fitCaption} />
                 <div className="min-w-0">
-                  <h2 className="text-sm leading-snug font-medium text-white">
+                  <h2 className="text-sm leading-snug font-medium text-moss-700">
                     {t.fitPanelHeading.replace("{band}", bandLabel)}
                   </h2>
-                  <p className="mt-1 text-xs leading-relaxed text-sage-100/70">
+                  <p className="mt-1 text-xs leading-relaxed text-ink-500">
                     {t.mockDataNote}
                   </p>
                 </div>
               </div>
 
-              <dl className="mt-5 flex flex-col gap-3 border-t border-white/15 pt-5">
+              <dl className="mt-5 flex flex-col gap-3 border-t border-sage-100 pt-5">
                 <FitRow label={t.fitPanelSkillOverlap}>
                   {tor.matchedSkillCount} / {tor.requiredSkills.length}
                 </FitRow>
@@ -390,23 +443,24 @@ export default function TorDetailPage({
               </dl>
 
               {/*
-                Both actions live inside the panel, as the design places them:
-                the primary in the mint accent, the secondary outlined on the
-                same dark ground.
+                Both actions live inside the panel, as the design places them.
+                mint-400 exists solely as the accent that stayed legible on the
+                moss ground, so with the ground gone the primary returns to
+                sage-600 — the token every other primary button uses.
               */}
               <div className="mt-5 flex flex-col gap-2.5">
                 <a
                   href={tor.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center rounded-field bg-mint-400 px-4 py-3 text-sm font-medium text-moss-700 transition duration-200 ease-soft hover:brightness-105 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none active:scale-[0.985]"
+                  className="flex items-center justify-center rounded-field bg-sage-600 px-4 py-3 text-sm font-medium text-white transition duration-200 ease-soft hover:brightness-110 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none active:scale-[0.985]"
                 >
                   {t.openSource} ↗
                 </a>
                 <button
                   type="button"
                   onClick={() => console.log("Save to watchlist:", tor.id)}
-                  className="flex items-center justify-center rounded-field border border-white/30 px-4 py-2.5 text-sm font-medium text-white transition duration-200 ease-soft hover:border-white/60 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none active:scale-[0.985]"
+                  className="flex items-center justify-center rounded-field border border-sage-400/70 px-4 py-2.5 text-sm font-medium text-sage-600 transition duration-200 ease-soft hover:border-sage-600 hover:bg-mist-50 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none active:scale-[0.985]"
                 >
                   {t.saveToWatchlist}
                 </button>
@@ -443,6 +497,14 @@ export default function TorDetailPage({
                   {t.methodLabels[tor.procurementMethod]}
                 </Fact>
                 <Fact label={t.factStatus}>{t.statusLabels[tor.status]}</Fact>
+                {/* Budget reads better as a table row than inside the summary
+                    sentence, where it turned prose into a data dump. The hero
+                    still carries it as a headline figure. */}
+                <Fact label={t.factBudget}>
+                  <span className="tabular-nums">
+                    {formatBudgetTHB(tor.budget, locale)}
+                  </span>
+                </Fact>
                 <Fact label={t.factNumber}>
                   <span className="tabular-nums">{tor.projectNumber}</span>
                 </Fact>
@@ -467,17 +529,24 @@ export default function TorDetailPage({
               a disclaimer. The reassurance survives; the chrome does not.
             */}
             {notable.length > 0 ? (
-              <section className="mt-6 overflow-hidden rounded-field border border-sage-100 border-t-2 border-t-clay-500 bg-white">
-                <div className="flex items-center gap-2 border-b border-sage-100 bg-mist-50 px-5 py-3.5">
+              // The single clay rule along the top read as a hairline on an
+              // otherwise white card, so the one block a reader most needs to
+              // notice was the quietest thing in the rail. The colour now
+              // carries the whole card — border, ground and heading — rather
+              // than one edge of it. Tinted, not saturated: FR-19 keeps these
+              // advisory, so it should read as "look at this", never as an
+              // alarm about the agency.
+              <section className="mt-6 overflow-hidden rounded-field border border-clay-500/35 bg-clay-500/[0.06]">
+                <div className="flex items-center gap-2 border-b border-clay-500/20 px-5 py-3.5">
                   <span aria-hidden="true" className="text-sm text-clay-500">
                     ⚑
                   </span>
-                  <h2 className=" text-lg tracking-tight text-moss-700">
+                  <h2 className="text-lg tracking-tight text-clay-500">
                     {t.signalsHeading}
                   </h2>
                 </div>
 
-                <ul className="divide-y divide-sage-100">
+                <ul className="divide-y divide-clay-500/15">
                   {notable.map((signal) => (
                     <li key={signal.id} className="px-5 py-4">
                       <SignalRow signal={signal} t={t} />
@@ -485,7 +554,7 @@ export default function TorDetailPage({
                   ))}
                 </ul>
 
-                <p className="border-t border-sage-100 px-5 py-3 text-xs leading-relaxed text-ink-500">
+                <p className="border-t border-clay-500/20 px-5 py-3 text-xs leading-relaxed text-ink-500">
                   {t.signalsNote}
                 </p>
               </section>
@@ -605,10 +674,10 @@ function FitRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="shrink-0 text-xs text-sage-100/75">{label}</dt>
+      <dt className="shrink-0 text-xs text-ink-500">{label}</dt>
       <dd
         className={`text-right font-mono text-xs font-medium tabular-nums ${
-          tone === "accent" ? "text-mint-400" : "text-sage-100"
+          tone === "accent" ? "text-sage-600" : "text-ink-500"
         }`}
       >
         {children}
@@ -633,11 +702,95 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** One key/value row of the record. */
+/**
+ * One row of the record table.
+ *
+ * A flex row that wrapped put the value on its own line whenever a long Thai
+ * agency name ran out of room, so the table lost its column edge exactly where
+ * it was densest. A two-column grid keeps the labels aligned down the left at
+ * every width and lets the value wrap within its own column instead.
+ */
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-4 py-2.5">
+    <div className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 py-2.5">
       <dt className="text-[0.8125rem] text-ink-500">{label}</dt>
-      <dd className="text-right text-[0.8125rem] text-ink-600">{children}</dd>
+      <dd className="min-w-0 text-right text-[0.8125rem] break-words text-moss-700">
+        {children}
+      </dd>
     </div>
+  );
+}
+
+
+/**
+ * One extracted document section, as a disclosure.
+ *
+ * `open` is the "expand all" switch rather than the row's own state, and it is
+ * passed through `key` on the <details> so flipping the switch re-mounts each
+ * row at the new state — without that, a row the reader opened by hand would
+ * fight the group control.
+ *
+ * The text arrives with real paragraph breaks now that the backend no longer
+ * flattens and truncates it, so paragraphs render as separate <p> elements;
+ * a single blob of Thai with no breaks is exactly what made this unreadable.
+ */
+function ExtractedSection({
+  section,
+  open,
+  pageRangeLabel,
+}: {
+  section: TorExtractedSection;
+  open: boolean;
+  pageRangeLabel: string;
+}) {
+  const paragraphs = section.text.split("\n\n").filter(Boolean);
+  const provenance =
+    section.pageStart > 0
+      ? `${section.filename} · ${pageRangeLabel
+          .replace("{from}", String(section.pageStart))
+          .replace("{to}", String(section.pageEnd))}`
+      : section.filename;
+
+  return (
+    <details key={String(open)} open={open} className="group py-4">
+      <summary className="flex cursor-pointer list-none items-baseline gap-3 rounded-field focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none">
+        {/* A caret rather than the browser's default marker, which differs
+            between engines and cannot be styled to the token palette. */}
+        <span
+          aria-hidden="true"
+          className="mt-1.5 shrink-0 text-[0.625rem] text-sage-600 transition-transform duration-200 ease-soft group-open:rotate-90"
+        >
+          ▶
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-moss-700">
+            {section.heading}
+          </span>
+          {/* The preview is hidden once open, so the first paragraph is not
+              printed twice. */}
+          <span
+            lang="th"
+            className="mt-1 line-clamp-2 block text-sm leading-relaxed text-ink-600 group-open:hidden"
+          >
+            {paragraphs[0] ?? ""}
+          </span>
+        </span>
+        <span className="shrink-0 font-mono text-[0.625rem] tracking-wide whitespace-nowrap text-ink-500">
+          {provenance}
+        </span>
+      </summary>
+
+      <div className="mt-3 ml-6 flex max-w-prose flex-col gap-3">
+        {paragraphs.map((paragraph, index) => (
+          <p
+            key={index}
+            lang="th"
+            className="text-sm leading-relaxed text-ink-600"
+          >
+            {paragraph}
+          </p>
+        ))}
+      </div>
+    </details>
   );
 }
