@@ -16,7 +16,10 @@ services:
     # /api/tors call 500'd) and NextAuth had no secret or Google client id
     # (sign-in could not work at all).
     env_file:
-      - .env
+      # `required: false` so a checkout without a .env (dev machines use
+      # .env.local) still builds — compose otherwise refuses to start.
+      - path: .env
+        required: false
     environment:
       PORT: 3003
       # Overrides whatever .env says: inside the container `localhost` is the
