@@ -1,229 +1,437 @@
 "use client";
 
-import Image from "next/image";
-import { TorCard } from "@/components/tor/TorCard";
-import { useTranslations } from "@/i18n/LanguageProvider";
+import Link from "next/link";
+
+import { TorPreviewCard } from "@/components/tor/TorPreviewCard";
+import { ScanPreview } from "@/components/tor/ScanPreview";
 import { Logo } from "@/components/brand/Logo";
+import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
+import { formatBudgetTHB } from "@/i18n/format";
+import { useEndpoint } from "@/api/useEndpoint";
+import { toTors, type TorListResponse } from "@/api/tors";
+import {
+  CORPUS,
+  LANDING_RECORD,
+  PRICE_GAP_PERCENT,
+} from "@/data/landingRecord";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { MOCK_TORS } from "@/data/torListings";
-import { withMatches } from "@/lib/torMatching";
+/**
+ * `{token}` interpolation, the same shape the admin pages use inline. Kept
+ * local because the landing copy is the only place that needs several at once.
+ */
+function fill(template: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce(
+    (acc, [key, value]) => acc.split(`{${key}}`).join(String(value)),
+    template
+  );
+}
 
+/** How many records the hero rail shows. */
+const HERO_COUNT = 3;
 
-const bigRow = "flex flex-col items-center py-24";
-const requiredSkill = "px-3 py-1 mt-2 mr-2 bg-green-700/5 text-sm text-sage-600 border rounded-xl border-sage-600";
-
-const TODAY_UTC = (() => {
-    const now = new Date();
-    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-})();
+/**
+ * One section rhythm for the whole page. Sections alternate paper/white and
+ * share a single content width, so the eye tracks one column all the way down
+ * instead of re-finding the margin at every band.
+ */
+const SECTION = "px-6 py-20 sm:py-24";
+const SHELL = "mx-auto w-full max-w-6xl";
 
 export default function Home() {
-    const t = useTranslations("landing");
+  const t = useTranslations("landing");
+  const tNav = useTranslations("nav");
+  const { locale } = useLanguage();
 
-    const matched = useMemo(() => withMatches(MOCK_TORS, TODAY_UTC), []);
-    const torDisplay = matched.slice(0,4);
+  /*
+   * The same endpoint the listing page reads, rather than the `MOCK_TORS`
+   * fixture. That file is keyed by egp2 document UUIDs; the detail route
+   * resolves the backend's own id, so linking a card built from the fixture
+   * produced a 404 on every click. Reading the live list means a card can only
+   * ever link to a record that exists.
+   */
+  const { data, error } = useEndpoint<TorListResponse, TorListResponse>(
+    `/api/tors?limit=${HERO_COUNT}`
+  );
+  const torDisplay = data ? toTors(data) : [];
+  const total = data?.total ?? 0;
 
-    return (
-        <div className="w-full">
-            <main className="flex flex-col grow">
-                {/* 1st row */}
-                <div className={bigRow}>
-                    <div>
-                        <Logo size="lg"></Logo>
-                    </div>
-                    <p className="mt-6 text-8xl font-semibold text-center text-moss-700">Find the tender you<br></br>can
-                        <span className="text-sage-600"> actually win.</span>
-                    </p>
-                    <a href="/tor" className="px-8 py-4 mt-12 rounded-xl bg-moss-700 hover:bg-sage-600 text-white transition shadow-md hover:-translate-y-1 duration-300">Browse TORs →</a>
-                    <span className="mt-8 text-sm">Free to read. No account needed until you want matches.</span>
+  // The bar pair is a ratio, not two independent widths: the reference price
+  // is the 100% mark and the budget overhangs it, which is the whole point of
+  // the panel. Budget is the wider of the two, so it sets the full track.
+  const referenceWidth = Math.round(
+    (LANDING_RECORD.referencePrice / LANDING_RECORD.budget) * 100
+  );
 
-                    <div className="p-12 mt-16 w-256 bg-linear-to-br from-sage-400 to-moss-700 rounded-xl">
-                        <div className="flex grow">
-                            <div className="px-4 py-1 bg-white/10 text-sm text-sage-100 rounded-xl border border-sage-100">
-                                Last ingest run 2 hours ago • 37 new today
-                            </div>
-                        </div>
-                        <div className="mt-6 w-full bg-white rounded-xl">
-                            <ul className="mt-3 flex flex-col gap-2.5">
-                                {torDisplay.map((tor) => (
-                                <li key={tor.id}>
-                                    <TorCard tor={tor} />
-                                </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+  return (
+    <main className="flex w-full flex-col">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className={`${SECTION} pt-16`}>
+        <div className={`${SHELL} flex flex-col items-center text-center`}>
+          <Logo size="lg" />
 
-                <hr className="text-zinc-300"></hr>
-                {/*2nd row*/}
-                <div className={`${bigRow} bg-white`}>
-                    <div className="w-260">
-                        <span className="text-sage-600">WHAT THIS IS</span>
-                        <div className="flex">
-                            <div className="w-2/3 pr-16">
-                                <p className="mt-4 text-4xl/12 text-moss-700">
-                                    BangkokTOR reads every software terms-of-reference published across Bangkok procurement portals, structures the Thai PDFs, and tells you which tender your team can actually win. 
-                                </p>
-                            </div>
-                            <div className="w-1/3">
-                                <hr className="text-zinc-300"></hr>
-                                <p className="mt-6 text-4xl font-semibold text-moss-700">1,234</p>
-                                <p className="mb-4">software TORs read and structured</p>
-                                <hr className="text-zinc-300"></hr>
-                                <p className="mt-6 text-4xl font-semibold text-moss-700">74%</p>
-                                <p className="mb-4">arrive as scans and are read back with OCR</p>
-                                <hr className="text-zinc-300"></hr>
-                                <p className="mt-6 text-4xl font-semibold text-moss-700">9.5%</p>
-                                <p className="mb-4">carry a pattern worth scrutinising</p>
-                                <hr className="text-zinc-300"></hr>
-                            </div>
-                        </div>
-                        <p className="w-2/3 pr-16 mt-6">
-                            The documents are already public. They are also scattered across two portals, published as scans, and written to be filed rather than read. Every record keeps the link back to the original listing, so nothing here replaces the source — it just makes the source findable. 
-                        </p>
-                    </div>
-                </div>
+          <h1 className="mt-8 max-w-4xl text-4xl leading-tight font-semibold text-balance text-moss-700 sm:text-5xl lg:text-6xl">
+            {t.heroTitleLead}{" "}
+            <span className="text-sage-600">{t.heroTitleAccent}</span>
+          </h1>
 
-                <hr className="text-zinc-300"></hr>
-                {/*3rd row*/}
-                <div className={bigRow}>
-                    <div className="w-280">
-                        <div className="flex w-full justify-between items-end">
-                            <p className="w-3/5 mr-24 text-4xl font-semibold text-moss-700">
-                                An 18-page Thai scan, read into fields.
-                            </p>
-                            <p className="w-2/5">
-                                One real record, start to finish. The source file carries no text layer and no closing date — everything on the right was read out of it.
-                            </p>
-                        </div>
+          <p className="mt-6 max-w-2xl text-base leading-7 text-ink-600 sm:text-lg">
+            {t.heroSub}
+          </p>
 
-                        <div className="flex w-full mt-10">
-                            {/*left*/}
-                            <div className="flex flex-col grow justify-between w-1/2 mr-6 bg-paper-100 border rounded-xl border-zinc-300">
-                                <div>
-                                    <div className="flex justify-between px-6 py-3">
-                                        <span className="text-sm">Source document</span>
-                                        <span className="text-sm text-zinc-500">18 pages</span>
-                                    </div>
-                                    <hr className="text-zinc-300"></hr>
-                                </div>
-                                <div className="flex px-6 pt-3 pb-5">
-                                    <span className="px-2 py-1 mr-2 bg-paper-50 text-xs border rounded-lg border-zinc-300">Not searchable</span>
-                                    <span className="px-2 py-1 mr-2 bg-paper-50 text-xs border rounded-lg border-zinc-300">No closing date printed</span>
-                                    <span className="px-2 py-1 mr-2 bg-paper-50 text-xs border rounded-lg border-zinc-300">Filed, not published</span>
-                                </div>
-                            </div>
+          <Link
+            href="/tor"
+            className="mt-10 rounded-field bg-moss-700 px-8 py-4 text-white shadow-md transition duration-300 ease-soft hover:-translate-y-1 hover:bg-sage-600"
+          >
+            {t.heroCta} →
+          </Link>
+          <p className="mt-5 text-sm text-ink-600">{t.heroFreeNote}</p>
 
-                            {/*right*/}
-                            <div className="w-1/2 bg-white border rounded-xl border-moss-700">
-                                <div className="flex justify-between px-6 py-3 bg-green-700/5">
-                                    <span className="text-sm text-moss-700">Extracted record</span>
-                                    <span className="text-sm text-zinc-500">12 fields</span>
-                                </div>
-                                <hr className="text-zinc-300"></hr>
-                                <div className="px-6 py-4">
-                                    <p className="text-lg text-moss-700">จ้างพัฒนาระบบสารสนเทศเพื่อการบริหารจัดการงานซ่อมบำรุง</p>
-                                    <p className="text-sm text-zinc-500">Dept. of Public Works · project no. 67-0412 · egp2.bangkok.go.th</p>
-                                    <div className="mt-4 grid grid-cols-2 border rounded-xl border-zinc-300">
-                                        <div className="h-22 px-4 py-3 border-b border-r border-zinc-300">
-                                            <p className="text-xs text-zinc-500">Budget</p>
-                                            <p className="text-moss-700">฿6,700,000</p>
-                                        </div>
-                                        <div className="h-22 px-4 py-3 border-b border-zinc-300">
-                                            <p className="text-xs text-zinc-500">Reference price</p>
-                                            <p className="text-moss-700">฿5,600,000</p>
-                                        </div>
-                                        <div className="h-22 px-4 py-3 border-r border-zinc-300">
-                                            <p className="text-xs text-zinc-500">Method</p>
-                                            <p className="text-moss-700">e-bidding</p>
-                                        </div>
-                                        <div className="h-22 px-4 py-3">
-                                            <p className="text-xs text-zinc-500">Category</p>
-                                            <p className="text-moss-700">IT & Software</p>
-                                        </div>
-                                    </div>
-                                    <p className="mt-4 text-sm text-zinc-500">Required skills</p>
-                                    <div className="flex flex-wrap mt-1">
-                                        <div className={requiredSkill}>Web application development</div>
-                                        <div className={requiredSkill}>PostgreSQL</div>
-                                        <div className={requiredSkill}>System integration</div>
-                                        <div className={requiredSkill}>On-prem deployment</div>
-                                    </div>
-                                </div>
-                                <hr className="mt-4 text-zinc-300"></hr>
-                                <div className="flex justify-between px-6 py-3">
-                                    <p className="text-sm text-zinc-500">Link to the original listing kept on every record</p>
-                                </div>
-                            </div>
-                        </div>
+          {/*
+            The sample rail, sitting on the brand gradient.
 
-                        <div className="mt-6 bg-white border rounded-xl border-red-700/50">
-                            <div className="flex justify-between px-6 py-3 bg-red-800/10 rounded-t-xl">
-                                <p className="text-sm font-semibold text-red-900">2 patterns worth scrutinising on this record </p>
-                            </div>
-                            <div className="flex">
-                                <div className="w-1/2 px-6 py-4 border-r border-zinc-300">
-                                    <p className="text-sm text-zinc-400">Clause 4.2 • Qualifications</p>
-                                    <p className="mt-1 text-lg font-medium text-moss-700">The qualification narrows to a single prior contract with this same agency.</p>
-                                    <div className="mt-4 px-6 py-6 bg-green-900/5 text-moss-700 border-l-4 rounded-r-xl border-red-800">“ผู้เสนอราคาต้องมีผลงานติดตั้งระบบเดียวกันกับหน่วยงานนี้ ในวงเงินไม่น้อยกว่า ๕,๐๐๐,๐๐๐ บาท ภายในสองปีที่ผ่านมา”</div>
-                                    <p className="mt-4 text-sm">Requiring prior work with this agency specifically excludes every vendor that has done the same job elsewhere. We quote it and stop there — whether it is justified is your call.</p>
-                                </div>
-                                <div className="w-1/2 px-6 py-4">
-                                    <p className="text-sm text-zinc-400">Price gap</p>
-                                    <p className="mt-1 text-lg font-medium text-moss-700">Budget sits 19% above the reference price.</p>
-                                    <div className="flex justify-between items-center mt-2">
-                                        <p className="w-20 text-sm text-zinc-500">Reference</p>
-                                        <div className="h-3 w-80 bg-sage-100 rounded-xl relative">
-                                            <div className="h-3 w-67 bg-sage-400 rounded-xl absolute left-0"></div>
-                                        </div>
-                                        <p className="w-14 text-sm">฿5.60M</p>
-                                    </div>
-                                    <div className="flex justify-between items-center mt-2">
-                                        <p className="w-20 text-sm text-zinc-500">Budget</p>
-                                        <div className="h-3 w-80 bg-red-900/75 rounded-xl"></div>
-                                        <p className="w-14 text-sm">฿6.70M</p>
-                                    </div>
-                                    <p className="mt-4 text-sm">A gap above 15% is uncommon in the corpus — 6% of records — so it is stated rather than filed away.</p>
-                                </div>
-                            </div>
-                        </div>
+            The caption counts what the rail is actually showing — the live
+            endpoint's own total — not the manifest's 50/134/1,224. Those
+            describe the ingest corpus behind the worked example further down;
+            printing them over three backend rows would caption the rail with
+            numbers from a different dataset.
+          */}
+          <div className="mt-16 w-full rounded-field bg-linear-to-br from-sage-400 to-moss-700 p-4 sm:p-8">
+            <p className="mb-4 text-sm text-sage-100">
+              {total > 0
+                ? fill(t.heroIngestNote, { records: total })
+                : t.heroIngestLoading}
+            </p>
 
-                        <p className="w-3/5 mt-32 text-4xl font-semibold text-moss-700">
-                            Three passes over every document.
-                        </p>
-                        <div className="flex mt-12 bg-white border rounded-xl border-zinc-300">
-                            <div className="flex flex-col w-1/3 px-10 py-8">
-                                <p className="text-zinc-400">01 / INGEST</p>
-                                <p className="text-xl font-semibold text-moss-700">Every portal, once a day</p>
-                                <p className="mt-2 text-sm/6 text-zinc-500">Scheduled scrapers watch egp2.bangkok.go.th, procurement.nsm.or.th and gprocurement.go.th, pull the source PDF, and keep the link back to the original listing.</p>
-                            </div>
-                            <div className="border-r border-zinc-300"></div>
-
-                            <div className="flex flex-col w-1/3 px-10 py-8">
-                                <p className="text-zinc-400">02 / EXTRACT</p>
-                                <p className="text-xl font-semibold text-moss-700">Thai PDFs, structured</p>
-                                <p className="mt-2 text-sm/6 text-zinc-500">Vertex AI pulls title, agency, budget, deadline, qualification criteria and required skills - OCR for scanned documents.</p>
-                            </div>
-                            <div className="border-r border-zinc-300"></div>
-
-                            <div className="flex flex-col w-1/3 px-10 py-8">
-                                <p className="text-zinc-400">03 / SCRUTINISE</p>
-                                <p className="text-xl font-semibold text-moss-700">Advisory, not accusation</p>
-                                <p className="mt-2 text-sm/6 text-zinc-500">Where qualification criteria look written for one predetermined vendor, we say so plainly as a pattern worth scrutinising, with the clause quoted, and the judgement left to you.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <footer className={`flex flex-col items-center py-18 bg-moss-700`}>
-                    <div className="flex justify-between items-center w-280">
-                        <p className="text-xl font-semibold text-white">BangkokTOR</p>
-                        <p className="w-90 text-sm text-zinc-300 opacity-75">Records are reproduced from egp2.bangkok.go.th and gprocurement.go.th. Observations are advisory and quote the clause they read.</p>
-                    </div>
-                </footer>
-            </main>
+            {torDisplay.length > 0 ? (
+              <ul className="flex flex-col gap-2.5 rounded-field bg-white p-3">
+                {torDisplay.map((tor) => (
+                  <li key={tor.id}>
+                    <TorPreviewCard tor={tor} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              /* Holds the rail's height so the page does not jump when the
+                 fetch lands, and says which state it is in. */
+              <div className="flex min-h-52 items-center justify-center rounded-field bg-white p-3">
+                <p className="text-sm text-ink-500">
+                  {error ? t.heroRailError : t.heroRailLoading}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-    );
+      </section>
+
+      {/* ── What this is ─────────────────────────────────────── */}
+      <section className={`${SECTION} border-y border-zinc-200 bg-white`}>
+        <div className={SHELL}>
+          <p className="font-mono text-xs tracking-widest text-sage-600 uppercase">
+            {t.statsEyebrow}
+          </p>
+
+          <div className="mt-6 grid gap-12 lg:grid-cols-[3fr_2fr]">
+            <div>
+              <p className="text-2xl leading-relaxed text-moss-700 sm:text-3xl">
+                {t.heroSub}
+              </p>
+              <p className="mt-8 max-w-xl leading-7 text-ink-600">
+                {t.statsNote}
+              </p>
+            </div>
+
+            {/* Four figures, one row each — a small table of fact. */}
+            <dl className="divide-y divide-zinc-200 border-y border-zinc-200">
+              {[
+                [CORPUS.records, t.statRecords],
+                [`${CORPUS.scannedPercent}%`, t.statScanned],
+                [`${CORPUS.gapPercent}%`, t.statGap],
+                [CORPUS.agencies, t.statAgencies],
+              ].map(([figure, label]) => (
+                <div key={String(label)} className="py-5">
+                  <dt className="text-3xl font-semibold text-moss-700">
+                    {figure}
+                  </dt>
+                  <dd className="mt-1 text-sm text-ink-600">{label}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      {/* ── One real record ──────────────────────────────────── */}
+      <section className={SECTION}>
+        <div className={SHELL}>
+          <p className="font-mono text-xs tracking-widest text-sage-600 uppercase">
+            {t.exampleEyebrow}
+          </p>
+
+          <div className="mt-5 grid items-end gap-6 lg:grid-cols-[3fr_2fr]">
+            <h2 className="text-3xl font-semibold text-balance text-moss-700 sm:text-4xl">
+              {fill(t.exampleTitle, { pages: LANDING_RECORD.document.pages })}
+            </h2>
+            <p className="leading-7 text-ink-600">
+              {fill(t.exampleSub, {
+                projectNumber: LANDING_RECORD.projectNumber,
+              })}
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 lg:grid-cols-2">
+            {/* Source: deliberately blank. The scan has nothing to show. */}
+            <div className="flex min-h-80 flex-col justify-between rounded-field border border-zinc-300 bg-paper-100">
+              <div>
+                <div className="flex justify-between px-6 py-3">
+                  <span className="text-sm">{t.sourceLabel}</span>
+                  <span className="text-sm text-zinc-500">
+                    {fill(t.sourcePages, {
+                      pages: LANDING_RECORD.document.pages,
+                    })}
+                  </span>
+                </div>
+                <hr className="border-zinc-300" />
+                <p className="px-6 pt-4 text-sm text-zinc-500">
+                  {LANDING_RECORD.document.kind}
+                </p>
+
+                {/*
+                  A drawn stand-in for page 1, not a render of the real file —
+                  see ScanPreview. It gives the panel something to be: the old
+                  empty box read as a failed load rather than as the locked
+                  scan the copy beside it is describing.
+                */}
+                <ScanPreview className="px-6 py-6" />
+              </div>
+
+              <div className="px-6 pt-3 pb-5">
+                <div className="flex flex-wrap gap-2">
+                  {[t.tagNotSearchable, t.tagNoTextLayer, t.tagFiledNotPublished].map(
+                    (tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-lg border border-zinc-300 bg-paper-50 px-2 py-1 text-xs"
+                      >
+                        {tag}
+                      </span>
+                    )
+                  )}
+                </div>
+                <p className="mt-3 text-xs text-zinc-500">
+                  {fill(t.sourceCompanion, {
+                    pages: LANDING_RECORD.document.companionPages,
+                  })}
+                </p>
+              </div>
+            </div>
+
+            {/* Extracted */}
+            <div className="rounded-field border border-moss-700 bg-white">
+              <div className="flex justify-between rounded-t-field bg-sage-600/5 px-6 py-3">
+                <span className="text-sm text-moss-700">
+                  {t.extractedLabel}
+                </span>
+                <span className="text-sm text-zinc-500">
+                  {fill(t.extractedFields, { count: LANDING_RECORD.fieldCount })}
+                </span>
+              </div>
+              <hr className="border-zinc-300" />
+
+              <div className="px-6 py-4">
+                <p className="text-lg leading-relaxed text-moss-700">
+                  {LANDING_RECORD.title}
+                </p>
+                <p className="mt-2 text-sm text-zinc-500">
+                  {LANDING_RECORD.agency} · {LANDING_RECORD.projectNumber} ·{" "}
+                  {LANDING_RECORD.sourceHost}
+                </p>
+
+                <dl className="mt-4 grid grid-cols-2 overflow-hidden rounded-field border border-zinc-300">
+                  {LANDING_RECORD.fields.map((field, index) => (
+                    <div
+                      key={field.labelKey}
+                      className={`px-4 py-3 ${
+                        index < 2 ? "border-b border-zinc-300" : ""
+                      } ${index % 2 === 0 ? "border-r border-zinc-300" : ""}`}
+                    >
+                      <dt className="text-xs text-zinc-500">
+                        {t.fieldLabels[field.labelKey]}
+                      </dt>
+                      <dd className="mt-0.5 text-moss-700">{field.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              <hr className="border-zinc-300" />
+              <a
+                href={LANDING_RECORD.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block px-6 py-3 text-sm text-zinc-500 underline-offset-4 hover:text-moss-700 hover:underline"
+              >
+                {t.sourceLink} ↗
+              </a>
+            </div>
+          </div>
+
+          {/* The one pattern this record actually carries. */}
+          <div className="mt-6 rounded-field border border-red-900/40 bg-white">
+            <p className="rounded-t-field bg-red-900/8 px-6 py-3 text-sm font-semibold text-red-900">
+              {t.patternsHeading}
+            </p>
+
+            <div className="grid gap-8 px-6 py-5 lg:grid-cols-2">
+              <div>
+                <p className="text-sm text-zinc-500">{t.gapLabel}</p>
+                <p className="mt-1 text-lg font-medium text-moss-700">
+                  {fill(t.gapHeadline, { percent: PRICE_GAP_PERCENT })}
+                </p>
+                <p className="mt-4 text-sm leading-6 text-ink-600">
+                  {fill(t.gapNote, {
+                    gapRecords: CORPUS.gapRecords,
+                    records: CORPUS.records,
+                  })}
+                </p>
+              </div>
+
+              <div className="self-center">
+                {[
+                  {
+                    label: t.gapReference,
+                    amount: LANDING_RECORD.referencePrice,
+                    width: referenceWidth,
+                    bar: "bg-sage-400",
+                  },
+                  {
+                    label: t.gapBudget,
+                    amount: LANDING_RECORD.budget,
+                    width: 100,
+                    bar: "bg-red-900/75",
+                  },
+                ].map((row) => (
+                  <div
+                    key={row.label}
+                    className="mt-2 flex items-center gap-4 first:mt-0"
+                  >
+                    <p className="w-24 shrink-0 text-sm text-zinc-500">
+                      {row.label}
+                    </p>
+                    <div className="h-3 flex-1 rounded-full bg-sage-100">
+                      <div
+                        className={`h-3 rounded-full ${row.bar}`}
+                        style={{ width: `${row.width}%` }}
+                      />
+                    </div>
+                    <p className="w-28 shrink-0 text-right text-sm tabular-nums">
+                      {formatBudgetTHB(row.amount, locale)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Three passes ─────────────────────────────────────── */}
+      <section className={`${SECTION} border-t border-zinc-200 bg-white`}>
+        <div className={SHELL}>
+          <h2 className="max-w-2xl text-3xl font-semibold text-balance text-moss-700 sm:text-4xl">
+            {t.pipelineHeading}
+          </h2>
+
+          <div className="mt-10 grid divide-y divide-zinc-300 overflow-hidden rounded-field border border-zinc-300 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+            {[
+              [t.step1Label, t.step1Title, t.step1Body],
+              [t.step2Label, t.step2Title, t.step2Body],
+              [t.step3Label, t.step3Title, t.step3Body],
+            ].map(([label, title, body]) => (
+              <div key={label} className="px-8 py-8">
+                <p className="font-mono text-xs tracking-widest text-zinc-400 uppercase">
+                  {label}
+                </p>
+                <p className="mt-2 text-xl font-semibold text-moss-700">
+                  {title}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ───────────────────────────────────────────── */}
+      <footer className="bg-moss-700 px-6 py-12 text-sage-100">
+        <div className={SHELL}>
+          <div className="grid gap-8 md:grid-cols-[2fr_1fr_1fr_2fr]">
+            <div>
+              <Logo size="md" onDark className="text-white" />
+              <p className="mt-3 max-w-xs text-sm text-sage-100/70">
+                {t.footerTagline}
+              </p>
+            </div>
+
+            <nav aria-label={t.footerProduct}>
+              <p className="text-xs font-semibold tracking-widest text-sage-100/60 uppercase">
+                {t.footerProduct}
+              </p>
+              <ul className="mt-3 space-y-2 text-sm">
+                {[
+                  ["/tor", t.footerBrowse],
+                  ["/skills", t.footerSkills],
+                  ["/signup", t.footerSignup],
+                  ["/login", tNav.login],
+                ].map(([href, label]) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="text-sage-100/80 underline-offset-4 transition hover:text-white hover:underline"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div>
+              <p className="text-xs font-semibold tracking-widest text-sage-100/60 uppercase">
+                {t.footerSources}
+              </p>
+              <ul className="mt-3 space-y-2 text-sm">
+                {["egp2.bangkok.go.th", "gprocurement.go.th"].map((host) => (
+                  <li key={host}>
+                    <a
+                      href={`https://${host}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sage-100/80 underline-offset-4 transition hover:text-white hover:underline"
+                    >
+                      {host} ↗
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold tracking-widest text-sage-100/60 uppercase">
+                {t.footerDisclaimerHeading}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-sage-100/70">
+                {t.footerDisclaimer}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 border-t border-sage-100/15 pt-5">
+            <p className="text-xs text-sage-100/60">
+              {fill(t.footerRights, { year: new Date().getFullYear() })}
+            </p>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
 }
