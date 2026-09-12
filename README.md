@@ -38,6 +38,18 @@ The build throws if this is true with `NODE_ENV=production`.
 
 Checks: `bunx tsc --noEmit`, `bunx eslint src`.
 
+**The production build needs the bypass off.** `src/lib/auth.ts` throws at module
+scope if `NEXT_PUBLIC_AUTH_BYPASS=true` in a production build — a deliberate
+guard against shipping the dev auth hole. So from a dev checkout, where
+`.env.local` has it on, build like this:
+
+```sh
+NEXT_PUBLIC_AUTH_BYPASS=false bunx next build
+```
+
+A bare `bun run build` failing with "NEXT_PUBLIC_AUTH_BYPASS=true is set in a
+production build" is the guard working, not a broken build.
+
 ## How data flows
 
 **The browser never talks to the backend.** Two hops, always:

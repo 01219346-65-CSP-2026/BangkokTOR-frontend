@@ -28,6 +28,29 @@ const en = {
     tourFitBody:
       "Every tender opens with a plain-language summary, the documents it published, and any observations about how complete that record is.",
   },
+  dashboard: {
+    eyebrow: "Your workspace",
+    heading: "Dashboard",
+    matchesTitle: "Your latest matches",
+    editProfile: "Edit skill profile",
+    placeholderTitle: "Not built yet",
+    placeholderBody:
+      "This panel is reserved for a chart that does not exist yet. It is scaffolding, not data.",
+    // The fit scores on this page are derived from a hash, not from matching —
+    // see lib/torMatching.ts. Saying so is the difference between a prototype
+    // and a misleading one.
+    mockNotice:
+      "Match scores and closing dates on this page are placeholders generated from the record id, not real matching. The source portal publishes no closing date.",
+  },
+  error: {
+    heading: "Something went wrong",
+    body:
+      "This page failed to load. The records themselves are fine — try again, or head back to the listings.",
+    retry: "Try again",
+    home: "Back to listings",
+    notFoundHeading: "Page not found",
+    notFoundBody: "That address does not exist. It may have moved, or never existed.",
+  },
   nav: {
     home: "Home",
     browse: "Browse TORs",
@@ -726,6 +749,26 @@ const th: typeof en = {
     tourFitTitle: "อ่านข้อมูลโครงการ",
     tourFitBody:
       "ทุกโครงการเปิดด้วยคำอธิบายอย่างง่าย เอกสารที่เผยแพร่ และข้อสังเกตเกี่ยวกับความครบถ้วนของข้อมูลชุดนั้น",
+  },
+  dashboard: {
+    eyebrow: "พื้นที่ทำงานของคุณ",
+    heading: "แดชบอร์ด",
+    matchesTitle: "รายการที่ตรงกับคุณล่าสุด",
+    editProfile: "แก้ไขโปรไฟล์ทักษะ",
+    placeholderTitle: "ยังไม่ได้พัฒนา",
+    placeholderBody:
+      "ส่วนนี้เตรียมไว้สำหรับกราฟที่ยังไม่มีข้อมูลจริง เป็นเพียงโครงร่างเท่านั้น",
+    mockNotice:
+      "คะแนนความตรงกันและวันปิดรับข้อเสนอในหน้านี้เป็นข้อมูลตัวอย่างที่สร้างจากรหัสโครงการ ไม่ใช่การจับคู่จริง เว็บไซต์ต้นทางไม่ได้เผยแพร่วันปิดรับ",
+  },
+  error: {
+    heading: "เกิดข้อผิดพลาด",
+    body:
+      "ไม่สามารถโหลดหน้านี้ได้ ข้อมูลโครงการยังอยู่ครบ ลองอีกครั้งหรือกลับไปที่รายการขอบเขตของงาน",
+    retry: "ลองอีกครั้ง",
+    home: "กลับไปที่รายการ",
+    notFoundHeading: "ไม่พบหน้าที่ต้องการ",
+    notFoundBody: "ที่อยู่นี้ไม่มีอยู่ อาจถูกย้ายหรือไม่เคยมีมาก่อน",
   },
   nav: {
     home: "หน้าแรก",

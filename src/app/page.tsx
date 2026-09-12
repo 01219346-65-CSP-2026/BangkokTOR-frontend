@@ -210,7 +210,7 @@ export default function Home() {
                     (tag) => (
                       <span
                         key={tag}
-                        className="rounded-lg border border-zinc-300 bg-paper-50 px-2 py-1 text-xs"
+                        className="rounded-field border border-sage-100 bg-paper-50 px-2 py-1 text-xs"
                       >
                         {tag}
                       </span>
@@ -276,8 +276,8 @@ export default function Home() {
           </div>
 
           {/* The one pattern this record actually carries. */}
-          <div className="mt-6 rounded-field border border-red-900/40 bg-white">
-            <p className="rounded-t-field bg-red-900/8 px-6 py-3 text-sm font-semibold text-red-900">
+          <div className="mt-6 rounded-field border border-clay-500/40 bg-white">
+            <p className="rounded-t-field bg-clay-500/[0.08] px-6 py-3 text-sm font-semibold text-clay-500">
               {t.patternsHeading}
             </p>
 
@@ -307,7 +307,7 @@ export default function Home() {
                     label: t.gapBudget,
                     amount: LANDING_RECORD.budget,
                     width: 100,
-                    bar: "bg-red-900/75",
+                    bar: "bg-clay-500/75",
                   },
                 ].map((row) => (
                   <div

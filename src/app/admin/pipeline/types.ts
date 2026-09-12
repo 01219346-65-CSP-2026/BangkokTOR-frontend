@@ -80,7 +80,6 @@ export const TOR_STATUS_ORDER = [
   "extraction_incomplete",
   "graded",
   "published",
-  "error",
 ] as const;
 
 export type TorStatus = (typeof TOR_STATUS_ORDER)[number];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
@@ -47,7 +47,22 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
   const t = useTranslations("nav");
   const adminT = useTranslations("admin");
   const pathname = usePathname();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  /*
+   * Menu state is keyed to the path it was opened on, rather than closed by an
+   * effect watching `pathname`.
+   *
+   * The effect version called setState during the render that followed every
+   * navigation — a cascading re-render, and what react-hooks/set-state-in-effect
+   * flags. Comparing against the path instead means a route change makes the
+   * menu read as closed with no second render. Same trick AccountMenu and
+   * NotificationBell already use for their dropdowns.
+   */
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const isMenuOpen = openedAt === pathname;
+
+  function setIsMenuOpen(next: boolean) {
+    setOpenedAt(next ? pathname : null);
+  }
   const { data: session, status } = useSession();
 
   // Treat "loading" as signed-out rather than flashing the signed-in chrome
@@ -59,12 +74,6 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
           email: session.user.email ?? "",
         }
       : null;
-
-  // A route change leaves the panel mounted otherwise — on mobile you'd tap a
-  // link and land on the new page with the menu still covering it.
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
 
   // Signed out, the auth-only links would each just bounce to /login, so they
   // are not offered at all.
@@ -116,7 +125,7 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
 
             <button
               type="button"
-              onClick={() => setIsMenuOpen((open) => !open)}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-expanded={isMenuOpen}
               aria-controls="nav-mobile-menu"
               aria-label={isMenuOpen ? t.closeMenu : t.openMenu}

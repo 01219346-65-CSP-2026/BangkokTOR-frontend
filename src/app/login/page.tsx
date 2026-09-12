@@ -64,8 +64,8 @@ export default function LoginPage() {
         </p>
 
         {AUTH_BYPASS && (
-          <div className="mt-6 rounded border border-dashed border-amber-400 bg-amber-50 p-3">
-            <p className="font-mono text-[0.6875rem] tracking-wider text-amber-700 uppercase">
+          <div className="mt-6 rounded-field border border-dashed border-clay-500/50 bg-clay-500/[0.06] p-3">
+            <p className="font-mono text-[0.6875rem] tracking-wider text-clay-500 uppercase">
               Dev only
             </p>
             <Button

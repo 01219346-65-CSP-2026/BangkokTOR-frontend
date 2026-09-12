@@ -137,7 +137,10 @@ function PipelineBody({ data, now }: { data: PipelineStatus; now: number }) {
     key: status,
     label: t.pipeline.torStatuses[status],
     value: data.torStatusCounts[status] ?? 0,
-    alarm: status === "extraction_incomplete" || status === "error",
+    // "error" was in this check but is no longer a TOR status — nothing ever
+    // wrote it, and the backend dropped it from TOR_STATUSES. Incompleteness is
+    // how the pipeline actually reports a problem.
+    alarm: status === "extraction_incomplete",
   }));
 
   return (
