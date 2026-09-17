@@ -3,7 +3,10 @@ WORKDIR /app
 
 FROM base AS install
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+# The concurrency cap is not cosmetic: the deploy box's network made the
+# default parallel fetch flake mid-install. Kept in the repo rather than
+# hand-edited in the prod checkout, where it broke `git pull --ff-only`.
+RUN bun install --frozen-lockfile --network-concurrency 4
 
 FROM node:22-slim AS build
 WORKDIR /app

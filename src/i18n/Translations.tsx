@@ -13,11 +13,50 @@ const en = {
     brandBenefitRead: "Thai listings read back in plain English",
     brandBenefitRecord: "Budget, agency and documents on every record",
   },
+  tour: {
+    stepOf: "Step {step} of {total}",
+    skip: "Skip",
+    next: "Next",
+    done: "Done",
+    tourNavTitle: "Start here",
+    tourNavBody:
+      "Browse every tender in the record, or open your dashboard and skill profile. Switch between Thai and English any time from the toggle above.",
+    tourSearchTitle: "Narrow it down",
+    tourSearchBody:
+      "Filter by agency, budget and category. The counts next to each option update as you go, so you can see what is left before you click.",
+    tourFitTitle: "Read the record",
+    tourFitBody:
+      "Every tender opens with a plain-language summary, the documents it published, and any observations about how complete that record is.",
+  },
+  dashboard: {
+    eyebrow: "Your workspace",
+    heading: "Dashboard",
+    matchesTitle: "Your latest matches",
+    editProfile: "Edit skill profile",
+    placeholderTitle: "Not built yet",
+    placeholderBody:
+      "This panel is reserved for a chart that does not exist yet. It is scaffolding, not data.",
+    // The fit scores on this page are derived from a hash, not from matching —
+    // see lib/torMatching.ts. Saying so is the difference between a prototype
+    // and a misleading one.
+    mockNotice:
+      "Match scores and closing dates on this page are placeholders generated from the record id, not real matching. The source portal publishes no closing date.",
+  },
+  error: {
+    heading: "Something went wrong",
+    body:
+      "This page failed to load. The records themselves are fine — try again, or head back to the listings.",
+    retry: "Try again",
+    home: "Back to listings",
+    notFoundHeading: "Page not found",
+    notFoundBody: "That address does not exist. It may have moved, or never existed.",
+  },
   nav: {
     home: "Home",
     browse: "Browse TORs",
+    dashboard: "Dashboard",
     notifications: "Notifications",
-    skills: "Settings",
+    skills: "My skills",
     login: "Log in",
     signup: "Sign up",
     openMenu: "Open navigation menu",
@@ -34,7 +73,89 @@ const en = {
     accountFallbackName: "Account",
   },
   landing: {
-    a: "BangkokTOR reads every software terms-of-reference published across Bangkok procurement portals, structures the Thai PDFs, and tells you which tender your team can actually win.",
+    // Hero
+    heroTitleLead: "Find the tender you",
+    heroTitleAccent: "can actually win.",
+    heroSub:
+      "BangkokTOR reads every terms-of-reference published across Bangkok's procurement portals, structures the Thai PDFs, and tells you which tender your team can actually win.",
+    heroCta: "Browse TORs",
+    heroFreeNote: "Free to read. No account needed until you want matches.",
+    heroIngestNote: "{records} records read and structured",
+    heroIngestLoading: "Loading records…",
+    heroRailLoading: "Loading records…",
+    heroRailError: "Records could not be loaded just now.",
+    // Preview-card fields. Every one is read off the portal — no fit score, no
+    // deadline, no skill list, because the source publishes none of them.
+    cardPages: "{pages}-page TOR",
+    cardScanned: "Scanned",
+    cardDigital: "Digital text",
+    cardReference: "median of comparable awards {amount}",
+
+    // Corpus figures
+    statsEyebrow: "WHAT THIS IS",
+    statRecords: "records read and structured",
+    statScanned: "of documents arrive as scans and are read back with OCR",
+    statGap: "carry a price gap worth scrutinising",
+    statAgencies: "agencies covered so far",
+    statsNote:
+      "The documents are already public. They are also scattered across portals, published as scans, and written to be filed rather than read. Every record keeps the link back to the original listing, so nothing here replaces the source — it just makes the source findable.",
+
+    // Worked example
+    exampleEyebrow: "ONE REAL RECORD",
+    exampleTitle: "A {pages}-page Thai scan, read into fields.",
+    exampleSub:
+      "Project {projectNumber}, start to finish. The source file carries no text layer — everything on the right was read out of it.",
+    sourceLabel: "Source document",
+    sourcePages: "{pages} pages",
+    sourceCompanion: "Plus a {pages}-page notice on the same project",
+    tagNotSearchable: "Not searchable",
+    tagNoTextLayer: "No text layer",
+    tagFiledNotPublished: "Filed, not published",
+    extractedLabel: "Extracted record",
+    extractedFields: "{count} fields",
+    fieldLabels: {
+      budget: "Budget",
+      referencePrice: "Reference price",
+      method: "Method",
+      category: "Category",
+    },
+    sourceLink: "Link to the original listing kept on every record",
+
+    // Patterns
+    patternsHeading: "1 pattern worth scrutinising on this record",
+    gapLabel: "Price gap",
+    gapHeadline: "Budget sits {percent}% above the reference price.",
+    gapReference: "Reference",
+    gapBudget: "Budget",
+    gapNote:
+      "A gap above 15% is uncommon in the corpus — {gapRecords} of {records} records — so it is stated rather than filed away.",
+
+    // Pipeline
+    pipelineHeading: "Three passes over every document.",
+    step1Label: "01 / INGEST",
+    step1Title: "Every portal, once a day",
+    step1Body:
+      "Scheduled scrapers watch egp2.bangkok.go.th and gprocurement.go.th, pull the source PDF, and keep the link back to the original listing.",
+    step2Label: "02 / EXTRACT",
+    step2Title: "Thai PDFs, structured",
+    step2Body:
+      "Vertex AI pulls title, agency, budget, reference price, method and category — OCR for the scans, which is most of them.",
+    step3Label: "03 / SCRUTINISE",
+    step3Title: "Advisory, not accusation",
+    step3Body:
+      "Where a budget clears its reference price, or a qualification looks written for one predetermined vendor, we say so plainly with the figure or clause quoted — and leave the judgement to you.",
+
+    // Footer
+    footerTagline: "Public procurement records, made findable.",
+    footerProduct: "Product",
+    footerBrowse: "Browse TORs",
+    footerSkills: "Skill profile",
+    footerSignup: "Create an account",
+    footerSources: "Sources",
+    footerDisclaimerHeading: "Disclaimer",
+    footerDisclaimer:
+      "Records are reproduced from egp2.bangkok.go.th and gprocurement.go.th. Observations are advisory and quote the figure or clause they read.",
+    footerRights: "© {year} BangkokTOR",
   },
   login: {
     eyebrow: "Sign in",
@@ -182,6 +303,7 @@ const en = {
     eyebrow: "Your alerts",
     heading: "Notifications",
     markAllRead: "Mark all as read",
+    viewAll: "View all notifications",
     tabNew: "New",
     tabViewed: "Already Viewed",
     tabSaved: "Saved",
@@ -330,12 +452,23 @@ const en = {
     pageStatus: "Page {page} of {total}",
     backToList: "Back to all terms of reference",
     detailSummary: "What this tender is",
+    // Two sentences, not a slot-filled list: what the agency is buying, then
+    // what the platform inferred about it. The project number and the raw
+    // budget figure moved to the record table, where an identifier belongs —
+    // in prose they turned the paragraph into a data dump.
     detailSummaryBody:
-      "A {contract} by {agency}, categorised as {category}, with a published budget of {budget}. Filed {date} under project number {number}.",
+      "{agency} is procuring this as a {contract}, with a published budget of {budget}. The portal listed it on {date}, and this platform reads it as falling under {category}.",
     detailInterpretationNote:
       "Category and contract type are this platform's reading of the portal's Thai classification. Budget, agency and dates are reproduced from the source record.",
     detailFacts: "Record",
     detailDocuments: "Documents",
+    detailExtractedDetails: "Extracted details",
+    summaryPointCount: "{count} points",
+    pageRange: "pages {from}–{to}",
+    summaryPointsEmpty:
+      "No summary has been generated for this record yet. The published documents are listed below.",
+    summaryProvenanceNote:
+      "These points are generated by a language model from the documents listed below, and describe what those documents state. Read the originals for anything you intend to rely on.",
     detailSignals: "Legitimacy signals",
     factAgency: "Agency",
     factDepartment: "Department",
@@ -397,6 +530,7 @@ const en = {
       referencePrice: "Reference price",
       invitation: "Invitation to bid",
       draftBidding: "Draft bidding documents",
+      bundle: "Document bundle",
       other: "Other document",
     },
     budgetBrackets: {
@@ -601,11 +735,47 @@ const th: typeof en = {
     brandBenefitRead: "อ่านประกาศภาษาไทยเป็นภาษาอังกฤษที่เข้าใจง่าย",
     brandBenefitRecord: "งบประมาณ หน่วยงาน และเอกสารครบในทุกรายการ",
   },
+  tour: {
+    stepOf: "ขั้นตอนที่ {step} จาก {total}",
+    skip: "ข้าม",
+    next: "ถัดไป",
+    done: "เสร็จสิ้น",
+    tourNavTitle: "เริ่มต้นที่นี่",
+    tourNavBody:
+      "ค้นหาขอบเขตของงานทั้งหมด หรือเปิดแดชบอร์ดและโปรไฟล์ทักษะของคุณ สลับภาษาไทยและอังกฤษได้ตลอดเวลาจากปุ่มด้านบน",
+    tourSearchTitle: "กรองให้แคบลง",
+    tourSearchBody:
+      "กรองตามหน่วยงาน งบประมาณ และหมวดหมู่ จำนวนข้างแต่ละตัวเลือกจะอัปเดตตามที่คุณเลือก ทำให้เห็นผลลัพธ์ก่อนคลิก",
+    tourFitTitle: "อ่านข้อมูลโครงการ",
+    tourFitBody:
+      "ทุกโครงการเปิดด้วยคำอธิบายอย่างง่าย เอกสารที่เผยแพร่ และข้อสังเกตเกี่ยวกับความครบถ้วนของข้อมูลชุดนั้น",
+  },
+  dashboard: {
+    eyebrow: "พื้นที่ทำงานของคุณ",
+    heading: "แดชบอร์ด",
+    matchesTitle: "รายการที่ตรงกับคุณล่าสุด",
+    editProfile: "แก้ไขโปรไฟล์ทักษะ",
+    placeholderTitle: "ยังไม่ได้พัฒนา",
+    placeholderBody:
+      "ส่วนนี้เตรียมไว้สำหรับกราฟที่ยังไม่มีข้อมูลจริง เป็นเพียงโครงร่างเท่านั้น",
+    mockNotice:
+      "คะแนนความตรงกันและวันปิดรับข้อเสนอในหน้านี้เป็นข้อมูลตัวอย่างที่สร้างจากรหัสโครงการ ไม่ใช่การจับคู่จริง เว็บไซต์ต้นทางไม่ได้เผยแพร่วันปิดรับ",
+  },
+  error: {
+    heading: "เกิดข้อผิดพลาด",
+    body:
+      "ไม่สามารถโหลดหน้านี้ได้ ข้อมูลโครงการยังอยู่ครบ ลองอีกครั้งหรือกลับไปที่รายการขอบเขตของงาน",
+    retry: "ลองอีกครั้ง",
+    home: "กลับไปที่รายการ",
+    notFoundHeading: "ไม่พบหน้าที่ต้องการ",
+    notFoundBody: "ที่อยู่นี้ไม่มีอยู่ อาจถูกย้ายหรือไม่เคยมีมาก่อน",
+  },
   nav: {
     home: "หน้าแรก",
     browse: "ค้นหาขอบเขตของงาน",
+    dashboard: "แดชบอร์ด",
     notifications: "การแจ้งเตือน",
-    skills: "การตั้งค่า",
+    skills: "ทักษะของฉัน",
     login: "เข้าสู่ระบบ",
     signup: "สมัครสมาชิก",
     openMenu: "เปิดเมนูนำทาง",
@@ -621,7 +791,87 @@ const th: typeof en = {
     accountFallbackName: "บัญชี",
   },
   landing: {
-    a: "BangkokTOR อ่านเอกสาร TOR ด้านซอฟต์แวร์ทุกฉบับที่ประกาศบนพอร์ทัลจัดซื้อจัดจ้างของกรุงเทพฯ จัดโครงสร้างไฟล์ PDF ภาษาไทย และบอกคุณว่าโครงการไหนที่ทีมของคุณมีโอกาสชนะจริง",
+    // Hero
+    heroTitleLead: "ค้นหาโครงการที่ทีมคุณ",
+    heroTitleAccent: "มีโอกาสชนะจริง",
+    heroSub:
+      "BangkokTOR อ่านเอกสาร TOR ทุกฉบับที่ประกาศบนพอร์ทัลจัดซื้อจัดจ้างของกรุงเทพฯ จัดโครงสร้างไฟล์ PDF ภาษาไทย และบอกคุณว่าโครงการไหนที่ทีมของคุณมีโอกาสชนะจริง",
+    heroCta: "ดูรายการ TOR",
+    heroFreeNote: "อ่านได้ฟรี ไม่ต้องสมัครสมาชิกจนกว่าคุณจะต้องการการจับคู่",
+    heroIngestNote: "{records} โครงการที่อ่านและจัดโครงสร้างแล้ว",
+    heroIngestLoading: "กำลังโหลดข้อมูล…",
+    heroRailLoading: "กำลังโหลดข้อมูล…",
+    heroRailError: "ขณะนี้ไม่สามารถโหลดข้อมูลได้",
+    cardPages: "TOR {pages} หน้า",
+    cardScanned: "ไฟล์สแกน",
+    cardDigital: "ข้อความดิจิทัล",
+    cardReference: "ค่ากลางโครงการเทียบเคียง {amount}",
+
+    // Corpus figures
+    statsEyebrow: "นี่คืออะไร",
+    statRecords: "โครงการที่อ่านและจัดโครงสร้างแล้ว",
+    statScanned: "ของเอกสารมาในรูปแบบสแกน และถูกอ่านกลับด้วย OCR",
+    statGap: "มีส่วนต่างราคาที่ควรตรวจสอบ",
+    statAgencies: "หน่วยงานที่ครอบคลุมแล้ว",
+    statsNote:
+      "เอกสารเหล่านี้เป็นข้อมูลสาธารณะอยู่แล้ว แต่กระจัดกระจายอยู่หลายพอร์ทัล เผยแพร่เป็นไฟล์สแกน และเขียนขึ้นเพื่อจัดเก็บมากกว่าเพื่ออ่าน ทุกรายการยังคงลิงก์กลับไปยังประกาศต้นฉบับ สิ่งนี้จึงไม่ได้แทนที่แหล่งข้อมูล เพียงแต่ทำให้ค้นหาเจอ",
+
+    // Worked example
+    exampleEyebrow: "ตัวอย่างจริงหนึ่งรายการ",
+    exampleTitle: "เอกสารสแกนภาษาไทย {pages} หน้า อ่านออกมาเป็นข้อมูล",
+    exampleSub:
+      "โครงการเลขที่ {projectNumber} ตั้งแต่ต้นจนจบ ไฟล์ต้นฉบับไม่มีชั้นข้อความ ข้อมูลทางขวาทั้งหมดถูกอ่านออกมาจากไฟล์นั้น",
+    sourceLabel: "เอกสารต้นฉบับ",
+    sourcePages: "{pages} หน้า",
+    sourceCompanion: "และประกาศเชิญชวนอีก {pages} หน้าในโครงการเดียวกัน",
+    tagNotSearchable: "ค้นหาไม่ได้",
+    tagNoTextLayer: "ไม่มีชั้นข้อความ",
+    tagFiledNotPublished: "จัดเก็บ ไม่ได้เผยแพร่",
+    extractedLabel: "ข้อมูลที่สกัดได้",
+    extractedFields: "{count} ฟิลด์",
+    fieldLabels: {
+      budget: "งบประมาณ",
+      referencePrice: "ราคากลาง",
+      method: "วิธีจัดซื้อจัดจ้าง",
+      category: "ประเภทพัสดุ",
+    },
+    sourceLink: "ทุกรายการเก็บลิงก์กลับไปยังประกาศต้นฉบับ",
+
+    // Patterns
+    patternsHeading: "พบ 1 รูปแบบที่ควรตรวจสอบในรายการนี้",
+    gapLabel: "ส่วนต่างราคา",
+    gapHeadline: "งบประมาณสูงกว่าราคากลาง {percent}%",
+    gapReference: "ราคากลาง",
+    gapBudget: "งบประมาณ",
+    gapNote:
+      "ส่วนต่างเกิน 15% พบไม่บ่อยในชุดข้อมูลนี้ — {gapRecords} จาก {records} รายการ — จึงระบุไว้ให้เห็น ไม่ได้เก็บเงียบ",
+
+    // Pipeline
+    pipelineHeading: "สามรอบการอ่านต่อเอกสารหนึ่งฉบับ",
+    step1Label: "01 / เก็บข้อมูล",
+    step1Title: "ทุกพอร์ทัล วันละครั้ง",
+    step1Body:
+      "ตัวเก็บข้อมูลตามกำหนดเวลาเฝ้าดู egp2.bangkok.go.th และ gprocurement.go.th ดึงไฟล์ PDF ต้นฉบับ และเก็บลิงก์กลับไปยังประกาศเดิมไว้เสมอ",
+    step2Label: "02 / สกัดข้อมูล",
+    step2Title: "จัดโครงสร้าง PDF ภาษาไทย",
+    step2Body:
+      "Vertex AI ดึงชื่อโครงการ หน่วยงาน งบประมาณ ราคากลาง วิธีจัดซื้อ และประเภทพัสดุ พร้อม OCR สำหรับไฟล์สแกน ซึ่งเป็นส่วนใหญ่",
+    step3Label: "03 / ตรวจสอบ",
+    step3Title: "ให้ข้อสังเกต ไม่ใช่กล่าวหา",
+    step3Body:
+      "เมื่องบประมาณสูงกว่าราคากลาง หรือคุณสมบัติผู้เสนอราคาดูเหมือนเขียนเพื่อผู้ขายรายใดรายหนึ่ง เราระบุไว้ตรงไปตรงมาพร้อมอ้างตัวเลขหรือข้อความนั้น แล้วปล่อยให้คุณเป็นผู้ตัดสิน",
+
+    // Footer
+    footerTagline: "ข้อมูลจัดซื้อจัดจ้างภาครัฐ ที่ค้นหาเจอ",
+    footerProduct: "ผลิตภัณฑ์",
+    footerBrowse: "ดูรายการ TOR",
+    footerSkills: "โปรไฟล์ทักษะ",
+    footerSignup: "สร้างบัญชี",
+    footerSources: "แหล่งข้อมูล",
+    footerDisclaimerHeading: "ข้อจำกัดความรับผิด",
+    footerDisclaimer:
+      "ข้อมูลนำมาจาก egp2.bangkok.go.th และ gprocurement.go.th ข้อสังเกตทั้งหมดเป็นเพียงคำแนะนำ และอ้างอิงตัวเลขหรือข้อความที่อ่านได้จริง",
+    footerRights: "© {year} BangkokTOR",
   },
   login: {
     eyebrow: "เข้าสู่ระบบ",
@@ -759,6 +1009,7 @@ const th: typeof en = {
     eyebrow: "การแจ้งเตือนของคุณ",
     heading: "การแจ้งเตือน",
     markAllRead: "ทำเครื่องหมายว่าอ่านทั้งหมด",
+    viewAll: "ดูการแจ้งเตือนทั้งหมด",
     tabNew: "ใหม่",
     tabViewed: "ดูแล้ว",
     tabSaved: "บันทึกไว้",
@@ -891,11 +1142,18 @@ const th: typeof en = {
     backToList: "กลับไปยังรายการทั้งหมด",
     detailSummary: "โครงการนี้คืออะไร",
     detailSummaryBody:
-      "{contract} โดย{agency} จัดอยู่ในหมวด{category} งบประมาณที่ประกาศ {budget} ประกาศเมื่อ {date} เลขที่โครงการ {number}",
+      "{agency} จัดซื้อจัดจ้างโครงการนี้ในรูปแบบ{contract} วงเงินงบประมาณที่ประกาศไว้ {budget} โดยเผยแพร่บนเว็บไซต์ต้นทางเมื่อวันที่ {date} และแพลตฟอร์มนี้ตีความว่าอยู่ในหมวด{category}",
     detailInterpretationNote:
       "หมวดหมู่และประเภทสัญญาเป็นการตีความของแพลตฟอร์มจากการจัดประเภทภาษาไทยของเว็บไซต์ต้นทาง ส่วนงบประมาณ หน่วยงาน และวันที่ นำมาจากข้อมูลต้นทางโดยตรง",
     detailFacts: "ข้อมูลโครงการ",
     detailDocuments: "เอกสาร",
+    detailExtractedDetails: "รายละเอียดจากเอกสาร",
+    summaryPointCount: "{count} ข้อ",
+    pageRange: "หน้า {from}–{to}",
+    summaryPointsEmpty:
+      "ยังไม่มีการสรุปสาระสำคัญของข้อมูลชุดนี้ สามารถดูเอกสารที่เผยแพร่ได้ด้านล่าง",
+    summaryProvenanceNote:
+      "ข้อสรุปเหล่านี้สร้างโดยแบบจำลองภาษาจากเอกสารที่แสดงด้านล่าง และระบุเฉพาะสิ่งที่เอกสารกำหนดไว้ หากต้องการนำไปใช้อ้างอิง ควรอ่านจากเอกสารต้นฉบับ",
     detailSignals: "สัญญาณความโปร่งใส",
     factAgency: "หน่วยงาน",
     factDepartment: "หน่วยงานย่อย",
@@ -957,6 +1215,7 @@ const th: typeof en = {
       referencePrice: "ประกาศราคากลาง",
       invitation: "ประกาศเชิญชวน",
       draftBidding: "ร่างเอกสารประกวดราคา",
+      bundle: "ชุดเอกสาร",
       other: "เอกสารอื่น ๆ",
     },
     budgetBrackets: {

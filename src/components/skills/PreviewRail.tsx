@@ -24,23 +24,20 @@ export function PreviewRail({ preview }: { preview: ProfilePreview }) {
         {t.previewHeading}
       </h2>
 
-      {/* Reach. The gradient panel is the same ramp AuthShell and NavBar use. */}
-      <div className="relative overflow-hidden rounded-field bg-moss-700 p-5">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,#5c8168_0%,#3d5c49_60%,#22362a_100%)]"
-        />
-        <div className="relative">
-          <p className="font-display text-4xl leading-none text-mint-400">
-            {preview.reachableCount}
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-sage-100/85">
-            {t.previewReach.replace(
-              "{count}",
-              String(preview.totalCount),
-            )}
-          </p>
-        </div>
+      {/*
+        Reach. This carried a three-stop gradient in raw hex — none of those
+        values were tokens, so the panel could not follow a palette change and
+        matched nothing else in the app. The figure is what matters here, and
+        it reads more clearly at full contrast on paper than reversed out of a
+        dark ramp.
+      */}
+      <div className="rounded-field border border-sage-400/60 bg-mist-50 p-5">
+        <p className="font-display text-4xl leading-none text-moss-700">
+          {preview.reachableCount}
+        </p>
+        <p className="mt-2 text-xs leading-relaxed text-ink-500">
+          {t.previewReach.replace("{count}", String(preview.totalCount))}
+        </p>
       </div>
 
       {preview.topMatches.length === 0 ? (

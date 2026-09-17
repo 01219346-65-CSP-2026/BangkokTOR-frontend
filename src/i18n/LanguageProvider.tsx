@@ -18,17 +18,36 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  // Thai is the product's primary language: the records are Thai and so are
-  // most readers. English is the alternate, not the default.
-  const [locale, setLocaleState] = useState<Locale>("th");
-
-  useEffect(() => {
+/**
+ * The reader's stored choice, or null when there isn't one.
+ *
+ * localStorage throws in a private window and is absent on the server, so both
+ * cases fall through to the default rather than breaking the provider.
+ */
+function storedLocale(): Locale | null {
+  if (typeof window === "undefined") return null;
+  try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "en" || stored === "th") {
-      setLocaleState(stored);
-    }
-  }, []);
+    return stored === "en" || stored === "th" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  /*
+   * Read the stored locale in the initializer, not an effect.
+   *
+   * An effect meant the first client render used the Thai default and then
+   * corrected itself — so an English reader saw a visible flash of Thai on
+   * every full page load, since the server also renders lang="th". A lazy
+   * initializer runs before paint, so the first painted frame is already in
+   * the right language.
+   *
+   * Thai remains the default: the records are Thai and so are most readers.
+   * English is the alternate.
+   */
+  const [locale, setLocaleState] = useState<Locale>(() => storedLocale() ?? "th");
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -36,7 +55,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   function setLocale(next: Locale) {
     setLocaleState(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // A private window can still switch language for this session; it just
+      // will not be remembered.
+    }
   }
 
   return (

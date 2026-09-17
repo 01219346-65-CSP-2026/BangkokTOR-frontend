@@ -1,8 +1,36 @@
 services:
   frontend:
-    build: .
-    ports:
-      - "3003:3003"
+    build:
+      context: .
+      # bun install in the build stage was flaking on the deploy box's network;
+      # host networking plus the concurrency cap in the Dockerfile settles it.
+      # Kept here rather than as a local-only edit in the prod checkout, where
+      # it made `git pull --ff-only` fail on every deploy.
+      network: host
+    # No `ports:` — Caddy is the only thing that faces the host, so exactly one
+    # port is forwarded by the router instead of one per service.
+    expose:
+      - "3003"
+    # Everything NextAuth and the backend client need. Without this the
+    # container came up with only PORT set, so BACKEND_URL was unset (every
+    # /api/tors call 500'd) and NextAuth had no secret or Google client id
+    # (sign-in could not work at all).
+    env_file:
+      # `required: false` so a checkout without a .env (dev machines use
+      # .env.local) still builds — compose otherwise refuses to start.
+      - path: .env
+        required: false
     environment:
       PORT: 3003
+      # Overrides whatever .env says: inside the container `localhost` is the
+      # frontend itself, so the backend has to be addressed by service name on
+      # the shared network.
+      BACKEND_URL: http://backend:8003
+    networks:
+      - bangkoktor
     restart: unless-stopped
+
+networks:
+  bangkoktor:
+    external: true
+    name: bangkoktor-net

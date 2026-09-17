@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
@@ -8,15 +8,26 @@ import { useTranslations } from "@/i18n/LanguageProvider";
 import { Logo } from "@/components/brand/Logo";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { AccountMenu, type Account } from "@/components/nav/AccountMenu";
+import { NotificationBell } from "@/components/nav/NotificationBell";
 
 /**
- * The public nav band. Notifications and settings are account-scoped, so they
- * live in the avatar menu instead — this band is the same for every reader,
- * signed in or not.
+ * The public nav band.
+ *
+ * It carried two links while /dashboard and /skills existed and were reachable
+ * only through the account menu, so the band looked bare and those pages were
+ * effectively hidden. Account-scoped destinations now appear here once there
+ * is an account to scope them to; `auth` marks the ones that are filtered out
+ * for a signed-out reader, who would only be bounced to /login by the route
+ * guard in src/proxy.ts.
+ *
+ * Notifications stay out of the band deliberately — they are the bell in the
+ * row above, where the unread count can live.
  */
 const NAV_ITEMS = [
-  { href: "/", key: "home" as const },
-  { href: "/tor", key: "browse" as const },
+  { href: "/", key: "home" as const, auth: false },
+  { href: "/tor", key: "browse" as const, auth: false },
+  { href: "/dashboard", key: "dashboard" as const, auth: true },
+  { href: "/skills", key: "skills" as const, auth: true },
 ];
 
 const ADMIN_NAV_ITEMS = [
@@ -36,7 +47,22 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
   const t = useTranslations("nav");
   const adminT = useTranslations("admin");
   const pathname = usePathname();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  /*
+   * Menu state is keyed to the path it was opened on, rather than closed by an
+   * effect watching `pathname`.
+   *
+   * The effect version called setState during the render that followed every
+   * navigation — a cascading re-render, and what react-hooks/set-state-in-effect
+   * flags. Comparing against the path instead means a route change makes the
+   * menu read as closed with no second render. Same trick AccountMenu and
+   * NotificationBell already use for their dropdowns.
+   */
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const isMenuOpen = openedAt === pathname;
+
+  function setIsMenuOpen(next: boolean) {
+    setOpenedAt(next ? pathname : null);
+  }
   const { data: session, status } = useSession();
 
   // Treat "loading" as signed-out rather than flashing the signed-in chrome
@@ -49,11 +75,9 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
         }
       : null;
 
-  // A route change leaves the panel mounted otherwise — on mobile you'd tap a
-  // link and land on the new page with the menu still covering it.
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
+  // Signed out, the auth-only links would each just bounce to /login, so they
+  // are not offered at all.
+  const navItems = NAV_ITEMS.filter((item) => !item.auth || account !== null);
 
   function isActive(href: string) {
     // "/" would prefix-match every route, so it only ever matches exactly.
@@ -88,14 +112,20 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
             </span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            {/* Signed in, the language control moves inside the account menu —
-                two language affordances in one row would compete. */}
-            {account ? <AccountMenu account={account} /> : <LanguageSwitcher />}
+          <div className="flex items-center gap-1.5">
+            {/*
+              The language control is always here now. It used to be swapped
+              out for the account menu when signed in, which left a logged-in
+              reader with no visible way to change language at all — the only
+              switch was buried inside the avatar menu.
+            */}
+            <LanguageSwitcher />
+            {account && <NotificationBell />}
+            {account && <AccountMenu account={account} />}
 
             <button
               type="button"
-              onClick={() => setIsMenuOpen((open) => !open)}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-expanded={isMenuOpen}
               aria-controls="nav-mobile-menu"
               aria-label={isMenuOpen ? t.closeMenu : t.openMenu}
@@ -110,8 +140,12 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
       {/* Tier 2 — one consistent institutional green across public and admin. */}
       <div className="hidden bg-moss-700 md:block">
         <div className="mx-auto flex h-11 max-w-[110rem] items-stretch justify-between px-6">
-          <nav aria-label={t.primaryLabel} className="flex items-stretch">
-            {NAV_ITEMS.map(({ href, key }) => {
+          <nav
+            aria-label={t.primaryLabel}
+            className="flex items-stretch"
+            data-tour="nav"
+          >
+            {navItems.map(({ href, key }) => {
               const active = isActive(href);
 
               return (
@@ -186,7 +220,7 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
             aria-label={t.primaryLabel}
             className="mx-auto flex max-w-[110rem] flex-col px-6 py-3"
           >
-            {NAV_ITEMS.map(({ href, key }) => {
+            {navItems.map(({ href, key }) => {
               const active = isActive(href);
 
               return (
@@ -223,6 +257,15 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
                   </Link>
                 );
               })}
+
+            {/* The header row's language toggle is hidden behind the hamburger
+                on this breakpoint, so the sheet carries its own. */}
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/15 pt-3">
+              <span className="text-xs font-semibold tracking-wider text-sage-100 uppercase">
+                {t.accountLanguage}
+              </span>
+              <LanguageSwitcher />
+            </div>
 
             <div className="mt-3 flex items-center gap-2 border-t border-white/15 pt-3">
               {account ? (

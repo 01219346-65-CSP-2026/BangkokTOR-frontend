@@ -86,6 +86,7 @@ export default function TorDetailPage({
 
   // Placeholder matching layer — see src/lib/torMatching.ts.
   const tor = withMatch(record, TODAY_UTC);
+  const summaryPoints = tor.summaryPoints ?? [];
 
   const published = formatDate(new Date(tor.publishedAt).getTime(), locale);
   const { notable, routine } = deriveObservations(tor);
@@ -240,12 +241,78 @@ export default function TorDetailPage({
                   .replace("{agency}", tor.agency)
                   .replace("{category}", t.categories[tor.category])
                   .replace("{budget}", formatBudgetTHB(tor.budget, locale))
-                  .replace("{date}", published)
-                  .replace("{number}", tor.projectNumber)}
+                  .replace("{date}", published)}
               </p>
               <p className="mt-3 max-w-prose border-t border-sage-100 pt-3 text-xs leading-relaxed text-ink-500">
                 {t.detailInterpretationNote}
               </p>
+            </section>
+
+            {/*
+              What the documents say, as points rather than as the documents.
+              This used to render the raw extracted chunks — up to 24 sections
+              of PDF text in an accordion. The PDFs are linked in the card
+              below, so reproducing them here only buried the substance.
+            */}
+            <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <h2 className="text-xl tracking-tight text-moss-700">
+                  {t.detailExtractedDetails}
+                </h2>
+                {summaryPoints.length > 0 && (
+                  <span className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
+                    {t.summaryPointCount.replace(
+                      "{count}",
+                      String(summaryPoints.length),
+                    )}
+                  </span>
+                )}
+              </div>
+
+              {summaryPoints.length === 0 ? (
+                /* A record graded before summaries existed, or one whose points
+                   were all screened out. Say so rather than render an empty
+                   card that reads as a loading failure. */
+                <p className="mt-3 text-sm leading-relaxed text-ink-500">
+                  {t.summaryPointsEmpty}
+                </p>
+              ) : (
+                <>
+                  <ul className="mt-4 divide-y divide-sage-100 border-t border-sage-100">
+                    {summaryPoints.map((point) => (
+                      <li key={point.id} className="flex gap-3 py-3.5">
+                        <span
+                          aria-hidden="true"
+                          className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sage-600"
+                        />
+                        <p
+                          lang="th"
+                          className="min-w-0 flex-1 text-[0.9375rem] leading-relaxed text-ink-600"
+                        >
+                          {point.text}
+                        </p>
+                        {/* The citation is what makes a generated point
+                            checkable against the source. Absent when the point
+                            can no longer be traced to a page. */}
+                        {point.filename && point.pageStart > 0 && (
+                          <span className="shrink-0 pt-0.5 font-mono text-[0.625rem] tracking-wide whitespace-nowrap text-ink-500">
+                            {t.pageRange
+                              .replace("{from}", String(point.pageStart))
+                              .replace("{to}", String(point.pageEnd))}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* These are machine-written. Saying so is both honest and
+                      what keeps the section from reading as the platform's own
+                      assertion about the agency. */}
+                  <p className="mt-4 max-w-prose border-t border-sage-100 pt-3 text-xs leading-relaxed text-ink-500">
+                    {t.summaryProvenanceNote}
+                  </p>
+                </>
+              )}
             </section>
 
             <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
@@ -348,29 +415,30 @@ export default function TorDetailPage({
           {/* The rail: reference material, out of the reading path. */}
           <aside>
             {/*
-              The fit panel, on the moss ground the mockups use to lift it out
-              of the rail. ⚠ Every figure in it is placeholder — see
-              src/lib/torMatching.ts — hence the footnote inside the panel.
+              The fit panel. It used the same moss-700 as the nav band, which
+              made the rail read as a second header competing with the real one
+              — so it sits on white like every other card and earns its
+              prominence from the sage border and the dial instead.
+              ⚠ Every figure in it is placeholder — see src/lib/torMatching.ts
+              — hence the footnote inside the panel.
             */}
-            <section className="rounded-field bg-moss-700 p-6">
+            <section
+              className="rounded-field border border-sage-400/60 bg-white p-6"
+              data-tour="fit"
+            >
               <div className="flex items-center gap-4">
-                <FitDial
-                  score={tor.fitScore}
-                  size="lg"
-                  onDark
-                  caption={t.fitCaption}
-                />
+                <FitDial score={tor.fitScore} size="lg" caption={t.fitCaption} />
                 <div className="min-w-0">
-                  <h2 className="text-sm leading-snug font-medium text-white">
+                  <h2 className="text-sm leading-snug font-medium text-moss-700">
                     {t.fitPanelHeading.replace("{band}", bandLabel)}
                   </h2>
-                  <p className="mt-1 text-xs leading-relaxed text-sage-100/70">
+                  <p className="mt-1 text-xs leading-relaxed text-ink-500">
                     {t.mockDataNote}
                   </p>
                 </div>
               </div>
 
-              <dl className="mt-5 flex flex-col gap-3 border-t border-white/15 pt-5">
+              <dl className="mt-5 flex flex-col gap-3 border-t border-sage-100 pt-5">
                 <FitRow label={t.fitPanelSkillOverlap}>
                   {tor.matchedSkillCount} / {tor.requiredSkills.length}
                 </FitRow>
@@ -390,23 +458,24 @@ export default function TorDetailPage({
               </dl>
 
               {/*
-                Both actions live inside the panel, as the design places them:
-                the primary in the mint accent, the secondary outlined on the
-                same dark ground.
+                Both actions live inside the panel, as the design places them.
+                mint-400 exists solely as the accent that stayed legible on the
+                moss ground, so with the ground gone the primary returns to
+                sage-600 — the token every other primary button uses.
               */}
               <div className="mt-5 flex flex-col gap-2.5">
                 <a
                   href={tor.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center rounded-field bg-mint-400 px-4 py-3 text-sm font-medium text-moss-700 transition duration-200 ease-soft hover:brightness-105 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none active:scale-[0.985]"
+                  className="flex items-center justify-center rounded-field bg-sage-600 px-4 py-3 text-sm font-medium text-white transition duration-200 ease-soft hover:brightness-110 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none active:scale-[0.985]"
                 >
                   {t.openSource} ↗
                 </a>
                 <button
                   type="button"
                   onClick={() => console.log("Save to watchlist:", tor.id)}
-                  className="flex items-center justify-center rounded-field border border-white/30 px-4 py-2.5 text-sm font-medium text-white transition duration-200 ease-soft hover:border-white/60 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none active:scale-[0.985]"
+                  className="flex items-center justify-center rounded-field border border-sage-400/70 px-4 py-2.5 text-sm font-medium text-sage-600 transition duration-200 ease-soft hover:border-sage-600 hover:bg-mist-50 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none active:scale-[0.985]"
                 >
                   {t.saveToWatchlist}
                 </button>
@@ -443,6 +512,14 @@ export default function TorDetailPage({
                   {t.methodLabels[tor.procurementMethod]}
                 </Fact>
                 <Fact label={t.factStatus}>{t.statusLabels[tor.status]}</Fact>
+                {/* Budget reads better as a table row than inside the summary
+                    sentence, where it turned prose into a data dump. The hero
+                    still carries it as a headline figure. */}
+                <Fact label={t.factBudget}>
+                  <span className="tabular-nums">
+                    {formatBudgetTHB(tor.budget, locale)}
+                  </span>
+                </Fact>
                 <Fact label={t.factNumber}>
                   <span className="tabular-nums">{tor.projectNumber}</span>
                 </Fact>
@@ -467,17 +544,24 @@ export default function TorDetailPage({
               a disclaimer. The reassurance survives; the chrome does not.
             */}
             {notable.length > 0 ? (
-              <section className="mt-6 overflow-hidden rounded-field border border-sage-100 border-t-2 border-t-clay-500 bg-white">
-                <div className="flex items-center gap-2 border-b border-sage-100 bg-mist-50 px-5 py-3.5">
+              // The single clay rule along the top read as a hairline on an
+              // otherwise white card, so the one block a reader most needs to
+              // notice was the quietest thing in the rail. The colour now
+              // carries the whole card — border, ground and heading — rather
+              // than one edge of it. Tinted, not saturated: FR-19 keeps these
+              // advisory, so it should read as "look at this", never as an
+              // alarm about the agency.
+              <section className="mt-6 overflow-hidden rounded-field border border-clay-500/35 bg-clay-500/[0.06]">
+                <div className="flex items-center gap-2 border-b border-clay-500/20 px-5 py-3.5">
                   <span aria-hidden="true" className="text-sm text-clay-500">
                     ⚑
                   </span>
-                  <h2 className=" text-lg tracking-tight text-moss-700">
+                  <h2 className="text-lg tracking-tight text-clay-500">
                     {t.signalsHeading}
                   </h2>
                 </div>
 
-                <ul className="divide-y divide-sage-100">
+                <ul className="divide-y divide-clay-500/15">
                   {notable.map((signal) => (
                     <li key={signal.id} className="px-5 py-4">
                       <SignalRow signal={signal} t={t} />
@@ -485,7 +569,7 @@ export default function TorDetailPage({
                   ))}
                 </ul>
 
-                <p className="border-t border-sage-100 px-5 py-3 text-xs leading-relaxed text-ink-500">
+                <p className="border-t border-clay-500/20 px-5 py-3 text-xs leading-relaxed text-ink-500">
                   {t.signalsNote}
                 </p>
               </section>
@@ -605,10 +689,10 @@ function FitRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="shrink-0 text-xs text-sage-100/75">{label}</dt>
+      <dt className="shrink-0 text-xs text-ink-500">{label}</dt>
       <dd
         className={`text-right font-mono text-xs font-medium tabular-nums ${
-          tone === "accent" ? "text-mint-400" : "text-sage-100"
+          tone === "accent" ? "text-sage-600" : "text-ink-500"
         }`}
       >
         {children}
@@ -633,11 +717,21 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** One key/value row of the record. */
+/**
+ * One row of the record table.
+ *
+ * A flex row that wrapped put the value on its own line whenever a long Thai
+ * agency name ran out of room, so the table lost its column edge exactly where
+ * it was densest. A two-column grid keeps the labels aligned down the left at
+ * every width and lets the value wrap within its own column instead.
+ */
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-4 py-2.5">
+    <div className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 py-2.5">
       <dt className="text-[0.8125rem] text-ink-500">{label}</dt>
-      <dd className="text-right text-[0.8125rem] text-ink-600">{children}</dd>
+      <dd className="min-w-0 text-right text-[0.8125rem] break-words text-moss-700">
+        {children}
+      </dd>
     </div>
   );
 }

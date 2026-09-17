@@ -4,14 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
-import type { Locale } from "@/i18n/Translations";
-import { MOCK_NOTIFICATIONS, countUnread } from "@/data/notifications";
+import { useTranslations } from "@/i18n/LanguageProvider";
 
 /**
  * The signed-in account control: an avatar that opens a menu holding the
- * settings link and the language choice. `account` is derived from the real
+ * identity, the settings link and sign-out. `account` is derived from the real
  * session by NavBar — see its call site.
+ *
+ * Notifications and the language choice used to live in here too. Both moved
+ * into the header row: a reader could not discover either without first
+ * opening this menu.
  */
 
 export type Account = {
@@ -19,11 +21,6 @@ export type Account = {
   name: string;
   email: string;
 };
-
-const LOCALES: { id: Locale; label: string }[] = [
-  { id: "en", label: "English" },
-  { id: "th", label: "ไทย" },
-];
 
 /** "Sathorn Labs" → "SL". Falls back to one letter for a single-word name. */
 function initials(name: string) {
@@ -35,7 +32,6 @@ function initials(name: string) {
 
 export function AccountMenu({ account }: { account: Account }) {
   const t = useTranslations("nav");
-  const { locale, setLocale } = useLanguage();
   const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -48,10 +44,6 @@ export function AccountMenu({ account }: { account: Account }) {
    */
   const [openedAt, setOpenedAt] = useState<string | null>(null);
   const isOpen = openedAt === pathname;
-
-  // Placeholder feed — see `data/notifications.ts`. Read directly rather than
-  // held in state: nothing here mutates it, and the page owns its own copy.
-  const unreadCount = countUnread(MOCK_NOTIFICATIONS);
 
   function setIsOpen(next: boolean) {
     setOpenedAt(next ? pathname : null);
@@ -95,27 +87,17 @@ export function AccountMenu({ account }: { account: Account }) {
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        // The unread dot is decorative, so the count rides on the label —
-        // otherwise it is invisible to a screen reader until the menu opens.
-        aria-label={
-          unreadCount > 0
-            ? `${t.accountMenuLabel} — ${t.accountUnread.replace(
-                "{count}",
-                String(unreadCount),
-              )}`
-            : t.accountMenuLabel
-        }
+        aria-label={t.accountMenuLabel}
         className="flex items-center gap-2.5 rounded-field py-1 pr-2 pl-1 transition duration-200 ease-soft hover:bg-sage-100 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
       >
-        {/* The dot marks unread mail while the menu is shut — otherwise the
-            count inside it is only discoverable by opening the menu. */}
-        <span aria-hidden="true" className="relative">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sage-600 font-mono text-xs font-semibold tracking-wider text-white">
-            {initials(account.name)}
-          </span>
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-clay-500 ring-2 ring-white" />
-          )}
+        {/* No unread dot here any more — the bell immediately to the left
+            carries the count, and two unread indicators side by side read as
+            two different things to check. */}
+        <span
+          aria-hidden="true"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-sage-600 font-mono text-xs font-semibold tracking-wider text-white"
+        >
+          {initials(account.name)}
         </span>
         <span className="hidden text-sm font-medium text-moss-700 sm:block">
           {account.name}
@@ -138,62 +120,12 @@ export function AccountMenu({ account }: { account: Account }) {
 
           <div className="py-1">
             <Link
-              href="/notifications"
-              role="menuitem"
-              className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-ink-600 transition duration-200 ease-soft hover:bg-sage-100 hover:text-moss-700 focus-visible:bg-sage-100 focus-visible:text-moss-700 focus-visible:outline-none"
-            >
-              {t.notifications}
-              {unreadCount > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-sage-600 px-1.5 font-mono text-[0.625rem] font-semibold text-white tabular-nums">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
-
-            <Link
               href="/skills"
               role="menuitem"
               className="block px-4 py-2.5 text-sm text-ink-600 transition duration-200 ease-soft hover:bg-sage-100 hover:text-moss-700 focus-visible:bg-sage-100 focus-visible:text-moss-700 focus-visible:outline-none"
             >
               {t.accountSettings}
             </Link>
-          </div>
-
-          {/*
-            Language lives in the menu as a two-option radio group rather than
-            the header's EN/TH toggle: inside a menu there is room to name each
-            language in its own script, which "TH" alone does not do.
-          */}
-          <div className="border-t border-sage-100 px-4 py-3">
-            <p className="mb-2 font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
-              {t.accountLanguage}
-            </p>
-            <div
-              role="radiogroup"
-              aria-label={t.accountLanguage}
-              className="flex gap-1.5"
-            >
-              {LOCALES.map(({ id, label }) => {
-                const isSelected = id === locale;
-
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    onClick={() => setLocale(id)}
-                    className={`flex-1 rounded-field px-2.5 py-1.5 text-xs transition duration-200 ease-soft outline-none focus-visible:ring-2 focus-visible:ring-sage-600/40 ${
-                      isSelected
-                        ? "border border-moss-700 bg-moss-700 font-medium text-white"
-                        : "border border-sage-400/70 bg-white text-moss-700 hover:border-sage-600 hover:bg-sage-100/60"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           <div className="border-t border-sage-100 py-1">

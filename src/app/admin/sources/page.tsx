@@ -22,8 +22,6 @@ const FREQUENCY_HOURS: Record<FrequencyId, number> = {
   weekly: 24 * 7,
 };
 
-const now = Date.now();
-
 // Static mock data for now — swap for a real sources API once it exists.
 const INITIAL_SOURCES: Source[] = [
   {
@@ -55,6 +53,16 @@ const INITIAL_SOURCES: Source[] = [
 export default function SourcesPage() {
   const t = useTranslations("admin");
   const { locale } = useLanguage();
+  /*
+   * The clock, captured once per mount rather than once per module load.
+   *
+   * At module scope this was evaluated when the bundle was first imported, so
+   * in a long-lived server process every "last scraped N hours ago" froze at
+   * process start and drifted further the longer it ran. A lazy initializer
+   * also keeps the server pass and hydration in agreement, which reading
+   * Date.now() during render would not.
+   */
+  const [now] = useState(() => Date.now());
   const [sources, setSources] = useState<Source[]>(INITIAL_SOURCES);
   const [selectedSource, setSelectedSource] = useState<Source | null>(null);
 
