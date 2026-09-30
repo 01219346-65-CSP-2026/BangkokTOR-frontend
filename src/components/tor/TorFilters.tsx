@@ -9,11 +9,10 @@ import {
   budgetToSlider,
   EMPTY_FILTERS,
   sliderToBudget,
-  type DeadlineWindowId,
   type PublishedWindowId,
   type TorFilters as Filters,
 } from "@/lib/torFilters";
-import type { FitBandId } from "@/lib/torMatching";
+import type { FitBandId } from "@/lib/torFit";
 import type { TorCategoryId, TorMethodId } from "@/types/tor";
 
 type TorFiltersProps = {
@@ -29,6 +28,8 @@ type TorFiltersProps = {
   methodCounts: Record<string, number>;
   /** Largest listed budget, from /api/tors/stats. Null until it loads. */
   budgetMax: number | null;
+  /** Only a reader with saved skills has a fit to filter on. */
+  showFit: boolean;
 };
 
 export function TorFilters({
@@ -40,6 +41,7 @@ export function TorFilters({
   categoryCounts,
   methodCounts,
   budgetMax,
+  showFit,
 }: TorFiltersProps) {
   const t = useTranslations("tor");
   const { locale } = useLanguage();
@@ -82,73 +84,46 @@ export function TorFilters({
       </div>
 
       {/*
-        Fit and deadline lead the rail, as the mockups place them — they are
-        the filters the fit score exists to make useful. Both read the
-        PLACEHOLDER matching layer (src/lib/torMatching.ts).
+        Fit leads the rail, as the mockups place it — it is the filter the fit
+        score exists to make useful. Scored server-side against the reader's
+        profile, so a reader without one has nothing to filter on.
       */}
-      <fieldset className="mt-3.5">
-        <legend className="mb-2 text-xs font-medium text-ink-600">
-          {t.matchHeading}
-        </legend>
-        <div className="flex flex-col gap-2">
-          {(
-            [
-              ["strong", t.matchStrong],
-              ["moderate", t.matchModerate],
-              ["weak", t.matchWeak],
-            ] as [FitBandId, string][]
-          ).map(([band, label]) => (
-            <label
-              key={band}
-              className="flex cursor-pointer items-center gap-2 text-xs text-ink-600"
-            >
-              <input
-                type="checkbox"
-                checked={filters.fitBands.includes(band)}
-                onChange={(event) =>
-                  update(
-                    "fitBands",
-                    event.target.checked
-                      ? [...filters.fitBands, band]
-                      : filters.fitBands.filter((id) => id !== band),
-                  )
-                }
-                className="h-3.5 w-3.5 accent-sage-600 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset className="mt-3.5 border-t border-sage-100 pt-3.5">
-        <legend className="mb-2 text-xs font-medium text-ink-600">
-          {t.deadlineHeading}
-        </legend>
-        <div className="flex flex-col gap-2">
-          {(
-            [
-              ["next7Days", t.deadline7Days],
-              ["next30Days", t.deadline30Days],
-              ["", t.deadlineAny],
-            ] as [DeadlineWindowId | "", string][]
-          ).map(([window, label]) => (
-            <label
-              key={window || "any"}
-              className="flex cursor-pointer items-center gap-2 text-xs text-ink-600"
-            >
-              <input
-                type="radio"
-                name="tor-deadline"
-                checked={filters.deadline === window}
-                onChange={() => update("deadline", window)}
-                className="h-3.5 w-3.5 accent-sage-600 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      {showFit && (
+        <fieldset className="mt-3.5">
+          <legend className="mb-2 text-xs font-medium text-ink-600">
+            {t.matchHeading}
+          </legend>
+          <div className="flex flex-col gap-2">
+            {(
+              [
+                ["strong", t.matchStrong],
+                ["moderate", t.matchModerate],
+                ["weak", t.matchWeak],
+              ] as [FitBandId, string][]
+            ).map(([band, label]) => (
+              <label
+                key={band}
+                className="flex cursor-pointer items-center gap-2 text-xs text-ink-600"
+              >
+                <input
+                  type="checkbox"
+                  checked={filters.fitBands.includes(band)}
+                  onChange={(event) =>
+                    update(
+                      "fitBands",
+                      event.target.checked
+                        ? [...filters.fitBands, band]
+                        : filters.fitBands.filter((id) => id !== band),
+                    )
+                  }
+                  className="h-3.5 w-3.5 accent-sage-600 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <div className="mt-3.5 border-t border-sage-100 pt-3.5">
         <label

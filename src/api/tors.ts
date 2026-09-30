@@ -1,3 +1,5 @@
+import type { SkillId } from "@/i18n/Translations";
+import { ALL_SKILL_IDS } from "@/lib/skillProfile";
 import type {
   TextLayer,
   Tor,
@@ -54,6 +56,10 @@ export type BackendTor = {
   sourceUrl: string | null;
   signalCount: number | null;
   signals?: TorSignalRef[];
+  /** Skills the backend's keyword tagger found, each with its quote. */
+  requiredSkills?: Array<{ slug: string; evidence: string }>;
+  /** Only when the list request sent `skills` — the server-side score. */
+  fitScore?: number | null;
   documents?: Array<{
     id: string;
     kind: TorDocumentKindId;
@@ -100,7 +106,13 @@ export type TorStatsResponse = {
 export type ApiTor = Tor & {
   /** Neutral observations from the grader. Empty until a TOR has been graded. */
   signals: TorSignalRef[];
+  /** Detected skill requirements, in the profile vocabulary. Unknown slugs
+   *  are dropped — the wizard has no name to show for them. */
+  requiredSkillIds: SkillId[];
 };
+
+const SKILL_IDS = new Set<string>(ALL_SKILL_IDS);
+const isSkillId = (id: string): id is SkillId => SKILL_IDS.has(id);
 
 const CATEGORIES = new Set<TorCategoryId>([
   "medical", "it", "office", "agriculture", "electrical", "education",
@@ -212,6 +224,7 @@ export function toTor(row: BackendTor): ApiTor {
     extractionIncomplete: extractionIncomplete(row),
     signalCount: row.signalCount ?? 0,
     signals: row.signals ?? [],
+    requiredSkillIds: (row.requiredSkills ?? []).map((s) => s.slug).filter(isSkillId),
   };
 }
 

@@ -6,6 +6,8 @@ import type { SortId } from "@/lib/torFilters";
 type TorSortSelectProps = {
   value: SortId;
   onChange: (sort: SortId) => void;
+  /** Best match needs a saved profile; without one it is not offered. */
+  showBestMatch: boolean;
 };
 
 /**
@@ -15,7 +17,7 @@ type TorSortSelectProps = {
  * another filter competing with the panel on the left. So it drops the box
  * entirely: a quiet inline control that reorders what is already there.
  */
-export function TorSortSelect({ value, onChange }: TorSortSelectProps) {
+export function TorSortSelect({ value, onChange, showBestMatch }: TorSortSelectProps) {
   const t = useTranslations("tor");
 
   return (
@@ -29,11 +31,13 @@ export function TorSortSelect({ value, onChange }: TorSortSelectProps) {
         onChange={(event) => onChange(event.target.value as SortId)}
         className="cursor-pointer rounded-field border-none bg-transparent py-1 pr-1 text-xs font-medium text-ink-600 transition duration-200 ease-soft outline-none hover:text-sage-600 focus-visible:ring-2 focus-visible:ring-sage-600"
       >
-        {(Object.keys(t.sortOptions) as SortId[]).map((id) => (
-          <option key={id} value={id}>
-            {t.sortOptions[id]}
-          </option>
-        ))}
+        {(Object.keys(t.sortOptions) as SortId[])
+          .filter((id) => showBestMatch || id !== "bestMatch")
+          .map((id) => (
+            <option key={id} value={id}>
+              {t.sortOptions[id]}
+            </option>
+          ))}
       </select>
     </div>
   );

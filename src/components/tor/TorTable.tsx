@@ -4,18 +4,16 @@ import Link from "next/link";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
 import { Badge } from "@/components/ui/Badge";
-import { DeadlineLabel } from "@/components/tor/TorCard";
-import { isClosingSoon } from "@/lib/torMatching";
-import type { MatchedTor } from "@/types/tor";
+import type { CardTor } from "@/types/tor";
 
 /**
  * The compact listing density (mockup 1e) — the same records as the cards, at
  * roughly a fifth of the height, for scanning twenty at a time.
  *
- * ⚠ Fit and deadline columns are placeholder values; see
- * `src/lib/torMatching.ts`.
+ * Fit is scored against the reader's profile (src/lib/torFit.ts). There is no
+ * deadline column: the portal publishes no closing date.
  */
-export function TorTable({ tors }: { tors: MatchedTor[] }) {
+export function TorTable({ tors }: { tors: CardTor[] }) {
   const t = useTranslations("tor");
   const { locale } = useLanguage();
 
@@ -23,7 +21,7 @@ export function TorTable({ tors }: { tors: MatchedTor[] }) {
     /* Scrolls inside its own container so the page body never scrolls
        sideways at 375px (CLAUDE.md §7). */
     <div className="overflow-x-auto rounded-field border border-sage-100 bg-white">
-      <table className="w-full min-w-[46rem] text-left text-sm">
+      <table className="w-full min-w-[40rem] text-left text-sm">
         <thead className="border-b border-sage-100 bg-mist-50">
           <tr className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
             <th className="px-4 py-3 text-right font-medium">{t.tableFit}</th>
@@ -32,15 +30,10 @@ export function TorTable({ tors }: { tors: MatchedTor[] }) {
             <th className="px-4 py-3 text-right font-medium">
               {t.tableBudget}
             </th>
-            <th className="px-4 py-3 text-right font-medium">
-              {t.tableCloses}
-            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-sage-100">
           {tors.map((tor) => {
-            const urgent = isClosingSoon(tor.daysRemaining);
-
             return (
               <tr
                 key={tor.id}
@@ -49,10 +42,12 @@ export function TorTable({ tors }: { tors: MatchedTor[] }) {
                 <td className="px-4 py-3 text-right">
                   <span
                     className={`font-mono text-sm font-semibold tabular-nums ${
-                      tor.fitScore >= 40 ? "text-sage-600" : "text-ink-500"
+                      tor.fitScore !== null && tor.fitScore >= 40
+                        ? "text-sage-600"
+                        : "text-ink-500"
                     }`}
                   >
-                    {tor.fitScore}
+                    {tor.fitScore ?? "—"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -87,13 +82,6 @@ export function TorTable({ tors }: { tors: MatchedTor[] }) {
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-xs text-moss-700 tabular-nums">
                   {formatBudgetTHB(tor.budget, locale)}
-                </td>
-                <td
-                  className={`px-4 py-3 text-right font-mono text-xs tabular-nums ${
-                    urgent ? "font-medium text-clay-500" : "text-ink-600"
-                  }`}
-                >
-                  <DeadlineLabel days={tor.daysRemaining} t={t} />
                 </td>
               </tr>
             );

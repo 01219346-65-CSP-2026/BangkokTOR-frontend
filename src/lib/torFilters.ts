@@ -1,23 +1,19 @@
-import type { MatchedTor, Tor, TorCategoryId } from "@/types/tor";
-import { fitBand, type FitBandId } from "@/lib/torMatching";
+import type { TorCategoryId } from "@/types/tor";
+import type { FitBandId } from "@/lib/torFit";
 
 /**
  * Filter state for the TOR listings page and its translation into the
- * `GET /api/tors` query string. Only the placeholder-layer filters (fit band,
- * deadline) and sorts still run in memory.
+ * `GET /api/tors` query string. Everything — fit included — is filtered,
+ * sorted and paginated by the backend; nothing here re-orders a fetched page.
  */
 
 export type PublishedWindowId = "last30Days" | "last90Days" | "thisYear";
-/** `bestMatch` is the mockups' default sort — see the placeholder note below. */
-export type SortId =
-  | "bestMatch"
-  | "closingSoon"
-  | "newest"
-  | "oldest"
-  | "budgetHigh"
-  | "budgetLow";
-/** Deadline windows, in days. "any" means no deadline filter. */
-export type DeadlineWindowId = "next7Days" | "next30Days";
+/**
+ * `bestMatch` needs the reader's profile skills; the page only offers it when
+ * there are some. There is no "closing soon": the portal publishes no closing
+ * date, so there is nothing real to sort on.
+ */
+export type SortId = "bestMatch" | "newest" | "oldest" | "budgetHigh" | "budgetLow";
 
 export type TorFilters = {
   search: string;
@@ -33,12 +29,8 @@ export type TorFilters = {
   maxBudget: number | null;
   published: PublishedWindowId | "";
   method: string | "";
-  /**
-   * Fit bands and deadline windows filter on the PLACEHOLDER matching layer
-   * (src/lib/torMatching.ts) — neither is a published value.
-   */
+  /** Scored server-side against the reader's skills; ignored without them. */
   fitBands: FitBandId[];
-  deadline: DeadlineWindowId | "";
 };
 
 export const EMPTY_FILTERS: TorFilters = {
@@ -50,7 +42,6 @@ export const EMPTY_FILTERS: TorFilters = {
   published: "",
   method: "",
   fitBands: [],
-  deadline: "",
 };
 
 export const PAGE_SIZE = 20;
@@ -84,54 +75,9 @@ export function budgetToSlider(budget: number, ceiling: number): number {
 }
 
 
-/**
- * Fit and deadline only apply to records carrying the placeholder matching
- * layer. A plain `Tor` has neither, so both filters pass it through rather than
- * silently emptying the list.
- */
-function hasMatch(tor: Tor): tor is MatchedTor {
-  return "fitScore" in tor;
-}
-
-function matchesFit(tor: Tor, bands: FitBandId[]): boolean {
-  if (bands.length === 0) return true;
-  if (!hasMatch(tor)) return true;
-  return bands.includes(fitBand(tor.fitScore));
-}
-
-const DEADLINE_DAYS: Record<DeadlineWindowId, number> = {
-  next7Days: 7,
-  next30Days: 30,
-};
-
-function matchesDeadline(tor: Tor, deadline: DeadlineWindowId | ""): boolean {
-  if (!deadline) return true;
-  if (!hasMatch(tor)) return true;
-  // Already-closed records fall outside every forward-looking window.
-  return tor.daysRemaining >= 0 && tor.daysRemaining <= DEADLINE_DAYS[deadline];
-}
-
-/**
- * `fitBands` and `deadline` filter on the PLACEHOLDER matching layer
- * (src/lib/torMatching.ts) — there is no backend field behind either, so
- * these two stay client-side while the rest of `TorFilters` goes to the API
- * query string. Applied to one already-fetched page of results.
- */
-export function filterMockOnly<T extends Tor>(
-  tors: T[],
-  filters: Pick<TorFilters, "fitBands" | "deadline">
-): T[] {
-  return tors.filter(
-    (tor) => matchesFit(tor, filters.fitBands) && matchesDeadline(tor, filters.deadline)
-  );
-}
-
-const SORT_TO_API: Record<SortId, string | null> = {
-  // Neither reads a real backend field (fit score, deadline) — leaving the
-  // API sort unset keeps the server's default (newest) order, and the page
-  // re-sorts the fetched page client-side against the placeholder layer.
-  bestMatch: null,
-  closingSoon: null,
+/** Every sort is the backend's own — see TOR_SORTS in tor.model.ts there. */
+const SORT_TO_API: Record<SortId, string> = {
+  bestMatch: "bestMatch",
   newest: "newest",
   oldest: "oldest",
   budgetHigh: "budgetHigh",
@@ -142,13 +88,18 @@ const SORT_TO_API: Record<SortId, string | null> = {
  * Turns filter/sort/page state into the query string `GET /api/tors` expects
  * (src/app/api/tors/route.ts's own FORWARDED allowlist). `now` drives the
  * published-window math so the range is deterministic in tests.
+ *
+ * `profileSkills` are the reader's saved skill ids. With them the backend
+ * scores every row, which is what makes `bestMatch` and the fit filter work
+ * across pages; without them both are meaningless and are not sent.
  */
 export function buildTorQuery(
   filters: TorFilters,
   sort: SortId,
   page: number,
   limit: number,
-  now: number = Date.now()
+  now: number = Date.now(),
+  profileSkills: readonly string[] = []
 ): URLSearchParams {
   const params = new URLSearchParams();
 
@@ -169,40 +120,18 @@ export function buildTorQuery(
     }
   }
 
-  const apiSort = SORT_TO_API[sort];
-  if (apiSort) params.set("sort", apiSort);
+  if (profileSkills.length > 0) {
+    params.set("skills", [...profileSkills].sort().join(","));
+    if (filters.fitBands.length > 0) params.set("fit", filters.fitBands.join(","));
+    params.set("sort", SORT_TO_API[sort]);
+  } else {
+    params.set("sort", SORT_TO_API[sort === "bestMatch" ? "newest" : sort]);
+  }
 
   params.set("page", String(page));
   params.set("limit", String(limit));
 
   return params;
-}
-
-export function sortTors<T extends Tor>(tors: T[], sort: SortId): T[] {
-  const sorted = [...tors];
-
-  switch (sort) {
-    /*
-     * Both of these read the placeholder matching layer. Records without it
-     * keep their existing order rather than being dropped or thrown to the end.
-     */
-    case "bestMatch":
-      return sorted.sort((a, b) =>
-        hasMatch(a) && hasMatch(b) ? b.fitScore - a.fitScore : 0
-      );
-    case "closingSoon":
-      return sorted.sort((a, b) =>
-        hasMatch(a) && hasMatch(b) ? a.daysRemaining - b.daysRemaining : 0
-      );
-    case "newest":
-      return sorted.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
-    case "oldest":
-      return sorted.sort((a, b) => a.publishedAt.localeCompare(b.publishedAt));
-    case "budgetHigh":
-      return sorted.sort((a, b) => b.budget - a.budget);
-    case "budgetLow":
-      return sorted.sort((a, b) => a.budget - b.budget);
-  }
 }
 
 /** How many filters are narrowing the list — drives the "clear all" affordance. */

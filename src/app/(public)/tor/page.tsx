@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslations } from "@/i18n/LanguageProvider";
 import { TorCard } from "@/components/tor/TorCard";
@@ -16,27 +17,20 @@ import {
   type TorListResponse,
   type TorStatsResponse,
 } from "@/api/tors";
-import { withMatches } from "@/lib/torMatching";
-import { translations } from "@/i18n/Translations";
-import type { TorCategoryId, TorMethodId } from "@/types/tor";
+import { loadProfile } from "@/lib/skillProfile";
+import { fitFor, requirementsFor } from "@/lib/torFit";
+import { translations, type SkillId } from "@/i18n/Translations";
+import type { CardTor, TorCategoryId, TorMethodId } from "@/types/tor";
 import {
   buildTorQuery,
   EMPTY_FILTERS,
-  filterMockOnly,
   PAGE_SIZE,
-  sortTors,
   type SortId,
   type TorFilters as Filters,
 } from "@/lib/torFilters";
 
-/**
- * Day-resolution clock for the placeholder deadline countdowns.
- *
- * Rounded to midnight UTC on purpose: `Date.now()` differs between the server
- * render and hydration, and a "closes in N days" that disagreed across the two
- * would be a hydration mismatch. Days only change at a date boundary, so
- * flooring to one makes both renders agree.
- */
+/** Only the published-window math reads the clock; day resolution keeps the
+ *  query string stable across the server render and hydration. */
 const TODAY_UTC = (() => {
   const now = new Date();
   return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -46,10 +40,8 @@ const TODAY_UTC = (() => {
 type DensityId = "cards" | "table";
 
 /**
- * Every field except `fitBands`/`deadline` is sent to the backend as a query
- * string (`buildTorQuery`, src/lib/torFilters.ts) and filtered/sorted/paginated
- * there. Those two stay client-side because they read the PLACEHOLDER matching
- * layer (src/lib/torMatching.ts), which has no backend field behind it.
+ * Every filter, and the sort, is sent to the backend as a query string
+ * (`buildTorQuery`, src/lib/torFilters.ts) and applied there before paging.
  * Debounced so a fast typist in the search box doesn't fire a request per key.
  */
 const FILTER_DEBOUNCE_MS = 300;
@@ -61,8 +53,9 @@ const FILTER_DEBOUNCE_MS = 300;
  * Data comes from `GET /api/tors`, the server-side proxy over the backend
  * (src/app/api/tors/route.ts), which in turn forwards to the real filter/sort/
  * paginate query in tor.service.ts's `listTors`. Each filter, sort and page
- * change re-requests that endpoint; nothing below filters an already-fetched
- * array except the two placeholder-only fields noted above.
+ * change re-requests that endpoint; nothing below filters or re-orders an
+ * already-fetched page. Best match used to be re-sorted here, one page at a
+ * time — so page 1 could end on a 20 and page 2 open on an 84.
  *
  * What arrives carries NO grade — the backend strips it (FR-19). `signalCount`
  * and the neutral `signals[]` are the whole public surface, by design.
@@ -94,10 +87,26 @@ const delay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperties;
 
 export default function TorListingsPage() {
   const t = useTranslations("tor");
+  const skillNames = useTranslations("skills").skillNames;
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  // The mockups open on best match, which is the point of the fit score.
-  const [sort, setSort] = useState<SortId>("bestMatch");
+
+  // The reader's saved skills. `null` while loading; `[]` for a guest, a
+  // reader who never saved a profile, or one whose profile failed to load —
+  // the list still works for them, just without a fit to rank by.
+  const [profileSkills, setProfileSkills] = useState<SkillId[] | null>(null);
+  useEffect(() => {
+    loadProfile()
+      .then((profile) => setProfileSkills(profile?.skills ?? []))
+      .catch(() => setProfileSkills([]));
+  }, []);
+  const hasProfile = (profileSkills?.length ?? 0) > 0;
+
+  // The mockups open on best match, which is the point of the fit score — but
+  // only a reader with skills has a match to rank by. Until they pick a sort,
+  // the default follows whether they do.
+  const [chosenSort, setSort] = useState<SortId | null>(null);
+  const sort: SortId = chosenSort ?? (hasProfile ? "bestMatch" : "newest");
   const [page, setPage] = useState(1);
   const [density, setDensity] = useState<DensityId>("cards");
 
@@ -113,9 +122,14 @@ export default function TorListingsPage() {
     return () => clearTimeout(timeout);
   }, [filters]);
 
+  // Held until the profile resolves: fetching first would load a newest-first
+  // page and then immediately replace it with the best-match one.
   const query = useMemo(
-    () => buildTorQuery(debouncedFilters, sort, page, PAGE_SIZE, TODAY_UTC).toString(),
-    [debouncedFilters, sort, page],
+    () =>
+      profileSkills === null
+        ? null
+        : buildTorQuery(debouncedFilters, sort, page, PAGE_SIZE, TODAY_UTC, profileSkills).toString(),
+    [debouncedFilters, sort, page, profileSkills],
   );
 
   // The whole request lives in one hook (src/api/useEndpoint.ts): stale-response
@@ -128,7 +142,7 @@ export default function TorListingsPage() {
     isLoading,
     refresh,
   } = useEndpoint<TorListResponse, { items: ApiTor[]; page: number; pages: number; total: number }>(
-    `/api/tors?${query}`,
+    query === null ? null : `/api/tors?${query}`,
     {
       select: (response) => ({
         items: toTors(response),
@@ -169,19 +183,16 @@ export default function TorListingsPage() {
     [stats],
   );
 
-  /*
-   * The placeholder matching layer is attached to the fetched page, so fit and
-   * deadline are available to the client-only filters and to the sort.
-   */
-  const matched = useMemo(() => withMatches(tors, TODAY_UTC), [tors]);
-
-  // `sortTors` here only re-orders the placeholder-driven sorts (bestMatch,
-  // closingSoon) within the one page the backend already sorted and paginated
-  // — for the real sorts (newest/oldest/budgetHigh/budgetLow) the backend's
-  // order already matches and this is a no-op.
-  const visible = useMemo(
-    () => sortTors(filterMockOnly(matched, filters), sort),
-    [matched, filters, sort],
+  // Scores and chips for display. The backend already ranked and filtered on
+  // the same formula across every page; this only renders the rows it sent.
+  const visible = useMemo<CardTor[]>(
+    () =>
+      tors.map((tor) => ({
+        ...tor,
+        fitScore: hasProfile ? fitFor(tor.requiredSkillIds, profileSkills ?? []) : null,
+        requiredSkills: requirementsFor(tor.requiredSkillIds, profileSkills ?? [], skillNames),
+      })),
+    [tors, hasProfile, profileSkills, skillNames],
   );
 
   const totalPages = data?.pages ?? 1;
@@ -248,7 +259,7 @@ export default function TorListingsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <TorSortSelect value={sort} onChange={setSort} />
+            <TorSortSelect value={sort} onChange={setSort} showBestMatch={hasProfile} />
 
             {/* Cards | Table, as the mockups draw it. */}
             <div
@@ -276,16 +287,26 @@ export default function TorListingsPage() {
         </header>
 
         {/*
-          Fit scores, deadlines and skill requirements on this page are invented
-          (src/lib/torMatching.ts). Saying so is not optional: a fit score reads
-          as a claim about someone's business, and a deadline as a date they
-          would plan around. Remove this only when the values are real.
+          Skills are found by keyword in the TOR's documents, so a TOR can ask
+          for more than was detected. Saying so is not optional: a fit score
+          reads as a claim about someone's business.
         */}
         <p
           className="rise mt-3 rounded-field border border-dashed border-sage-400 bg-mist-50 px-3 py-2 text-xs text-ink-600"
           style={delay(60)}
         >
           {t.mockDataNote}
+          {profileSkills !== null && !hasProfile && (
+            <>
+              {" "}
+              <Link
+                href="/skills"
+                className="rounded-field font-medium text-sage-600 underline underline-offset-4 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+              >
+                {t.setUpSkillsPrompt}
+              </Link>
+            </>
+          )}
         </p>
 
         <div className="mt-5 grid items-start gap-6 lg:grid-cols-[15rem_1fr]">
@@ -307,6 +328,7 @@ export default function TorListingsPage() {
               categoryCounts={categoryFacet.counts}
               methodCounts={methodFacet.counts}
               budgetMax={stats?.maxBudget ?? null}
+              showFit={hasProfile}
             />
           </div>
 

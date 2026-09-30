@@ -32,6 +32,10 @@ const FORWARDED = [
   "publishedFrom",
   "publishedTo",
   "sort",
+  // The reader's own profile skill ids and fit bands. Not identifying, and
+  // sending them keeps this route free of NextAuth — see publicFetch above.
+  "skills",
+  "fit",
   "page",
   "limit",
 ] as const;

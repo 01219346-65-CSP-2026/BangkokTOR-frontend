@@ -1,6 +1,6 @@
 "use client";
 
-import { use, type ReactNode } from "react";
+import { use, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { useEndpoint } from "@/api/useEndpoint";
@@ -12,16 +12,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FitDial } from "@/components/tor/FitDial";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
-import { fitBand, withMatch } from "@/lib/torMatching";
+import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
+import { loadProfile, type SkillProfile } from "@/lib/skillProfile";
 
-/**
- * Day-resolution clock — see the note in the listings page. Flooring to midnight
- * UTC keeps the server render and hydration in agreement about "in N days".
- */
-const TODAY_UTC = (() => {
-  const now = new Date();
-  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-})();
+/** Documents shown before the list folds behind "show all". */
+const COLLAPSED_DOCUMENTS = 4;
 
 /**
  * One term of reference in full.
@@ -48,6 +43,17 @@ export default function TorDetailPage({
   const { id } = use(params);
   const t = useTranslations("tor");
   const { locale } = useLanguage();
+  const [showAllDocuments, setShowAllDocuments] = useState(false);
+  const skillNames = useTranslations("skills").skillNames;
+
+  // The reader's saved profile; null for a guest or a reader without one.
+  // Scored against the same way as the listing card (src/lib/torFit.ts).
+  const [profile, setProfile] = useState<SkillProfile | null>(null);
+  useEffect(() => {
+    loadProfile()
+      .then(setProfile)
+      .catch(() => setProfile(null));
+  }, []);
 
   const { data: record, error, isLoading, refresh } = useEndpoint<
     TorDetailResponse,
@@ -86,8 +92,12 @@ export default function TorDetailPage({
     );
   }
 
-  // Placeholder matching layer — see src/lib/torMatching.ts.
-  const tor = withMatch(record, TODAY_UTC);
+  const tor = record;
+  const profileSkills = profile?.skills ?? [];
+  const hasProfile = profileSkills.length > 0;
+  const requiredSkills = requirementsFor(tor.requiredSkillIds, profileSkills, skillNames);
+  const matchedSkillCount = requiredSkills.filter((skill) => skill.matched).length;
+  const fitScore = hasProfile ? fitFor(tor.requiredSkillIds, profileSkills) : null;
   const summaryPoints = tor.summaryPoints ?? [];
 
   const published = formatDate(new Date(tor.publishedAt).getTime(), locale);
@@ -96,12 +106,20 @@ export default function TorDetailPage({
   // leads the page as a banner instead of waiting at the bottom of the rail.
   const blocking = notable.filter((signal) => signal.id === "no-tor");
   const advisory = notable.filter((signal) => signal.id !== "no-tor");
-  const missingSkills = tor.requiredSkills.filter((skill) => !skill.matched);
-  const bandLabel = {
-    strong: t.fitStrong,
-    moderate: t.fitModerate,
-    weak: t.fitWeak,
-  }[fitBand(tor.fitScore)];
+  const missingSkills = requiredSkills.filter((skill) => !skill.matched);
+  const fitHeading =
+    fitScore === null
+      ? hasProfile
+        ? t.fitPanelNoSkills
+        : t.setUpSkillsPrompt
+      : t.fitPanelHeading.replace(
+          "{band}",
+          { strong: t.fitStrong, moderate: t.fitModerate, weak: t.fitWeak }[fitBand(fitScore)],
+        );
+  const inBudgetRange =
+    profile &&
+    tor.budget >= profile.budgetMin &&
+    (profile.budgetMax === null || tor.budget <= profile.budgetMax);
 
   // Once extraction has expanded the bundle, its PDFs replace it in the list;
   // the zip stays reachable as a single link underneath.
@@ -111,6 +129,10 @@ export default function TorDetailPage({
     pdfs.length > 0
       ? [...tor.documents.filter((document) => document.kind !== "extractedPdf" && document.kind !== "bundle"), ...pdfs]
       : tor.documents;
+  // A bundle can expand to 40+ PDFs; the list stays short until asked.
+  const collapsible = listed.length > COLLAPSED_DOCUMENTS;
+  const visibleDocuments =
+    collapsible && !showAllDocuments ? listed.slice(0, COLLAPSED_DOCUMENTS) : listed;
 
   const textLayerLabel = (layer: TextLayer) =>
     layer === "digital"
@@ -298,7 +320,7 @@ export default function TorDetailPage({
               </div>
 
               <ul className="mt-3 divide-y divide-sage-100 border-t border-sage-100">
-                {listed.map((document, index) => (
+                {visibleDocuments.map((document, index) => (
                   <li key={document.id ?? `${tor.id}-${index}`}>
                     <DocumentRow
                       document={document}
@@ -313,6 +335,25 @@ export default function TorDetailPage({
                   </li>
                 ))}
               </ul>
+
+              {collapsible && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllDocuments((open) => !open)}
+                  aria-expanded={showAllDocuments}
+                  className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-field border-t border-sage-100 py-2.5 text-xs font-medium text-sage-600 transition duration-200 ease-soft hover:bg-mist-50 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                >
+                  {showAllDocuments
+                    ? t.showFewerDocuments
+                    : t.showAllDocuments.replace("{count}", String(listed.length))}
+                  <span
+                    aria-hidden="true"
+                    className={`transition-transform duration-200 ${showAllDocuments ? "rotate-180" : ""}`}
+                  >
+                    ▾
+                  </span>
+                </button>
+              )}
 
               {pdfs.length > 0 &&
                 bundles.map(
@@ -375,17 +416,26 @@ export default function TorDetailPage({
               </Button>
             </div>
 
-            {/* ⚠ Every figure in the fit panel is placeholder — see
-                src/lib/torMatching.ts — hence the footnote inside it. */}
+            {/* Scored against the reader's saved profile. Skills are found by
+                keyword, so the footnote inside says they can be incomplete. */}
             <section
               className="mt-6 rounded-field border border-sage-400/60 bg-white p-6"
               data-tour="fit"
             >
               <div className="flex items-center gap-4">
-                <FitDial score={tor.fitScore} size="lg" caption={t.fitCaption} />
+                <FitDial score={fitScore} size="lg" caption={t.fitCaption} />
                 <div className="min-w-0">
                   <h2 className="text-sm leading-snug font-medium text-moss-700">
-                    {t.fitPanelHeading.replace("{band}", bandLabel)}
+                    {hasProfile ? (
+                      fitHeading
+                    ) : (
+                      <Link
+                        href="/skills"
+                        className="rounded-field underline underline-offset-4 hover:text-sage-600 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                      >
+                        {fitHeading}
+                      </Link>
+                    )}
                   </h2>
                   <p className="mt-1 text-xs leading-relaxed text-ink-500">
                     {t.mockDataNote}
@@ -395,15 +445,15 @@ export default function TorDetailPage({
 
               <dl className="mt-5 flex flex-col gap-3 border-t border-sage-100 pt-5">
                 <FitRow label={t.fitPanelSkillOverlap}>
-                  {tor.matchedSkillCount} / {tor.requiredSkills.length}
+                  {hasProfile ? `${matchedSkillCount} / ${requiredSkills.length}` : "—"}
                 </FitRow>
                 <FitRow label={t.fitPanelBudget}>
-                  {tor.budget >= 1_000_000 && tor.budget <= 8_000_000
-                    ? t.yes
-                    : t.no}
+                  {profile ? (inBudgetRange ? t.yes : t.no) : "—"}
                 </FitRow>
                 <FitRow label={t.fitPanelMissing} tone="muted">
-                  {missingSkills.length === 0
+                  {requiredSkills.length === 0 || !hasProfile
+                    ? "—"
+                    : missingSkills.length === 0
                     ? t.fitPanelNothingMissing
                     : missingSkills.map((skill) => skill.name).join(", ")}
                 </FitRow>

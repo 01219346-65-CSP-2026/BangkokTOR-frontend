@@ -6,8 +6,7 @@ import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
 import { Badge } from "@/components/ui/Badge";
 import { FitDial } from "@/components/tor/FitDial";
-import { isClosingSoon } from "@/lib/torMatching";
-import type { MatchedTor } from "@/types/tor";
+import type { CardTor } from "@/types/tor";
 
 /**
  * One term of reference, as a card that opens its detail page.
@@ -15,15 +14,14 @@ import type { MatchedTor } from "@/types/tor";
  * The whole card is the target — a single unambiguous click, rather than a row
  * of competing small links.
  *
- * ⚠ The fit dial, the skill chips and the deadline are all placeholder values
- * (see `src/lib/torMatching.ts`). The listing page carries a banner saying so;
- * do not remove it while this data is invented.
+ * On /tor the fit dial and skill chips are real: skills detected in the TOR's
+ * documents, scored against the reader's profile (src/lib/torFit.ts). There is
+ * no deadline — the portal publishes no closing date, and an invented one is a
+ * date someone would plan around.
  */
-export function TorCard({ tor }: { tor: MatchedTor }) {
+export function TorCard({ tor }: { tor: CardTor }) {
   const t = useTranslations("tor");
   const { locale } = useLanguage();
-
-  const urgent = isClosingSoon(tor.daysRemaining);
 
   return (
     <Link
@@ -82,13 +80,6 @@ export function TorCard({ tor }: { tor: MatchedTor }) {
           <p className="font-mono text-base leading-snug font-semibold text-moss-700 tabular-nums">
             {formatBudgetTHB(tor.budget, locale)}
           </p>
-          <p
-            className={`font-mono text-[0.6875rem] tabular-nums ${
-              urgent ? "font-medium text-clay-500" : "text-ink-500"
-            }`}
-          >
-            <DeadlineLabel days={tor.daysRemaining} t={t} />
-          </p>
 
           <span className="mt-2 rounded-field border border-sage-400/70 px-3 py-1.5 text-xs font-medium text-sage-600 transition duration-200 ease-soft group-hover:border-sage-600 group-hover:bg-mist-50 group-hover:text-moss-700">
             {t.viewDetail}
@@ -122,26 +113,4 @@ function SkillChip({
       {matched && <span aria-hidden="true"> ✓</span>}
     </span>
   );
-}
-
-/**
- * The countdown. Shared by the card and the table so both phrase a deadline the
- * same way — including the already-closed case, which the mockups never show.
- */
-export function DeadlineLabel({
-  days,
-  t,
-}: {
-  days: number;
-  t: Record<string, string | Record<string, string>>;
-}) {
-  function line(key: string): string {
-    const value = t[key];
-    return typeof value === "string" ? value : key;
-  }
-
-  if (days < 0) return <>{line("closed")}</>;
-  if (days === 0) return <>{line("closesToday")}</>;
-  if (days === 1) return <>{line("closesTomorrow")}</>;
-  return <>{line("closesIn").replace("{count}", String(days))}</>;
 }

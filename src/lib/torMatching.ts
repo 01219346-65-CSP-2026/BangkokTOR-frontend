@@ -15,6 +15,10 @@ import type { MatchedTor, Tor, TorSkillRequirement } from "@/types/tor";
  * navigation, which makes the UI impossible to review.
  *
  * Delete this file when real matching exists. Nothing it returns is a fact.
+ *
+ * It no longer backs /tor or /tor/[id]: those score real TORs against the
+ * reader's saved profile (src/lib/torFit.ts). Only the sample-data screens —
+ * /dashboard and the /skills preview — still render MOCK_TORS through here.
  */
 
 /**
@@ -130,14 +134,8 @@ export function withMatches(tors: Tor[], now: number): MatchedTor[] {
   return tors.map((tor) => withMatch(tor, now));
 }
 
-/** The mockups' three fit bands, used by the listing's match filter. */
-export type FitBandId = "strong" | "moderate" | "weak";
-
-export function fitBand(fitScore: number): FitBandId {
-  if (fitScore >= 70) return "strong";
-  if (fitScore >= 40) return "moderate";
-  return "weak";
-}
+// One definition of the bands, shared with the real matching in torFit.ts.
+export { fitBand, type FitBandId } from "@/lib/torFit";
 
 /** A deadline inside a week is the one the mockups colour as urgent. */
 export function isClosingSoon(daysRemaining: number): boolean {

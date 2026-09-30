@@ -163,3 +163,15 @@ export type TorMatch = {
 
 /** A TOR with its derived matching data attached. */
 export type MatchedTor = Tor & TorMatch;
+
+/**
+ * What a listing card or table row needs. Real records (src/lib/torFit.ts)
+ * and the mock ones (src/lib/torMatching.ts) both satisfy it.
+ *
+ * `fitScore` is null when the TOR has no detected skills, or the reader has
+ * no profile — there is nothing to score, and a zero would claim otherwise.
+ */
+export type CardTor = Tor & {
+  fitScore: number | null;
+  requiredSkills: TorSkillRequirement[];
+};
