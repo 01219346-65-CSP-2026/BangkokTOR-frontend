@@ -30,14 +30,16 @@ export type UseEndpointOptions<TResponse, TData> = {
 };
 
 /**
- * @param path      URL to fetch, relative to the app's own origin.
+ * @param path      URL to fetch, relative to the app's own origin. `null` means
+ *                  "not yet" — nothing is fetched and the state stays loading,
+ *                  for a request that depends on something still resolving.
  * @param options   Optional `select` transform.
  *
  * `TResponse` is what the endpoint returns; `TData` is what the component gets.
  * They are the same type unless `select` is given.
  */
 export function useEndpoint<TResponse, TData = TResponse>(
-  path: string,
+  path: string | null,
   options: UseEndpointOptions<TResponse, TData> = {},
 ) {
   const { select } = options;
@@ -112,6 +114,7 @@ export function useEndpoint<TResponse, TData = TResponse>(
     // `run` happens after an await, never synchronously in this effect body,
     // and a stale response is discarded via requestId. The linter cannot see
     // across the useCallback boundary to confirm that, hence the disable.
+    if (path === null) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void run(path);
 
@@ -119,6 +122,7 @@ export function useEndpoint<TResponse, TData = TResponse>(
   }, [path, run]);
 
   const refresh = useCallback(() => {
+    if (path === null) return;
     setState((prev) => ({ ...prev, isLoading: true }));
     void run(path);
   }, [path, run]);

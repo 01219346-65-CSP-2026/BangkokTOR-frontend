@@ -1,6 +1,9 @@
+import type { SkillId } from "@/i18n/Translations";
+import { ALL_SKILL_IDS } from "@/lib/skillProfile";
 import type {
   TextLayer,
   Tor,
+  TorDocument,
   TorCategoryId,
   TorContractId,
   TorMethodId,
@@ -53,6 +56,10 @@ export type BackendTor = {
   sourceUrl: string | null;
   signalCount: number | null;
   signals?: TorSignalRef[];
+  /** Skills the backend's keyword tagger found, each with its quote. */
+  requiredSkills?: Array<{ slug: string; evidence: string }>;
+  /** Only when the list request sent `skills` — the server-side score. */
+  fitScore?: number | null;
   documents?: Array<{
     id: string;
     kind: TorDocumentKindId;
@@ -60,6 +67,7 @@ export type BackendTor = {
     url: string;
     textLayer: "digital" | "scanned" | "unreadable" | "missing";
     pages: number;
+    bytes?: number | null;
     fetchedAt: string | null;
   }>;
   summaryPoints?: Array<{
@@ -81,11 +89,30 @@ export type TorListResponse = {
 
 export type TorDetailResponse = BackendTor;
 
+/** `GET /api/tors/agencies` — every agency in the corpus, not just one page. */
+export type AgencyOption = { agency: string; count: number };
+
+/** `GET /api/tors/stats` — over every listed record, ignoring any active filter. */
+export type TorStatsResponse = {
+  total: number;
+  software: number;
+  withSignals: number;
+  byCategory: Array<{ category: string | null; count: number }>;
+  byMethod: Array<{ method: string | null; count: number }>;
+  maxBudget: number | null;
+};
+
 /** A `Tor` plus the fields the backend adds that the shared type has no slot for. */
 export type ApiTor = Tor & {
   /** Neutral observations from the grader. Empty until a TOR has been graded. */
   signals: TorSignalRef[];
+  /** Detected skill requirements, in the profile vocabulary. Unknown slugs
+   *  are dropped — the wizard has no name to show for them. */
+  requiredSkillIds: SkillId[];
 };
+
+const SKILL_IDS = new Set<string>(ALL_SKILL_IDS);
+const isSkillId = (id: string): id is SkillId => SKILL_IDS.has(id);
 
 const CATEGORIES = new Set<TorCategoryId>([
   "medical", "it", "office", "agriculture", "electrical", "education",
@@ -123,7 +150,49 @@ function extractionIncomplete(row: BackendTor): boolean {
   return row.status === "extraction_incomplete";
 }
 
+/**
+ * A backend document row in the frontend's vocabulary.
+ *
+ * The backend writes "missing" for a row whose file triage has not reached yet
+ * — the file exists, it just has not been read — so that becomes "unknown".
+ * "unreadable" is a file that exists but yields no text, which a reader
+ * experiences exactly like a scan.
+ *
+ * `extractedPdf` rows are served by the backend, whose port is not public, so
+ * their link goes through this app's own proxy route instead.
+ */
+function toDocument(torId: string, document: NonNullable<BackendTor["documents"]>[number]): TorDocument {
+  return {
+    id: document.id,
+    kind: document.kind,
+    published: document.fetchedAt ?? "",
+    filename: document.filename,
+    url:
+      document.kind === "extractedPdf"
+        ? `/api/tors/${encodeURIComponent(torId)}/documents/${encodeURIComponent(document.id)}/file`
+        : document.url || null,
+    textLayer:
+      document.textLayer === "unreadable"
+        ? "scanned"
+        : document.textLayer === "missing"
+          ? "unknown"
+          : document.textLayer,
+    pages: document.pages,
+    bytes: document.bytes ?? null,
+  };
+}
+
+/** Readable if any file is; "missing" only when there is no file at all. */
+function torTextLayer(documents: TorDocument[]): TextLayer {
+  if (documents.length === 0) return "missing";
+  if (documents.some((document) => document.textLayer === "digital")) return "digital";
+  if (documents.some((document) => document.textLayer === "scanned")) return "scanned";
+  return "unknown";
+}
+
 export function toTor(row: BackendTor): ApiTor {
+  const documents = (row.documents ?? []).map((document) => toDocument(row.id, document));
+
   return {
     id: row.id,
     projectNumber: row.projectId,
@@ -141,19 +210,12 @@ export function toTor(row: BackendTor): ApiTor {
     category: oneOf(CATEGORIES, row.category, "other"),
     contractType: oneOf(CONTRACTS, row.contractType, "purchase"),
 
-    // Per-document triage is not on the list payload — it lives on `documents`,
-    // which this endpoint does not serve. Claiming "digital" here would be an
-    // invention, so it reports the honest absence.
-    torTextLayer: "missing" as TextLayer,
-    torPages: 0,
-    documents: row.documents?.map((document) => ({
-      kind: document.kind,
-      published: document.fetchedAt ?? "",
-      filename: document.filename,
-      url: document.url,
-      textLayer: document.textLayer === "unreadable" ? "missing" : document.textLayer,
-      pages: document.pages,
-    })) ?? [],
+    // The list payload carries no `documents`, so there it stays "missing" —
+    // claiming "digital" would be an invention. The detail payload does, and
+    // there the verdict comes from the real files.
+    torTextLayer: torTextLayer(documents),
+    torPages: documents.find((document) => document.kind === "tor")?.pages ?? 0,
+    documents,
     summaryPoints: row.summaryPoints ?? [],
 
     status: procurementStatus(row),
@@ -162,6 +224,7 @@ export function toTor(row: BackendTor): ApiTor {
     extractionIncomplete: extractionIncomplete(row),
     signalCount: row.signalCount ?? 0,
     signals: row.signals ?? [],
+    requiredSkillIds: (row.requiredSkills ?? []).map((s) => s.slug).filter(isSkillId),
   };
 }
 

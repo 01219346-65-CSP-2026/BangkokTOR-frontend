@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslations } from "@/i18n/LanguageProvider";
 import { TorCard } from "@/components/tor/TorCard";
 import { TorTable } from "@/components/tor/TorTable";
@@ -9,29 +10,27 @@ import { TorActiveFilters } from "@/components/tor/TorActiveFilters";
 import { TorSortSelect } from "@/components/tor/TorSortSelect";
 import { TorPagination } from "@/components/tor/TorPagination";
 import { useEndpoint } from "@/api/useEndpoint";
-import { toTors, type ApiTor, type TorListResponse } from "@/api/tors";
-import { withMatches } from "@/lib/torMatching";
 import {
-  agencyOptions,
-  categoryOptions,
+  toTors,
+  type AgencyOption,
+  type ApiTor,
+  type TorListResponse,
+  type TorStatsResponse,
+} from "@/api/tors";
+import { loadProfile } from "@/lib/skillProfile";
+import { fitFor, requirementsFor } from "@/lib/torFit";
+import { translations, type SkillId } from "@/i18n/Translations";
+import type { CardTor, TorCategoryId, TorMethodId } from "@/types/tor";
+import {
+  buildTorQuery,
   EMPTY_FILTERS,
-  filterTors,
-  methodOptions,
-  pageCount,
-  paginate,
-  sortTors,
+  PAGE_SIZE,
   type SortId,
   type TorFilters as Filters,
 } from "@/lib/torFilters";
 
-/**
- * Day-resolution clock for the placeholder deadline countdowns.
- *
- * Rounded to midnight UTC on purpose: `Date.now()` differs between the server
- * render and hydration, and a "closes in N days" that disagreed across the two
- * would be a hydration mismatch. Days only change at a date boundary, so
- * flooring to one makes both renders agree.
- */
+/** Only the published-window math reads the clock; day resolution keeps the
+ *  query string stable across the server render and hydration. */
 const TODAY_UTC = (() => {
   const now = new Date();
   return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -41,75 +40,164 @@ const TODAY_UTC = (() => {
 type DensityId = "cards" | "table";
 
 /**
- * One page of rows, filtered in memory afterwards. Right while the corpus is
- * small — every filter stays instant and the facet counts are honest. When it
- * outgrows this, pass `filters` into the query string instead: the backend
- * already accepts q, agency, category, minBudget, maxBudget, page and limit.
+ * Every filter, and the sort, is sent to the backend as a query string
+ * (`buildTorQuery`, src/lib/torFilters.ts) and applied there before paging.
+ * Debounced so a fast typist in the search box doesn't fire a request per key.
  */
-const FETCH_LIMIT = 100;
+const FILTER_DEBOUNCE_MS = 300;
 
 /**
  * The discovery dashboard (FR-12, FR-13) — the product's main screen and the
  * only one a guest can use without signing in.
  *
  * Data comes from `GET /api/tors`, the server-side proxy over the backend
- * (src/app/api/tors/route.ts). The rows are fetched once and then filtered,
- * sorted and paginated in memory, which is right while the corpus is small:
- * every filter stays instant and the facet counts can be computed honestly.
- * When the corpus outgrows one page of results, the same shape moves
- * server-side by passing `filters` into the query string instead.
+ * (src/app/api/tors/route.ts), which in turn forwards to the real filter/sort/
+ * paginate query in tor.service.ts's `listTors`. Each filter, sort and page
+ * change re-requests that endpoint; nothing below filters or re-orders an
+ * already-fetched page. Best match used to be re-sorted here, one page at a
+ * time — so page 1 could end on a 20 and page 2 open on an 84.
  *
  * What arrives carries NO grade — the backend strips it (FR-19). `signalCount`
  * and the neutral `signals[]` are the whole public surface, by design.
  */
 /** Declares the entrance order in the markup, exactly as AuthShell does. */
+const CATEGORY_IDS = new Set<string>(Object.keys(translations.en.tor.categories));
+const METHOD_IDS = new Set<string>(Object.keys(translations.en.tor.methodLabels));
+const isCategory = (id: string): id is TorCategoryId => CATEGORY_IDS.has(id);
+const isMethod = (id: string): id is TorMethodId => METHOD_IDS.has(id);
+
+/** Known ids with a non-zero count, largest first, plus the counts by id. */
+function facet<Row extends { count: number }, Id extends string>(
+  rows: Row[] | undefined,
+  key: (row: Row) => string | null,
+  isKnown: (id: string) => id is Id,
+): { ids: Id[]; counts: Record<string, number> } {
+  const ids: Id[] = [];
+  const counts: Record<string, number> = {};
+  for (const row of rows ?? []) {
+    const id = key(row);
+    if (!id || !isKnown(id) || row.count === 0) continue;
+    ids.push(id);
+    counts[id] = row.count;
+  }
+  return { ids, counts };
+}
+
 const delay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperties;
 
 export default function TorListingsPage() {
   const t = useTranslations("tor");
+  const skillNames = useTranslations("skills").skillNames;
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  // The mockups open on best match, which is the point of the fit score.
-  const [sort, setSort] = useState<SortId>("bestMatch");
+
+  // The reader's saved skills. `null` while loading; `[]` for a guest, a
+  // reader who never saved a profile, or one whose profile failed to load —
+  // the list still works for them, just without a fit to rank by.
+  const [profileSkills, setProfileSkills] = useState<SkillId[] | null>(null);
+  useEffect(() => {
+    loadProfile()
+      .then((profile) => setProfileSkills(profile?.skills ?? []))
+      .catch(() => setProfileSkills([]));
+  }, []);
+  const hasProfile = (profileSkills?.length ?? 0) > 0;
+
+  // The mockups open on best match, which is the point of the fit score — but
+  // only a reader with skills has a match to rank by. Until they pick a sort,
+  // the default follows whether they do.
+  const [chosenSort, setSort] = useState<SortId | null>(null);
+  const sort: SortId = chosenSort ?? (hasProfile ? "bestMatch" : "newest");
   const [page, setPage] = useState(1);
   const [density, setDensity] = useState<DensityId>("cards");
+
+  // Debounced separately from `filters` itself so every keystroke in the
+  // search box updates the input instantly while the request it triggers
+  // waits — typing four characters fast should cost one fetch, not four.
+  const [debouncedFilters, setDebouncedFilters] = useState<Filters>(filters);
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => setDebouncedFilters(filters),
+      FILTER_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, [filters]);
+
+  // Held until the profile resolves: fetching first would load a newest-first
+  // page and then immediately replace it with the best-match one.
+  const query = useMemo(
+    () =>
+      profileSkills === null
+        ? null
+        : buildTorQuery(debouncedFilters, sort, page, PAGE_SIZE, TODAY_UTC, profileSkills).toString(),
+    [debouncedFilters, sort, page, profileSkills],
+  );
+
   // The whole request lives in one hook (src/api/useEndpoint.ts): stale-response
   // guarding, aborting and error shape are decided there rather than per page.
-  // `select` maps the backend shape at the boundary, so nothing below this line
-  // ever sees a raw BackendTor.
+  // `select` maps the backend shape at the boundary — including the pagination
+  // metadata — so nothing below this line ever sees a raw BackendTor.
   const {
     data,
     error,
     isLoading,
     refresh,
-  } = useEndpoint<TorListResponse, ApiTor[]>(`/api/tors?limit=${FETCH_LIMIT}`, {
-    select: toTors,
-  });
+  } = useEndpoint<TorListResponse, { items: ApiTor[]; page: number; pages: number; total: number }>(
+    query === null ? null : `/api/tors?${query}`,
+    {
+      select: (response) => ({
+        items: toTors(response),
+        page: response.page,
+        pages: response.pages,
+        total: response.total,
+      }),
+    },
+  );
 
   // Null until the first response lands. Kept explicit here rather than hidden
   // inside the hook: "no data yet" and "an empty result" are different states,
   // and only the second should render the empty message.
-  const tors = useMemo(() => data ?? [], [data]);
+  const tors = useMemo(() => data?.items ?? [], [data]);
 
-  const agencies = useMemo(() => agencyOptions(tors), [tors]);
-  const categories = useMemo(() => categoryOptions(tors), [tors]);
-  const methods = useMemo(() => methodOptions(tors), [tors]);
+  // Fetched once and unfiltered: an option list derived from the current page
+  // would lose every agency the active filters hide.
+  const { data: agencyList } = useEndpoint<AgencyOption[]>("/api/tors/agencies");
+  const { data: stats } = useEndpoint<TorStatsResponse>("/api/tors/stats");
 
-  /*
-   * The placeholder matching layer is attached once, before filtering, so fit
-   * and deadline are available to both the filters and the sort.
-   */
-  const matched = useMemo(() => withMatches(tors, TODAY_UTC), [tors]);
-
-  const results = useMemo(
-    () => sortTors(filterTors(matched, filters), sort),
-    [matched, filters, sort],
+  const agencies = useMemo(
+    () =>
+      (agencyList ?? [])
+        .map((row) => row.agency)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "th")),
+    [agencyList],
+  );
+  // Options are the values that actually occur in the listed records, with
+  // their counts — a closed vocabulary still offers nothing when every record
+  // falls in one bucket.
+  const categoryFacet = useMemo(
+    () => facet(stats?.byCategory, (row) => row.category, isCategory),
+    [stats],
+  );
+  const methodFacet = useMemo(
+    () => facet(stats?.byMethod, (row) => row.method, isMethod),
+    [stats],
   );
 
-  const totalPages = pageCount(results.length);
-  // Guard against landing past the end after a filter narrows the list.
-  const currentPage = Math.min(page, totalPages);
-  const visible = paginate(results, currentPage);
+  // Scores and chips for display. The backend already ranked and filtered on
+  // the same formula across every page; this only renders the rows it sent.
+  const visible = useMemo<CardTor[]>(
+    () =>
+      tors.map((tor) => ({
+        ...tor,
+        fitScore: hasProfile ? fitFor(tor.requiredSkillIds, profileSkills ?? []) : null,
+        requiredSkills: requirementsFor(tor.requiredSkillIds, profileSkills ?? [], skillNames),
+      })),
+    [tors, hasProfile, profileSkills, skillNames],
+  );
+
+  const totalPages = data?.pages ?? 1;
+  const currentPage = data?.page ?? page;
+  const totalResults = data?.total ?? 0;
 
   function handleFilterChange(next: Filters) {
     setFilters(next);
@@ -162,16 +250,16 @@ export default function TorListingsPage() {
             >
               {t.resultCount
                 .replace("{shown}", String(visible.length))
-                .replace("{total}", String(results.length))}
+                .replace("{total}", String(totalResults))}
               {" · "}
               {t.subheading
-                .replace("{count}", String(tors.length))
+                .replace("{count}", String(totalResults))
                 .replace("{agencies}", String(agencies.length))}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <TorSortSelect value={sort} onChange={setSort} />
+            <TorSortSelect value={sort} onChange={setSort} showBestMatch={hasProfile} />
 
             {/* Cards | Table, as the mockups draw it. */}
             <div
@@ -199,16 +287,26 @@ export default function TorListingsPage() {
         </header>
 
         {/*
-          Fit scores, deadlines and skill requirements on this page are invented
-          (src/lib/torMatching.ts). Saying so is not optional: a fit score reads
-          as a claim about someone's business, and a deadline as a date they
-          would plan around. Remove this only when the values are real.
+          Skills are found by keyword in the TOR's documents, so a TOR can ask
+          for more than was detected. Saying so is not optional: a fit score
+          reads as a claim about someone's business.
         */}
         <p
           className="rise mt-3 rounded-field border border-dashed border-sage-400 bg-mist-50 px-3 py-2 text-xs text-ink-600"
           style={delay(60)}
         >
           {t.mockDataNote}
+          {profileSkills !== null && !hasProfile && (
+            <>
+              {" "}
+              <Link
+                href="/skills"
+                className="rounded-field font-medium text-sage-600 underline underline-offset-4 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+              >
+                {t.setUpSkillsPrompt}
+              </Link>
+            </>
+          )}
         </p>
 
         <div className="mt-5 grid items-start gap-6 lg:grid-cols-[15rem_1fr]">
@@ -225,8 +323,12 @@ export default function TorListingsPage() {
               filters={filters}
               onChange={handleFilterChange}
               agencies={agencies}
-              categories={categories}
-              methods={methods}
+              categories={categoryFacet.ids}
+              methods={methodFacet.ids}
+              categoryCounts={categoryFacet.counts}
+              methodCounts={methodFacet.counts}
+              budgetMax={stats?.maxBudget ?? null}
+              showFit={hasProfile}
             />
           </div>
 

@@ -20,7 +20,25 @@ import type { TorListResponse } from "@/api/tors";
  */
 
 /** Only these reach the backend. Anything else a client sends is dropped. */
-const FORWARDED = ["q", "agency", "category", "province", "isSoftware", "minBudget", "maxBudget", "page", "limit"] as const;
+const FORWARDED = [
+  "q",
+  "agency",
+  "category",
+  "method",
+  "province",
+  "isSoftware",
+  "minBudget",
+  "maxBudget",
+  "publishedFrom",
+  "publishedTo",
+  "sort",
+  // The reader's own profile skill ids and fit bands. Not identifying, and
+  // sending them keeps this route free of NextAuth — see publicFetch above.
+  "skills",
+  "fit",
+  "page",
+  "limit",
+] as const;
 
 const MAX_LIMIT = 100;
 

@@ -24,6 +24,8 @@ export type TorDocumentKindId =
   | "invitation"
   | "draftBidding"
   | "bundle"
+  | "extractedPdf"
+  | "announcement"
   | "other";
 
 export type TorStatusId =
@@ -56,10 +58,15 @@ export type TorCategoryId =
 
 export type TorContractId = "purchase" | "hire" | "construction" | "lease";
 
-/** Whether the PDF carries selectable text. "missing" means no file was attached. */
-export type TextLayer = "digital" | "scanned" | "missing";
+/**
+ * Whether the PDF carries selectable text. "missing" means no file was
+ * attached; "unknown" means a file exists but extraction has not read it yet.
+ */
+export type TextLayer = "digital" | "scanned" | "missing" | "unknown";
 
 export type TorDocument = {
+  /** Backend row id. Absent on the mock listings. */
+  id?: string;
   kind: TorDocumentKindId;
   /** ISO 8601 timestamp. */
   published: string;
@@ -69,6 +76,8 @@ export type TorDocument = {
   url: string | null;
   textLayer: TextLayer;
   pages: number;
+  /** File size, when the backend recorded it. */
+  bytes?: number | null;
 };
 
 /**
@@ -154,3 +163,15 @@ export type TorMatch = {
 
 /** A TOR with its derived matching data attached. */
 export type MatchedTor = Tor & TorMatch;
+
+/**
+ * What a listing card or table row needs. Real records (src/lib/torFit.ts)
+ * and the mock ones (src/lib/torMatching.ts) both satisfy it.
+ *
+ * `fitScore` is null when the TOR has no detected skills, or the reader has
+ * no profile — there is nothing to score, and a zero would claim otherwise.
+ */
+export type CardTor = Tor & {
+  fitScore: number | null;
+  requiredSkills: TorSkillRequirement[];
+};

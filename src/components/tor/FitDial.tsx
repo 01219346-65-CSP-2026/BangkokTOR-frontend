@@ -1,9 +1,10 @@
-import { fitBand } from "@/lib/torMatching";
+import { fitBand } from "@/lib/torFit";
 
 type FitDialSize = "sm" | "md" | "lg";
 
 type FitDialProps = {
-  score: number;
+  /** Null when there is nothing to score: an empty ring and a dash, never a 0. */
+  score: number | null;
   size?: FitDialSize;
   /** Renders on the moss panel — the ring and figure switch to sage-400. */
   onDark?: boolean;
@@ -21,8 +22,8 @@ const SIZES: Record<FitDialSize, { outer: string; inner: string; text: string }>
 /**
  * The fit score as a ring, from the UI mockups.
  *
- * ⚠ The score itself is placeholder — see `src/lib/torMatching.ts`. Nothing
- * here reflects a real assessment of anyone's business.
+ * On /tor the score is real (src/lib/torFit.ts); the sample-data screens
+ * still pass placeholder scores from `src/lib/torMatching.ts`.
  *
  * The ring is a conic-gradient: one element, no SVG arc maths, and it degrades
  * to a plain disc if the gradient is unsupported. The number is repeated in an
@@ -35,7 +36,8 @@ export function FitDial({
   caption,
 }: FitDialProps) {
   const { outer, inner, text } = SIZES[size];
-  const band = fitBand(score);
+  // An unscored TOR draws like a weak one: muted, and the ring stays empty.
+  const band = score === null ? "weak" : fitBand(score);
 
   /*
    * On the moss panel the ring is the brightest thing in the dial, so it uses
@@ -56,7 +58,7 @@ export function FitDial({
     <div
       className={`flex flex-none items-center justify-center rounded-full ${outer}`}
       style={{
-        backgroundImage: `conic-gradient(${ringColor} ${score}%, ${trackColor} 0)`,
+        backgroundImage: `conic-gradient(${ringColor} ${score ?? 0}%, ${trackColor} 0)`,
       }}
     >
       <div
@@ -73,7 +75,7 @@ export function FitDial({
                 : "text-sage-600"
           }`}
         >
-          {score}
+          {score ?? "—"}
         </span>
         {caption && size !== "sm" && (
           <span

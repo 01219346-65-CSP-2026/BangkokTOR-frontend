@@ -1,25 +1,22 @@
 "use client";
 
-import { use, type ReactNode } from "react";
+import { use, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { useEndpoint } from "@/api/useEndpoint";
 import { toTor, type ApiTor, type TorDetailResponse } from "@/api/tors";
-import { formatBudgetTHB, formatDate } from "@/i18n/format";
+import { formatBudgetTHB, formatBytes, formatDate } from "@/i18n/format";
+import type { Locale } from "@/i18n/Translations";
+import type { TextLayer, TorDocument } from "@/types/tor";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { FitDial } from "@/components/tor/FitDial";
-import { DeadlineLabel } from "@/components/tor/TorCard";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
-import { fitBand, withMatch } from "@/lib/torMatching";
+import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
+import { loadProfile, type SkillProfile } from "@/lib/skillProfile";
 
-/**
- * Day-resolution clock — see the note in the listings page. Flooring to midnight
- * UTC keeps the server render and hydration in agreement about "in N days".
- */
-const TODAY_UTC = (() => {
-  const now = new Date();
-  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-})();
+/** Documents shown before the list folds behind "show all". */
+const COLLAPSED_DOCUMENTS = 4;
 
 /**
  * One term of reference in full.
@@ -46,6 +43,17 @@ export default function TorDetailPage({
   const { id } = use(params);
   const t = useTranslations("tor");
   const { locale } = useLanguage();
+  const [showAllDocuments, setShowAllDocuments] = useState(false);
+  const skillNames = useTranslations("skills").skillNames;
+
+  // The reader's saved profile; null for a guest or a reader without one.
+  // Scored against the same way as the listing card (src/lib/torFit.ts).
+  const [profile, setProfile] = useState<SkillProfile | null>(null);
+  useEffect(() => {
+    loadProfile()
+      .then(setProfile)
+      .catch(() => setProfile(null));
+  }, []);
 
   const { data: record, error, isLoading, refresh } = useEndpoint<
     TorDetailResponse,
@@ -84,29 +92,62 @@ export default function TorDetailPage({
     );
   }
 
-  // Placeholder matching layer — see src/lib/torMatching.ts.
-  const tor = withMatch(record, TODAY_UTC);
+  const tor = record;
+  const profileSkills = profile?.skills ?? [];
+  const hasProfile = profileSkills.length > 0;
+  const requiredSkills = requirementsFor(tor.requiredSkillIds, profileSkills, skillNames);
+  const matchedSkillCount = requiredSkills.filter((skill) => skill.matched).length;
+  const fitScore = hasProfile ? fitFor(tor.requiredSkillIds, profileSkills) : null;
   const summaryPoints = tor.summaryPoints ?? [];
 
   const published = formatDate(new Date(tor.publishedAt).getTime(), locale);
   const { notable, routine } = deriveObservations(tor);
-  const missingSkills = tor.requiredSkills.filter((skill) => !skill.matched);
-  const bandLabel = {
-    strong: t.fitStrong,
-    moderate: t.fitModerate,
-    weak: t.fitWeak,
-  }[fitBand(tor.fitScore)];
+  // "No TOR attached" decides whether the record can be read at all, so it
+  // leads the page as a banner instead of waiting at the bottom of the rail.
+  const blocking = notable.filter((signal) => signal.id === "no-tor");
+  const advisory = notable.filter((signal) => signal.id !== "no-tor");
+  const missingSkills = requiredSkills.filter((skill) => !skill.matched);
+  const fitHeading =
+    fitScore === null
+      ? hasProfile
+        ? t.fitPanelNoSkills
+        : t.setUpSkillsPrompt
+      : t.fitPanelHeading.replace(
+          "{band}",
+          { strong: t.fitStrong, moderate: t.fitModerate, weak: t.fitWeak }[fitBand(fitScore)],
+        );
+  const inBudgetRange =
+    profile &&
+    tor.budget >= profile.budgetMin &&
+    (profile.budgetMax === null || tor.budget <= profile.budgetMax);
+
+  // Once extraction has expanded the bundle, its PDFs replace it in the list;
+  // the zip stays reachable as a single link underneath.
+  const pdfs = tor.documents.filter((document) => document.kind === "extractedPdf");
+  const bundles = tor.documents.filter((document) => document.kind === "bundle");
+  const listed =
+    pdfs.length > 0
+      ? [...tor.documents.filter((document) => document.kind !== "extractedPdf" && document.kind !== "bundle"), ...pdfs]
+      : tor.documents;
+  // A bundle can expand to 40+ PDFs; the list stays short until asked.
+  const collapsible = listed.length > COLLAPSED_DOCUMENTS;
+  const visibleDocuments =
+    collapsible && !showAllDocuments ? listed.slice(0, COLLAPSED_DOCUMENTS) : listed;
+
+  const textLayerLabel = (layer: TextLayer) =>
+    layer === "digital"
+      ? t.torDigital
+      : layer === "scanned"
+        ? t.torScanned
+        : layer === "unknown"
+          ? t.torUnread
+          : t.torMissing;
 
   return (
     <div className="flex-1 bg-paper-50">
       {/* Narrower than the listing's 110rem: this page is a document, and the
           design holds it to a contained measure rather than full-bleed. */}
       <div className="mx-auto w-full max-w-[84rem] px-6 pt-6 pb-16">
-        {/*
-          1f's breadcrumb: where this record sits, rather than a bare back
-          link. The agency segment is the one piece of hierarchy the source
-          actually publishes.
-        */}
         <nav
           aria-label={t.breadcrumbAll}
           className="flex flex-wrap items-center gap-1.5 font-mono text-xs text-ink-500"
@@ -123,136 +164,97 @@ export default function TorDetailPage({
           <span className="text-moss-700 tabular-nums">{tor.projectNumber}</span>
         </nav>
 
+        {blocking.length > 0 && (
+          <div
+            role="status"
+            className="mt-4 flex flex-col gap-2 rounded-field border border-clay-500/35 bg-clay-500/[0.06] px-5 py-3.5"
+          >
+            {blocking.map((signal) => (
+              <SignalRow key={signal.id} signal={signal} t={t} />
+            ))}
+          </div>
+        )}
+
         {/*
-          One grid for the whole page, header included: the rail's fit panel
-          then starts level with the header rather than below it, and the
-          header gives up the rail's width instead of running full-bleed over
-          the top of it. Both columns still stack in source order on mobile.
+          One grid for the whole page, header included. The rail stretches to
+          the reading column's height so its action block can stay pinned
+          while the reader scrolls the documents.
         */}
         <div className="mt-4 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_23rem]">
-          {/* Reading column: the header and everything that elaborates it. */}
           <div className="min-w-0">
-        <header className="rounded-field border border-sage-100 bg-white p-6">
-          {/*
-            The provenance chip row the design opens with: what we classified
-            this as, and where it came from. Mono and uppercase, because these
-            are machine facts about the record rather than prose about it.
-          */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-field bg-sage-100/70 px-2.5 py-1 font-mono text-[0.625rem] tracking-widest text-sage-600 uppercase">
-              {t.categories[tor.category]}
-            </span>
-            <span className="rounded-field bg-mist-50 px-2.5 py-1 font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
-              {t.contractTypes[tor.contractType]}
-            </span>
-            <span className="rounded-field bg-mist-50 px-2.5 py-1 font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
-              {sourceHost(tor.sourceUrl)}
-            </span>
-            {tor.extractionIncomplete && (
-              <Badge tone="caution">{t.extractionIncomplete}</Badge>
-            )}
-          </div>
+            <header className="rounded-field border border-sage-100 bg-white p-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="accent">{t.categories[tor.category]}</Badge>
+                <Badge>{t.contractTypes[tor.contractType]}</Badge>
+                {tor.sourceUrl && <Badge>{sourceHost(tor.sourceUrl)}</Badge>}
+                {tor.extractionIncomplete && (
+                  <Badge tone="caution">{t.extractionIncomplete}</Badge>
+                )}
+              </div>
 
-          {/*
-            The design sets a Thai source line above a large English title. We
-            hold no English title — the portal publishes Thai only, and there is
-            no translation service — so the Thai title itself takes the display
-            slot rather than inventing one. The agency line below carries the
-            supporting detail the design puts there.
-          */}
-          <div className="mt-4 max-w-3xl">
-            <h1
-              lang="th"
-              className="text-[1.75rem] leading-[1.3] font-medium text-moss-700"
-            >
-              {tor.title}
-            </h1>
+              {/* The portal publishes Thai only, so the Thai title takes the
+                  display slot rather than an invented translation. */}
+              <div className="mt-4 max-w-3xl">
+                <h1
+                  lang="th"
+                  className="text-[1.75rem] leading-[1.3] font-medium text-moss-700"
+                >
+                  {tor.title}
+                </h1>
+                <p lang="th" className="mt-2.5 text-sm text-ink-500">
+                  {tor.agency}
+                  {tor.department ? ` · ${tor.department}` : ""}
+                </p>
+              </div>
 
-            <p lang="th" className="mt-2.5 text-sm text-ink-500">
-              {tor.agency}
-              {tor.department ? ` · ${tor.department}` : ""}
-            </p>
-          </div>
+              {/*
+                Three cells, all real. The mockup's "closes" cell is gone: the
+                portal publishes no closing date, and a made-up countdown sat
+                beside the real procurement status and contradicted it.
+                Agency is not repeated here — it is the line under the title.
+              */}
+              <dl className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-field border border-sage-100 bg-sage-100 sm:grid-cols-[1.4fr_1fr_1fr]">
+                <Stat label={t.statBudget}>
+                  <span className="font-mono text-2xl font-semibold text-moss-700 tabular-nums">
+                    {formatBudgetTHB(tor.budget, locale)}
+                  </span>
+                </Stat>
+                <Stat label={t.statStatus}>
+                  <Badge tone="accent" withDot>
+                    {t.statusLabels[tor.status]}
+                  </Badge>
+                </Stat>
+                <Stat label={t.statDocuments}>
+                  <span className="font-mono text-lg font-semibold text-moss-700 tabular-nums">
+                    {pdfs.length > 0 ? pdfs.length : tor.documents.length}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ink-500">
+                    {textLayerLabel(tor.torTextLayer)}
+                  </span>
+                </Stat>
+              </dl>
+            </header>
 
-          {/*
-            1f's stat grid. The mockup's four cells are budget / closes /
-            agency / duration; the portal publishes no closing date and no
-            contract duration, so the two money figures the record does carry
-            take the lead and the document state fills the fourth.
-
-            Built as a 1px-gap grid over a sage-100 ground, so the rules
-            between cells come from the gaps rather than per-cell borders that
-            would double up at every seam.
-          */}
-          <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-field border border-sage-100 bg-sage-100 sm:grid-cols-4">
-            <Stat label={t.statBudget}>
-              <span className="font-mono text-lg font-semibold text-moss-700 tabular-nums">
-                {formatBudgetTHB(tor.budget, locale)}
-              </span>
-            </Stat>
-            {/* ⚠ Placeholder deadline — the portal publishes no closing date. */}
-            <Stat label={t.statCloses}>
-              <span className="font-mono text-lg font-semibold text-moss-700 tabular-nums">
-                {formatDate(new Date(tor.closesAt).getTime(), locale)}
-              </span>
-              <span
-                className={`mt-0.5 block font-mono text-xs tabular-nums ${
-                  tor.daysRemaining <= 7 && tor.daysRemaining >= 0
-                    ? "font-medium text-clay-500"
-                    : "text-ink-500"
-                }`}
-              >
-                <DeadlineLabel days={tor.daysRemaining} t={t} />
-              </span>
-            </Stat>
-            <Stat label={t.statAgency}>
-              <span lang="th" className="text-sm leading-snug text-moss-700">
-                {tor.agency}
-              </span>
-            </Stat>
-            <Stat label={t.statDocuments}>
-              <span className="font-mono text-lg font-semibold text-moss-700 tabular-nums">
-                {tor.documents.length}
-              </span>
-              <span className="mt-0.5 block text-xs text-ink-500">
-                {tor.torTextLayer === "digital"
-                  ? t.torDigital
-                  : tor.torTextLayer === "scanned"
-                    ? t.torScanned
-                    : t.torMissing}
-              </span>
-            </Stat>
-          </dl>
-        </header>
-
-            {/*
-              Our plain-language reading of the record — the one thing the
-              source portal cannot give you, so it takes the prime slot directly
-              under the hero. Each block in the reading column is its own white
-              card with a display heading, as the design sets them.
-            */}
-            <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
-              <h2 className=" text-xl tracking-tight text-moss-700">
+            {/* Our plain-language reading. One or two sentences, so a compact
+                banner rather than a full card with room to spare. */}
+            <section className="mt-6 rounded-field border border-sage-100 bg-mist-50 px-6 py-5">
+              <h2 className="text-2xl font-semibold tracking-tight text-moss-700">
                 {t.detailSummary}
               </h2>
-              <p className="mt-3 max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+              <p className="mt-2 max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
                 {t.detailSummaryBody
                   .replace("{contract}", t.contractTypes[tor.contractType])
-                  .replace("{agency}", tor.agency)
                   .replace("{category}", t.categories[tor.category])
-                  .replace("{budget}", formatBudgetTHB(tor.budget, locale))
                   .replace("{date}", published)}
               </p>
-              <p className="mt-3 max-w-prose border-t border-sage-100 pt-3 text-xs leading-relaxed text-ink-500">
+              <p className="mt-2 max-w-prose text-xs leading-relaxed text-ink-500">
                 {t.detailInterpretationNote}
               </p>
             </section>
 
             {/*
               What the documents say, as points rather than as the documents.
-              This used to render the raw extracted chunks — up to 24 sections
-              of PDF text in an accordion. The PDFs are linked in the card
-              below, so reproducing them here only buried the substance.
+              The PDFs are linked in the card below.
             */}
             <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
               <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -260,7 +262,7 @@ export default function TorDetailPage({
                   {t.detailExtractedDetails}
                 </h2>
                 {summaryPoints.length > 0 && (
-                  <span className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
+                  <span className="font-mono text-[0.6875rem] tracking-widest text-ink-500 uppercase">
                     {t.summaryPointCount.replace(
                       "{count}",
                       String(summaryPoints.length),
@@ -270,10 +272,7 @@ export default function TorDetailPage({
               </div>
 
               {summaryPoints.length === 0 ? (
-                /* A record graded before summaries existed, or one whose points
-                   were all screened out. Say so rather than render an empty
-                   card that reads as a loading failure. */
-                <p className="mt-3 text-sm leading-relaxed text-ink-500">
+                <p className="mt-3 rounded-field bg-mist-50 px-4 py-3 text-sm leading-relaxed text-ink-500">
                   {t.summaryPointsEmpty}
                 </p>
               ) : (
@@ -291,11 +290,8 @@ export default function TorDetailPage({
                         >
                           {point.text}
                         </p>
-                        {/* The citation is what makes a generated point
-                            checkable against the source. Absent when the point
-                            can no longer be traced to a page. */}
                         {point.filename && point.pageStart > 0 && (
-                          <span className="shrink-0 pt-0.5 font-mono text-[0.625rem] tracking-wide whitespace-nowrap text-ink-500">
+                          <span className="shrink-0 pt-0.5 font-mono text-[0.6875rem] tracking-wide whitespace-nowrap text-ink-500">
                             {t.pageRange
                               .replace("{from}", String(point.pageStart))
                               .replace("{to}", String(point.pageEnd))}
@@ -304,10 +300,6 @@ export default function TorDetailPage({
                       </li>
                     ))}
                   </ul>
-
-                  {/* These are machine-written. Saying so is both honest and
-                      what keeps the section from reading as the platform's own
-                      assertion about the agency. */}
                   <p className="mt-4 max-w-prose border-t border-sage-100 pt-3 text-xs leading-relaxed text-ink-500">
                     {t.summaryProvenanceNote}
                   </p>
@@ -317,87 +309,68 @@ export default function TorDetailPage({
 
             <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
               <div className="flex items-baseline justify-between gap-4">
-                <h2 className=" text-xl tracking-tight text-moss-700">
+                <h2 className="text-2xl font-semibold tracking-tight text-moss-700">
                   {t.detailDocuments}
                 </h2>
-                {/* The design pairs each card heading with a mono provenance
-                    note on the right. */}
-                <span className="shrink-0 font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
-                  {t.documentCount.replace(
-                    "{count}",
-                    String(tor.documents.length),
-                  )}
+                <span className="shrink-0 font-mono text-[0.6875rem] tracking-widest text-ink-500 uppercase">
+                  {pdfs.length > 0
+                    ? t.documentsFromBundle.replace("{count}", String(pdfs.length))
+                    : t.documentCount.replace("{count}", String(tor.documents.length))}
                 </span>
               </div>
 
               <ul className="mt-3 divide-y divide-sage-100 border-t border-sage-100">
-                {tor.documents.map((document, index) => {
-                  const meta = `${
-                    document.textLayer === "scanned"
-                      ? t.scannedLabel
-                      : document.textLayer === "digital"
-                        ? t.torDigital
-                        : t.torMissing
-                  }${
-                    document.pages > 0
-                      ? ` · ${t.pageCount.replace("{count}", String(document.pages))}`
-                      : ""
-                  }`;
-
-                  return (
-                    <li key={`${tor.id}-${index}`}>
-                      {/*
-                        The whole row is the target when a file exists, not just
-                        the PDF chip — a row that looks like a link should behave
-                        like one wherever you click it. The chip stays as the
-                        visual affordance but is no longer the only hit area.
-                        Rows with no file stay inert rather than becoming a dead
-                        link.
-                      */}
-                      {document.url ? (
-                        <a
-                          href={document.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group -mx-2 flex flex-wrap items-center justify-between gap-3 rounded-field px-2 py-3 transition duration-200 ease-soft hover:bg-mist-50 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
-                        >
-                          <span className="min-w-0">
-                            <span className="block text-sm font-medium text-ink-600 underline-offset-[3px] group-hover:text-moss-700 group-hover:underline">
-                              {t.documentKinds[document.kind]}
-                            </span>
-                            <span className="mt-0.5 block text-xs text-ink-500">
-                              {meta}
-                            </span>
-                          </span>
-
-                          <span className="shrink-0 rounded-field border border-sage-400/70 px-3 py-1.5 text-xs font-medium text-sage-600 transition duration-200 ease-soft group-hover:border-sage-600 group-hover:bg-white group-hover:text-moss-700">
-                            PDF ↗
-                          </span>
-                        </a>
-                      ) : (
-                        <div className="flex flex-wrap items-center justify-between gap-3 py-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-ink-600">
-                              {t.documentKinds[document.kind]}
-                            </p>
-                            <p className="mt-0.5 text-xs text-ink-500">{meta}</p>
-                          </div>
-                          <span className="shrink-0 text-xs text-clay-500">
-                            {t.fileUnavailable}
-                          </span>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
+                {visibleDocuments.map((document, index) => (
+                  <li key={document.id ?? `${tor.id}-${index}`}>
+                    <DocumentRow
+                      document={document}
+                      locale={locale}
+                      t={t}
+                      layerLabel={
+                        document.textLayer === "scanned"
+                          ? t.scannedLabel
+                          : textLayerLabel(document.textLayer)
+                      }
+                    />
+                  </li>
+                ))}
               </ul>
 
-              {/*
-                Readability sits with the documents it describes, stated as a
-                condition rather than flagged as a finding. On most records this
-                one line replaces what used to be a warning panel — see the
-                header of `lib/torSignals.ts` for the counts behind that.
-              */}
+              {collapsible && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllDocuments((open) => !open)}
+                  aria-expanded={showAllDocuments}
+                  className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-field border-t border-sage-100 py-2.5 text-xs font-medium text-sage-600 transition duration-200 ease-soft hover:bg-mist-50 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                >
+                  {showAllDocuments
+                    ? t.showFewerDocuments
+                    : t.showAllDocuments.replace("{count}", String(listed.length))}
+                  <span
+                    aria-hidden="true"
+                    className={`transition-transform duration-200 ${showAllDocuments ? "rotate-180" : ""}`}
+                  >
+                    ▾
+                  </span>
+                </button>
+              )}
+
+              {pdfs.length > 0 &&
+                bundles.map(
+                  (bundle, index) =>
+                    bundle.url && (
+                      <a
+                        key={bundle.id ?? `bundle-${index}`}
+                        href={bundle.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-block rounded-field text-xs text-sage-600 underline-offset-4 hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                      >
+                        {t.documentKinds.bundle} ↗
+                      </a>
+                    ),
+                )}
+
               {routine.length > 0 && (
                 <dl className="mt-4 border-t border-sage-100 pt-4">
                   {routine.map((observation) => (
@@ -412,25 +385,57 @@ export default function TorDetailPage({
             </section>
           </div>
 
-          {/* The rail: reference material, out of the reading path. */}
-          <aside>
+          {/* The rail: actions first, then reference material. */}
+          <aside className="lg:self-stretch">
             {/*
-              The fit panel. It used the same moss-700 as the nav band, which
-              made the rail read as a second header competing with the real one
-              — so it sits on white like every other card and earns its
-              prominence from the sage border and the dial instead.
-              ⚠ Every figure in it is placeholder — see src/lib/torMatching.ts
-              — hence the footnote inside the panel.
+              The actions sit apart from the fit panel: they are about the
+              record, while every figure in the panel is placeholder. Pinned so
+              "open the original" stays in reach down the whole page.
             */}
+            <div className="z-10 flex flex-col gap-2.5 rounded-field border border-sage-100 bg-white p-4 lg:sticky lg:top-6">
+              {tor.sourceUrl ? (
+                <a
+                  href={tor.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition duration-200 ease-soft hover:bg-moss-700 hover:shadow-md focus-visible:ring-2 focus-visible:ring-sage-600/40 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.985]"
+                >
+                  {t.openSource} ↗
+                </a>
+              ) : (
+                <Button fullWidth disabled>
+                  {t.sourceUnavailable}
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => console.log("Save to watchlist:", tor.id)}
+              >
+                {t.saveToWatchlist}
+              </Button>
+            </div>
+
+            {/* Scored against the reader's saved profile. Skills are found by
+                keyword, so the footnote inside says they can be incomplete. */}
             <section
-              className="rounded-field border border-sage-400/60 bg-white p-6"
+              className="mt-6 rounded-field border border-sage-400/60 bg-white p-6"
               data-tour="fit"
             >
               <div className="flex items-center gap-4">
-                <FitDial score={tor.fitScore} size="lg" caption={t.fitCaption} />
+                <FitDial score={fitScore} size="lg" caption={t.fitCaption} />
                 <div className="min-w-0">
                   <h2 className="text-sm leading-snug font-medium text-moss-700">
-                    {t.fitPanelHeading.replace("{band}", bandLabel)}
+                    {hasProfile ? (
+                      fitHeading
+                    ) : (
+                      <Link
+                        href="/skills"
+                        className="rounded-field underline underline-offset-4 hover:text-sage-600 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                      >
+                        {fitHeading}
+                      </Link>
+                    )}
                   </h2>
                   <p className="mt-1 text-xs leading-relaxed text-ink-500">
                     {t.mockDataNote}
@@ -440,52 +445,24 @@ export default function TorDetailPage({
 
               <dl className="mt-5 flex flex-col gap-3 border-t border-sage-100 pt-5">
                 <FitRow label={t.fitPanelSkillOverlap}>
-                  {tor.matchedSkillCount} / {tor.requiredSkills.length}
+                  {hasProfile ? `${matchedSkillCount} / ${requiredSkills.length}` : "—"}
                 </FitRow>
                 <FitRow label={t.fitPanelBudget}>
-                  {tor.budget >= 1_000_000 && tor.budget <= 8_000_000
-                    ? t.yes
-                    : t.no}
+                  {profile ? (inBudgetRange ? t.yes : t.no) : "—"}
                 </FitRow>
-                {/* Missing skills are the one row that is a gap, not a match —
-                    amber-side clay would read as an error, so it stays neutral
-                    sage-100 while the satisfied rows carry the mint accent. */}
                 <FitRow label={t.fitPanelMissing} tone="muted">
-                  {missingSkills.length === 0
+                  {requiredSkills.length === 0 || !hasProfile
+                    ? "—"
+                    : missingSkills.length === 0
                     ? t.fitPanelNothingMissing
                     : missingSkills.map((skill) => skill.name).join(", ")}
                 </FitRow>
               </dl>
-
-              {/*
-                Both actions live inside the panel, as the design places them.
-                mint-400 exists solely as the accent that stayed legible on the
-                moss ground, so with the ground gone the primary returns to
-                sage-600 — the token every other primary button uses.
-              */}
-              <div className="mt-5 flex flex-col gap-2.5">
-                <a
-                  href={tor.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center rounded-field bg-sage-600 px-4 py-3 text-sm font-medium text-white transition duration-200 ease-soft hover:brightness-110 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none active:scale-[0.985]"
-                >
-                  {t.openSource} ↗
-                </a>
-                <button
-                  type="button"
-                  onClick={() => console.log("Save to watchlist:", tor.id)}
-                  className="flex items-center justify-center rounded-field border border-sage-400/70 px-4 py-2.5 text-sm font-medium text-sage-600 transition duration-200 ease-soft hover:border-sage-600 hover:bg-mist-50 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none active:scale-[0.985]"
-                >
-                  {t.saveToWatchlist}
-                </button>
-              </div>
             </section>
 
-            {/* The record: dense key/value reference, not prose. The design
-                renders this as the rail's "provenance" card. */}
+            {/* The record: dense key/value reference, not prose. */}
             <section className="mt-6 rounded-field border border-sage-100 bg-white p-5">
-              <h2 className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
+              <h2 className="font-mono text-[0.6875rem] tracking-widest text-ink-500 uppercase">
                 {t.detailFacts}
               </h2>
               <dl className="mt-3 divide-y divide-sage-100 border-t border-sage-100">
@@ -512,9 +489,6 @@ export default function TorDetailPage({
                   {t.methodLabels[tor.procurementMethod]}
                 </Fact>
                 <Fact label={t.factStatus}>{t.statusLabels[tor.status]}</Fact>
-                {/* Budget reads better as a table row than inside the summary
-                    sentence, where it turned prose into a data dump. The hero
-                    still carries it as a headline figure. */}
                 <Fact label={t.factBudget}>
                   <span className="tabular-nums">
                     {formatBudgetTHB(tor.budget, locale)}
@@ -530,27 +504,11 @@ export default function TorDetailPage({
             </section>
 
             {/*
-              FR-19: advisory language only. These are observations about the
-              record's completeness — never an accusation.
-
-              The flagged panel now renders ONLY when something uncommon fired.
-              Document readability moved to the documents card, which is what
-              used to fill this block on 34 of 50 records and made almost every
-              record look flagged — a panel that appears on everything cannot
-              signal anything. Its absence now carries meaning too.
-
-              UC-05 alt flow a still holds: when nothing applies we say so,
-              just as one plain line instead of a full panel with a heading and
-              a disclaimer. The reassurance survives; the chrome does not.
+              FR-19: advisory language only — observations about the record,
+              never an accusation. "No TOR" moved to the top banner; what stays
+              here is everything else worth a second look.
             */}
-            {notable.length > 0 ? (
-              // The single clay rule along the top read as a hairline on an
-              // otherwise white card, so the one block a reader most needs to
-              // notice was the quietest thing in the rail. The colour now
-              // carries the whole card — border, ground and heading — rather
-              // than one edge of it. Tinted, not saturated: FR-19 keeps these
-              // advisory, so it should read as "look at this", never as an
-              // alarm about the agency.
+            {advisory.length > 0 ? (
               <section className="mt-6 overflow-hidden rounded-field border border-clay-500/35 bg-clay-500/[0.06]">
                 <div className="flex items-center gap-2 border-b border-clay-500/20 px-5 py-3.5">
                   <span aria-hidden="true" className="text-sm text-clay-500">
@@ -560,29 +518,89 @@ export default function TorDetailPage({
                     {t.signalsHeading}
                   </h2>
                 </div>
-
                 <ul className="divide-y divide-clay-500/15">
-                  {notable.map((signal) => (
+                  {advisory.map((signal) => (
                     <li key={signal.id} className="px-5 py-4">
                       <SignalRow signal={signal} t={t} />
                     </li>
                   ))}
                 </ul>
-
                 <p className="border-t border-clay-500/20 px-5 py-3 text-xs leading-relaxed text-ink-500">
                   {t.signalsNote}
                 </p>
               </section>
             ) : (
-              <p className="mt-6 flex items-baseline gap-2 px-1 text-xs leading-relaxed text-ink-500">
-                <span aria-hidden="true" className="text-sage-600">
-                  ✓
-                </span>
-                {t.signalsNoneBody}
-              </p>
+              blocking.length === 0 && (
+                <p className="mt-6 flex items-baseline gap-2 px-1 text-xs leading-relaxed text-ink-500">
+                  <span aria-hidden="true" className="text-sage-600">
+                    ✓
+                  </span>
+                  {t.signalsNoneBody}
+                </p>
+              )
             )}
           </aside>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One attachment: what it is, its format and size, and a distinct button to
+ * open it. A row with no file stays inert rather than becoming a dead link.
+ */
+function DocumentRow({
+  document,
+  locale,
+  t,
+  layerLabel,
+}: {
+  document: TorDocument;
+  locale: Locale;
+  t: ReturnType<typeof useTranslations<"tor">>;
+  layerLabel: string;
+}) {
+  const isPdf =
+    document.kind === "extractedPdf" ||
+    (document.filename ?? "").toLowerCase().endsWith(".pdf");
+  const format = document.kind === "bundle" ? "ZIP" : isPdf ? "PDF" : null;
+  const meta = [
+    document.kind === "extractedPdf" ? null : t.documentKinds[document.kind],
+    layerLabel,
+    document.pages > 0 ? t.pageCount.replace("{count}", String(document.pages)) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium break-all text-ink-600">
+          {document.kind === "extractedPdf" && document.filename
+            ? document.filename
+            : t.documentKinds[document.kind]}
+        </p>
+        <p className="mt-0.5 text-xs text-ink-500">{meta}</p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-3">
+        {format && <Badge>{format}</Badge>}
+        <span className="w-16 text-right font-mono text-xs text-ink-500 tabular-nums">
+          {document.bytes ? formatBytes(document.bytes, locale) : "—"}
+        </span>
+        {document.url ? (
+          <a
+            href={document.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-sage-400 bg-white px-3 py-1.5 text-xs font-medium text-moss-700 transition duration-200 ease-soft hover:border-sage-600 hover:bg-sage-100 focus-visible:ring-2 focus-visible:ring-sage-600/40 focus-visible:outline-none active:scale-[0.985]"
+          >
+            {t.download} ↗
+          </a>
+        ) : (
+          <span className="text-xs text-clay-500">{t.fileUnavailable}</span>
+        )}
       </div>
     </div>
   );
