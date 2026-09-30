@@ -20,7 +20,7 @@ import {
 import { loadProfile } from "@/lib/skillProfile";
 import { fitFor, requirementsFor } from "@/lib/torFit";
 import { translations, type SkillId } from "@/i18n/Translations";
-import type { CardTor, TorCategoryId, TorMethodId } from "@/types/tor";
+import type { CardTor, TorMethodId, TorWorkTypeId } from "@/types/tor";
 import {
   buildTorQuery,
   EMPTY_FILTERS,
@@ -61,9 +61,9 @@ const FILTER_DEBOUNCE_MS = 300;
  * and the neutral `signals[]` are the whole public surface, by design.
  */
 /** Declares the entrance order in the markup, exactly as AuthShell does. */
-const CATEGORY_IDS = new Set<string>(Object.keys(translations.en.tor.categories));
+const WORK_TYPE_IDS = new Set<string>(Object.keys(translations.en.tor.workTypes));
 const METHOD_IDS = new Set<string>(Object.keys(translations.en.tor.methodLabels));
-const isCategory = (id: string): id is TorCategoryId => CATEGORY_IDS.has(id);
+const isWorkType = (id: string): id is TorWorkTypeId => WORK_TYPE_IDS.has(id);
 const isMethod = (id: string): id is TorMethodId => METHOD_IDS.has(id);
 
 /** Known ids with a non-zero count, largest first, plus the counts by id. */
@@ -174,8 +174,8 @@ export default function TorListingsPage() {
   // Options are the values that actually occur in the listed records, with
   // their counts — a closed vocabulary still offers nothing when every record
   // falls in one bucket.
-  const categoryFacet = useMemo(
-    () => facet(stats?.byCategory, (row) => row.category, isCategory),
+  const workTypeFacet = useMemo(
+    () => facet(stats?.byWorkType, (row) => row.workType, isWorkType),
     [stats],
   );
   const methodFacet = useMemo(
@@ -323,10 +323,11 @@ export default function TorListingsPage() {
               filters={filters}
               onChange={handleFilterChange}
               agencies={agencies}
-              categories={categoryFacet.ids}
+              workTypes={workTypeFacet.ids}
               methods={methodFacet.ids}
-              categoryCounts={categoryFacet.counts}
+              workTypeCounts={workTypeFacet.counts}
               methodCounts={methodFacet.counts}
+              projectStatuses={stats?.byProjectStatus ?? []}
               budgetMax={stats?.maxBudget ?? null}
               showFit={hasProfile}
             />

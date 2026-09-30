@@ -40,11 +40,11 @@ export function TorActiveFilters({
   if (filters.agency) {
     chips.push({ key: "agency", label: t.agencyLabel, value: filters.agency });
   }
-  if (filters.category) {
+  if (filters.workType) {
     chips.push({
-      key: "category",
+      key: "workType",
       label: t.categoryLabel,
-      value: t.categories[filters.category],
+      value: t.workTypes[filters.workType],
     });
   }
   /*
@@ -85,6 +85,14 @@ export function TorActiveFilters({
       key: "method",
       label: t.methodLabel,
       value: t.methodLabels[filters.method as keyof typeof t.methodLabels],
+    });
+  }
+
+  if (filters.projectStatus) {
+    chips.push({
+      key: "projectStatus",
+      label: t.projectStatusLabel,
+      value: filters.projectStatus,
     });
   }
 

@@ -13,19 +13,21 @@ import {
   type TorFilters as Filters,
 } from "@/lib/torFilters";
 import type { FitBandId } from "@/lib/torFit";
-import type { TorCategoryId, TorMethodId } from "@/types/tor";
+import type { TorMethodId, TorWorkTypeId } from "@/types/tor";
 
 type TorFiltersProps = {
   filters: Filters;
   onChange: (filters: Filters) => void;
   /** Derived from the data, not hardcoded. */
   agencies: string[];
-  categories: TorCategoryId[];
+  workTypes: TorWorkTypeId[];
   methods: TorMethodId[];
   /** Per-option totals from /api/tors/stats, over every listed record — not
    *  narrowed by the other active filters. */
-  categoryCounts: Record<string, number>;
+  workTypeCounts: Record<string, number>;
   methodCounts: Record<string, number>;
+  /** สถานะโครงการ values with their counts, straight from /api/tors/stats. */
+  projectStatuses: Array<{ status: string; count: number }>;
   /** Largest listed budget, from /api/tors/stats. Null until it loads. */
   budgetMax: number | null;
   /** Only a reader with saved skills has a fit to filter on. */
@@ -36,10 +38,11 @@ export function TorFilters({
   filters,
   onChange,
   agencies,
-  categories,
+  workTypes,
   methods,
-  categoryCounts,
+  workTypeCounts,
   methodCounts,
+  projectStatuses,
   budgetMax,
   showFit,
 }: TorFiltersProps) {
@@ -153,22 +156,22 @@ export function TorFilters({
       />
 
       {/*
-        Our own category, not the portal's. This is the filter that makes the
-        platform worth using over the source site, so it sits directly under
-        the agency it reframes.
+        What kind of software work — our reading of the title, not a portal
+        field (the national e-GP data has no goods category). A TOR can carry
+        several, so the counts can sum past the total.
       */}
       <Select
         wrapperClassName="mt-3.5 border-t border-sage-100 pt-3.5"
-        id="tor-category"
+        id="tor-work-type"
         label={t.categoryLabel}
         placeholder={t.categoryAll}
-        value={filters.category}
+        value={filters.workType}
         onChange={(event) =>
-          update("category", event.target.value as TorCategoryId | "")
+          update("workType", event.target.value as TorWorkTypeId | "")
         }
-        options={categories.map((id) => ({
+        options={workTypes.map((id) => ({
           value: id,
-          label: withCount(t.categories[id], categoryCounts[id]),
+          label: withCount(t.workTypes[id], workTypeCounts[id]),
         }))}
       />
 
@@ -246,6 +249,24 @@ export function TorFilters({
         options={methods.map((id) => ({
           value: id,
           label: withCount(t.methodLabels[id], methodCounts[id]),
+        }))}
+      />
+
+      {/*
+        The portal's own words, not a translated vocabulary: data.go.th ships
+        contract-stage values (ระหว่างดำเนินการ, สิ้นสุดสัญญา, …), and the
+        options are exactly the ones present in the listed records.
+      */}
+      <Select
+        wrapperClassName="mt-3.5 border-t border-sage-100 pt-3.5"
+        id="tor-project-status"
+        label={t.projectStatusLabel}
+        placeholder={t.projectStatusAll}
+        value={filters.projectStatus}
+        onChange={(event) => update("projectStatus", event.target.value)}
+        options={projectStatuses.map(({ status, count }) => ({
+          value: status,
+          label: withCount(status, count),
         }))}
       />
     </aside>

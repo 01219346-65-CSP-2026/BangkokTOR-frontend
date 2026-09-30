@@ -1,4 +1,4 @@
-import type { TorCategoryId } from "@/types/tor";
+import type { TorWorkTypeId } from "@/types/tor";
 import type { FitBandId } from "@/lib/torFit";
 
 /**
@@ -18,8 +18,12 @@ export type SortId = "bestMatch" | "newest" | "oldest" | "budgetHigh" | "budgetL
 export type TorFilters = {
   search: string;
   agency: string | "";
-  /** Our interpreted category — the most useful filter we add over the source. */
-  category: TorCategoryId | "";
+  /**
+   * หมวดหมู่: our reading of what kind of software work this is. Replaced the
+   * goods category, which the national e-GP data does not carry — every record
+   * read as "other".
+   */
+  workType: TorWorkTypeId | "";
   /**
    * Budget range in baht, driven by the two-handle budget slider. `null` on
    * either end means that end is open — a floor of null is "from anything", a
@@ -29,6 +33,11 @@ export type TorFilters = {
   maxBudget: number | null;
   published: PublishedWindowId | "";
   method: string | "";
+  /**
+   * สถานะโครงการ exactly as data.go.th ships it (e.g. ระหว่างดำเนินการ). The
+   * options come from the data via /api/tors/stats, so there is no id list.
+   */
+  projectStatus: string;
   /** Scored server-side against the reader's skills; ignored without them. */
   fitBands: FitBandId[];
 };
@@ -36,11 +45,12 @@ export type TorFilters = {
 export const EMPTY_FILTERS: TorFilters = {
   search: "",
   agency: "",
-  category: "",
+  workType: "",
   minBudget: null,
   maxBudget: null,
   published: "",
   method: "",
+  projectStatus: "",
   fitBands: [],
 };
 
@@ -106,8 +116,9 @@ export function buildTorQuery(
   const search = filters.search.trim();
   if (search) params.set("q", search);
   if (filters.agency) params.set("agency", filters.agency);
-  if (filters.category) params.set("category", filters.category);
+  if (filters.workType) params.set("workType", filters.workType);
   if (filters.method) params.set("method", filters.method);
+  if (filters.projectStatus) params.set("projectStatus", filters.projectStatus);
   if (filters.minBudget !== null) params.set("minBudget", String(filters.minBudget));
   if (filters.maxBudget !== null) params.set("maxBudget", String(filters.maxBudget));
 

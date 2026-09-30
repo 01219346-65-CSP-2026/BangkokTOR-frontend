@@ -404,6 +404,8 @@ const en = {
     publishedAll: "Any time",
     methodLabel: "Method",
     methodAll: "Any method",
+    projectStatusLabel: "Project status",
+    projectStatusAll: "Any status",
     clearAll: "Clear all filters",
     sortLabel: "Sort",
     resultCount: "Showing {shown} of {total}",
@@ -461,7 +463,7 @@ const en = {
     // budget figure moved to the record table, where an identifier belongs —
     // in prose they turned the paragraph into a data dump.
     detailSummaryBody:
-      "A {contract} procurement, listed on the source portal on {date}. This platform reads it as falling under {category}.",
+      "A {contract} procurement, listed on the source portal on {date}. This platform reads it as {category} work.",
     detailInterpretationNote:
       "Category and contract type are this platform's reading of the portal's Thai classification. Budget, agency and dates are reproduced from the source record.",
     detailFacts: "Record",
@@ -480,7 +482,7 @@ const en = {
     factReferencePrice: "Reference price",
     factMethod: "Procurement method",
     factContract: "Contract type",
-    factCategory: "Category",
+    factCategory: "Type of work",
     factSourceCategory: "Portal classification",
     factStatus: "Status",
     factNumber: "Project number",
@@ -491,12 +493,21 @@ const en = {
       "Files are served from the source portal. Scanned documents have no searchable text layer.",
     pageCount: "{count} pages",
     removeFilter: "Remove filter {filter}",
-    categoryLabel: "Category",
-    categoryAll: "All categories",
+    categoryLabel: "Type of work",
+    categoryAll: "All types of work",
     torPages: "{count}-page TOR",
     torScanned: "Scanned TOR",
     torDigital: "Searchable TOR",
     torMissing: "No TOR attached",
+    workTypes: {
+      development: "Development",
+      aiData: "AI & data",
+      cloudInfra: "Cloud & infrastructure",
+      maintenance: "Maintenance (MA)",
+      consulting: "Consulting",
+      learning: "Digital learning",
+      other: "Other",
+    },
     categories: {
       medical: "Medical & scientific",
       it: "IT & computing",
@@ -523,6 +534,7 @@ const en = {
       contracted: "Contract issued",
       deliveredOnTime: "Delivered on time",
       deliveredComplete: "Delivered in full",
+      contractEnded: "Contract ended",
     },
     methodLabels: {
       eBidding: "e-bidding",
@@ -1198,6 +1210,8 @@ const th: typeof en = {
     publishedAll: "ทุกช่วงเวลา",
     methodLabel: "วิธีจัดซื้อจัดจ้าง",
     methodAll: "ทุกวิธี",
+    projectStatusLabel: "สถานะโครงการ",
+    projectStatusAll: "เลือกสถานะโครงการ",
     clearAll: "ล้างตัวกรองทั้งหมด",
     sortLabel: "เรียงลำดับ",
     resultCount: "แสดง {shown} จาก {total}",
@@ -1243,7 +1257,7 @@ const th: typeof en = {
     backToList: "กลับไปยังรายการทั้งหมด",
     detailSummary: "โครงการนี้คืออะไร",
     detailSummaryBody:
-      "จัดซื้อจัดจ้างในรูปแบบ{contract} เผยแพร่บนเว็บไซต์ต้นทางเมื่อวันที่ {date} และแพลตฟอร์มนี้ตีความว่าอยู่ในหมวด{category}",
+      "จัดซื้อจัดจ้างในรูปแบบ{contract} เผยแพร่บนเว็บไซต์ต้นทางเมื่อวันที่ {date} และแพลตฟอร์มนี้ตีความว่าเป็นงานประเภท {category}",
     detailInterpretationNote:
       "หมวดหมู่และประเภทสัญญาเป็นการตีความของแพลตฟอร์มจากการจัดประเภทภาษาไทยของเว็บไซต์ต้นทาง ส่วนงบประมาณ หน่วยงาน และวันที่ นำมาจากข้อมูลต้นทางโดยตรง",
     detailFacts: "ข้อมูลโครงการ",
@@ -1279,6 +1293,15 @@ const th: typeof en = {
     torScanned: "TOR เป็นไฟล์สแกน",
     torDigital: "TOR ค้นหาข้อความได้",
     torMissing: "ไม่มีไฟล์ TOR",
+    workTypes: {
+      development: "พัฒนาระบบ/แพลตฟอร์ม",
+      aiData: "AI/ข้อมูล/ภูมิสารสนเทศ",
+      cloudInfra: "คลาวด์/โครงสร้างพื้นฐาน",
+      maintenance: "บำรุงรักษา (MA)",
+      consulting: "ที่ปรึกษา",
+      learning: "การเรียนรู้ดิจิทัล",
+      other: "อื่น ๆ",
+    },
     categories: {
       medical: "วิทยาศาสตร์และการแพทย์",
       it: "คอมพิวเตอร์และไอที",
@@ -1305,6 +1328,7 @@ const th: typeof en = {
       contracted: "จัดทำสัญญา/PO แล้ว",
       deliveredOnTime: "ส่งงานตามกำหนด",
       deliveredComplete: "ส่งงานครบถ้วน",
+      contractEnded: "สิ้นสุดสัญญา",
     },
     methodLabels: {
       eBidding: "ประกวดราคาอิเล็กทรอนิกส์ (e-bidding)",
