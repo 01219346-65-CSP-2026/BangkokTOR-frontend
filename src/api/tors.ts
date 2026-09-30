@@ -5,6 +5,7 @@ import type {
   Tor,
   TorDocument,
   TorCategoryId,
+  TorWorkTypeId,
   TorContractId,
   TorMethodId,
   TorStatusId,
@@ -47,6 +48,7 @@ export type BackendTor = {
   procurementType: string | null;
   goodsCategory: string | null;
   category: string | null;
+  workTypes?: string[] | null;
   contractType: string | null;
   methodId: string | null;
   statusId: string | null;
@@ -98,7 +100,13 @@ export type TorStatsResponse = {
   software: number;
   withSignals: number;
   byCategory: Array<{ category: string | null; count: number }>;
+  /** Multi-label: a TOR counts under each of its work types. */
+  byWorkType: Array<{ workType: string; count: number }>;
   byMethod: Array<{ method: string | null; count: number }>;
+  /** สถานะโครงการ values present in the listed records, as the portal writes them. */
+  byProjectStatus: Array<{ status: string; count: number }>;
+  /** The fiscal year (Buddhist era) the listings cover. Null before any ingest. */
+  fiscalYear: number | null;
   maxBudget: number | null;
 };
 
@@ -122,8 +130,18 @@ const CATEGORIES = new Set<TorCategoryId>([
 const CONTRACTS = new Set<TorContractId>(["purchase", "hire", "construction", "lease"]);
 const METHODS = new Set<TorMethodId>(["eBidding", "specific", "competitive"]);
 const STATUSES = new Set<TorStatusId>([
-  "inProgress", "contracted", "deliveredOnTime", "deliveredComplete",
+  "inProgress", "contracted", "deliveredOnTime", "deliveredComplete", "contractEnded",
 ]);
+
+const WORK_TYPES = new Set<TorWorkTypeId>([
+  "development", "aiData", "cloudInfra", "maintenance", "consulting", "learning", "other",
+]);
+
+/** Known work types only; a row classified before work types existed reads as "other". */
+function workTypes(value: string[] | null | undefined): TorWorkTypeId[] {
+  const known = (value ?? []).filter((id): id is TorWorkTypeId => WORK_TYPES.has(id as TorWorkTypeId));
+  return known.length ? known : ["other"];
+}
 
 /** Narrow an upstream string to a known id, or fall back rather than throw.
  *  The portal ships free text; one unrecognised value must not empty the page. */
@@ -208,6 +226,7 @@ export function toTor(row: BackendTor): ApiTor {
     procurementType: row.procurementType ?? "",
     goodsCategory: row.goodsCategory ?? "",
     category: oneOf(CATEGORIES, row.category, "other"),
+    workTypes: workTypes(row.workTypes),
     contractType: oneOf(CONTRACTS, row.contractType, "purchase"),
 
     // The list payload carries no `documents`, so there it stays "missing" —

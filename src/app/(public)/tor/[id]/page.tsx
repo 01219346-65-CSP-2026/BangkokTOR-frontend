@@ -184,7 +184,11 @@ export default function TorDetailPage({
           <div className="min-w-0">
             <header className="rounded-field border border-sage-100 bg-white p-6">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="accent">{t.categories[tor.category]}</Badge>
+                {tor.workTypes.map((id) => (
+                  <Badge key={id} tone="accent">
+                    {t.workTypes[id]}
+                  </Badge>
+                ))}
                 <Badge>{t.contractTypes[tor.contractType]}</Badge>
                 {tor.sourceUrl && <Badge>{sourceHost(tor.sourceUrl)}</Badge>}
                 {tor.extractionIncomplete && (
@@ -244,7 +248,7 @@ export default function TorDetailPage({
               <p className="mt-2 max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
                 {t.detailSummaryBody
                   .replace("{contract}", t.contractTypes[tor.contractType])
-                  .replace("{category}", t.categories[tor.category])
+                  .replace("{category}", tor.workTypes.map((id) => t.workTypes[id]).join(" · "))
                   .replace("{date}", published)}
               </p>
               <p className="mt-2 max-w-prose text-xs leading-relaxed text-ink-500">
@@ -476,7 +480,9 @@ export default function TorDetailPage({
                     <span className="text-ink-500">{t.notRecorded}</span>
                   )}
                 </Fact>
-                <Fact label={t.factCategory}>{t.categories[tor.category]}</Fact>
+                <Fact label={t.factCategory}>
+                  {tor.workTypes.map((id) => t.workTypes[id]).join(" · ")}
+                </Fact>
                 <Fact label={t.factSourceCategory}>
                   <span lang="th" className="text-ink-500">
                     {tor.goodsCategory}

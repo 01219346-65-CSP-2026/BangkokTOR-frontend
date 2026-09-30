@@ -32,7 +32,8 @@ export type TorStatusId =
   | "inProgress"
   | "contracted"
   | "deliveredOnTime"
-  | "deliveredComplete";
+  | "deliveredComplete"
+  | "contractEnded";
 
 export type TorMethodId = "eBidding" | "specific" | "competitive";
 
@@ -57,6 +58,20 @@ export type TorCategoryId =
   | "other";
 
 export type TorContractId = "purchase" | "hire" | "construction" | "lease";
+
+/**
+ * What kind of software work a TOR is — the หมวดหมู่ filter. Our reading of the
+ * title (backend lib/classify/workType.ts), multi-label: one TOR can be both
+ * development and AI/data. "other" when nothing matched.
+ */
+export type TorWorkTypeId =
+  | "development"
+  | "aiData"
+  | "cloudInfra"
+  | "maintenance"
+  | "consulting"
+  | "learning"
+  | "other";
 
 /**
  * Whether the PDF carries selectable text. "missing" means no file was
@@ -116,6 +131,8 @@ export type Tor = {
   category: TorCategoryId;
   /** Interpreted: what kind of contract this is. */
   contractType: TorContractId;
+  /** Interpreted: what kind of software work — never empty, ["other"] at worst. */
+  workTypes: TorWorkTypeId[];
   /** Whether the TOR document itself is searchable text or a locked scan. */
   torTextLayer: TextLayer;
   /** Page count of the TOR document — a rough proxy for how heavy it is. */

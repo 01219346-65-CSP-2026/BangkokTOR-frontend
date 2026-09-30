@@ -65,9 +65,14 @@ export function TorPreviewCard({ tor }: { tor: Tor }) {
             shown when a payload does carry one, and silently skipped when not.
           */}
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <span className="rounded-field bg-sage-100/70 px-2 py-0.5 text-[0.6875rem] font-medium text-sage-600">
-              {t.categories[tor.category]}
-            </span>
+            {tor.workTypes.map((id) => (
+              <span
+                key={id}
+                className="rounded-field bg-sage-100/70 px-2 py-0.5 text-[0.6875rem] font-medium text-sage-600"
+              >
+                {t.workTypes[id]}
+              </span>
+            ))}
             <span className="rounded-field border border-dashed border-sage-400 px-2 py-0.5 text-[0.6875rem] font-medium text-ink-500">
               {t.contractTypes[tor.contractType]}
             </span>
