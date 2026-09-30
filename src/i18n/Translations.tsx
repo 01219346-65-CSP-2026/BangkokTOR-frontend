@@ -264,6 +264,9 @@ const en = {
     notifySignalsHint: "Flagged, but still shown to you",
     saveProfile: "Save profile & see matches",
     saveToast: "Profile saved. We'll email you when a new TOR matches.",
+    saving: "Saving…",
+    loadingProfile: "Loading your profile…",
+    saveFailed: "Couldn't save your profile: {reason}",
     // Live preview rail
     previewHeading: "Live preview",
     previewReach: "open TORs reachable with these {count} skills",
@@ -971,6 +974,9 @@ const th: typeof en = {
     notifySignalsHint: "มีการทำเครื่องหมายไว้ แต่ยังแสดงให้คุณเห็น",
     saveProfile: "บันทึกโปรไฟล์และดูโครงการที่ตรงกัน",
     saveToast: "บันทึกโปรไฟล์แล้ว เราจะส่งอีเมลเมื่อมีโครงการใหม่ที่ตรงกัน",
+    saving: "กำลังบันทึก…",
+    loadingProfile: "กำลังโหลดโปรไฟล์ของคุณ…",
+    saveFailed: "บันทึกโปรไฟล์ไม่สำเร็จ: {reason}",
     previewHeading: "ตัวอย่างแบบสด",
     previewReach: "โครงการที่เปิดรับซึ่งเข้าถึงได้ด้วย {count} ทักษะนี้",
     previewMatchesToday:
