@@ -5,6 +5,7 @@ import { useTranslations } from "@/i18n/LanguageProvider";
 import { Button } from "@/components/ui/Button";
 import { formatDuration } from "./duration";
 import { useEndpoint } from "@/api/useEndpoint";
+import { InfoTip } from "./InfoTip";
 import type { QueuePage, QueueRow } from "./types";
 
 // Row-level view of the two real queues. Grading has no queue collection — it
@@ -16,6 +17,10 @@ type StatusFilter = "all" | "pending" | "working" | "done" | "failed";
 
 const FILTERS: StatusFilter[] = ["all", "pending", "working", "done", "failed"];
 const PAGE_SIZE = 6;
+
+// Shared by the header row and every data row so the columns line up. A
+// literal string, not built, so Tailwind's scanner can see the class.
+const ROW_GRID = "sm:grid-cols-[minmax(8.5rem,1.2fr)_6rem_5.5rem_minmax(8rem,1fr)_7.5rem]";
 
 /**
  * `claimedBy` is `${hostname}-${pid}`. The design shows it as "ingest · 40633",
@@ -63,7 +68,7 @@ export function QueueInspector({ now }: { now: number }) {
   const last = data ? Math.min(data.page * data.limit, data.total) : 0;
 
   return (
-    <section className="mt-8 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
+    <section className="mt-6 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-lg tracking-tight text-moss-700">
           {t.pipeline.inspectorHeading}
@@ -77,6 +82,7 @@ export function QueueInspector({ now }: { now: number }) {
           </p>
         )}
       </div>
+      <p className="mt-1 text-[0.8125rem] text-ink-500">{t.pipeline.inspectorNote}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-y border-sage-100 py-3">
         {/* Stage picker: a solid moss segment, matching the design. */}
@@ -93,7 +99,8 @@ export function QueueInspector({ now }: { now: number }) {
                   : "text-ink-600 hover:bg-sage-100 hover:text-moss-700"
               }`}
             >
-              {id === "ingest" ? t.pipeline.stageIngest : t.pipeline.stageExtract}
+              {/* Same names as the stage flow above, so the two read as one pipeline. */}
+              {id === "ingest" ? t.pipeline.flowImport : t.pipeline.flowExtract}
             </button>
           ))}
         </div>
@@ -117,6 +124,12 @@ export function QueueInspector({ now }: { now: number }) {
         </div>
       </div>
 
+      {/* Says which queue this is and what one row in it means — the stage
+          name alone does not tell a newcomer what a "job" here is. */}
+      <p className="mt-3 text-xs text-ink-600">
+        {stage === "ingest" ? t.pipeline.inspectorIngestNote : t.pipeline.inspectorExtractNote}
+      </p>
+
       <div className="mt-3 overflow-hidden rounded-field border border-sage-100">
         {error ? (
           <p className="p-8 text-center text-sm text-clay-500">{error}</p>
@@ -126,6 +139,21 @@ export function QueueInspector({ now }: { now: number }) {
           <p className="p-8 text-center text-sm text-ink-500">{t.pipeline.inspectorEmpty}</p>
         ) : (
           <ul className="divide-y divide-sage-100">
+            <li
+              className={`hidden border-b border-sage-100 bg-paper-50 px-4 py-2 font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase sm:grid ${ROW_GRID}`}
+            >
+              <span>{t.pipeline.inspectorColProject}</span>
+              <span>{t.pipeline.inspectorColStatus}</span>
+              <span className="whitespace-nowrap">
+                {t.pipeline.inspectorColAttempts}
+                <InfoTip>{t.pipeline.tipColAttempts}</InfoTip>
+              </span>
+              <span>
+                {t.pipeline.inspectorColWorker}
+                <InfoTip>{t.pipeline.tipColHeldBy}</InfoTip>
+              </span>
+              <span className="text-right">{t.pipeline.inspectorColUpdated}</span>
+            </li>
             {data.items.map((row) => (
               <QueueRowItem key={row.id} row={row} stage={stage} now={now} />
             ))}
@@ -184,7 +212,7 @@ function QueueRowItem({
 
   return (
     <li className={`border-b border-sage-100 ${failed ? "bg-clay-500/5" : ""}`}>
-      <div className="grid gap-x-4 gap-y-2 px-3 py-3 sm:grid-cols-[minmax(8.5rem,1.2fr)_6rem_3rem_minmax(8rem,1fr)_auto] sm:items-center sm:px-4 sm:py-3">
+      <div className={`grid gap-x-4 gap-y-2 px-3 py-3 sm:items-center sm:px-4 sm:py-3 ${ROW_GRID}`}>
         <p
           className={`min-w-0 font-mono text-[0.8125rem] ${
             failed ? "text-clay-500" : "text-moss-700"

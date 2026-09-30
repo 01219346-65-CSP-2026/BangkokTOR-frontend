@@ -117,6 +117,17 @@ export async function authedFetch<T>(path: string, init: RequestInit = {}): Prom
   return request<T>(path, { ...init, headers });
 }
 
+/**
+ * `authedFetch` plus the backend's shared ADMIN_TOKEN, for the routes gated by
+ * requireAdminToken (pipeline controls). Server-only for the same reason as
+ * `syncBackendUser`: the token must never reach the browser.
+ */
+export function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (process.env.ADMIN_TOKEN) headers.set("X-Admin-Token", process.env.ADMIN_TOKEN);
+  return authedFetch<T>(path, { ...init, headers });
+}
+
 /** The Google identity fields the backend mirrors into the `users` collection. */
 export type SyncUserPayload = {
   google_id: string;

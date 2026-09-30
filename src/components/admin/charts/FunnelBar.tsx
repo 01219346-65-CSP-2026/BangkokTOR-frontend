@@ -1,20 +1,14 @@
-"use client";
-
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { CHART_COLORS } from "./tokens";
-
 /**
- * The document funnel: one row per pipeline stage, with the chart shape kept
- * readable when discovery is much larger than extraction or grading.
+ * Where every document is now: one row per stage — label, bar, exact count.
+ *
+ * Plain HTML rather than recharts. Six bars of one series do not need a chart
+ * library, and the recharts version rendered its labels twice (axis + a stat
+ * list) and collapsed into the narrow grid column at lg. Here the label, the
+ * bar and the number share a row, so they cannot drift apart.
+ *
+ * Bars are true to scale against the largest stage. A non-zero stage too small
+ * to see gets a 2px sliver so "some" never reads as "none"; the printed count
+ * is always exact.
  */
 
 export type FunnelRow = {
@@ -32,69 +26,43 @@ export function FunnelBar({ rows, emptyLabel }: { rows: FunnelRow[]; emptyLabel:
     return <p className="py-6 text-center text-sm text-ink-500">{emptyLabel}</p>;
   }
 
-  const chartRows = rows.map((row) => ({
-    ...row,
-    // Keep small non-zero stages visible while the stat list preserves the
-    // exact count and prevents the chart from implying false precision.
-    chartValue: row.value === 0 ? 0 : Math.max(row.value, max * 0.08),
-  }));
-
   return (
-    <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-center">
-      <dl className="order-2 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-sage-100 pt-4 lg:order-1 lg:block lg:border-t-0 lg:border-r lg:pr-6">
-        {rows.map((row) => (
-          <div key={row.key} className="mb-4 last:mb-0">
-            <dt className="text-xs text-ink-500">{row.label}</dt>
-            <dd
-              className={`mt-1 font-mono text-lg tabular-nums ${
-                row.alarm && row.value > 0 ? "text-clay-500" : "text-moss-700"
+    <ul className="space-y-2.5">
+      {rows.map((row) => {
+        const pct = (row.value / max) * 100;
+        const alarm = row.alarm && row.value > 0;
+
+        return (
+          <li
+            key={row.key}
+            // Hit target is the whole row, not the bar: a 2px sliver still
+            // gets its tooltip.
+            title={`${row.label}: ${row.value.toLocaleString()}`}
+            className="grid grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_4.5rem] items-center gap-3 rounded-field px-1 py-0.5 hover:bg-mist-50"
+          >
+            <span className="truncate text-xs text-ink-600">{row.label}</span>
+
+            <span className="h-3.5 rounded-r-[4px] bg-sage-100/50">
+              {row.value > 0 && (
+                <span
+                  className={`block h-full min-w-[2px] rounded-r-[4px] ${
+                    alarm ? "bg-clay-500" : "bg-moss-700"
+                  }`}
+                  style={{ width: `${pct}%` }}
+                />
+              )}
+            </span>
+
+            <span
+              className={`text-right font-mono text-sm tabular-nums ${
+                alarm ? "text-clay-500" : row.value === 0 ? "text-ink-500" : "text-moss-700"
               }`}
             >
               {row.value.toLocaleString()}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="h-[19rem] min-w-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartRows}
-            layout="vertical"
-            margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
-            barCategoryGap="22%"
-          >
-            <CartesianGrid horizontal={false} stroke={CHART_COLORS.sage100} />
-            <XAxis type="number" hide domain={[0, "dataMax"]} />
-            <YAxis
-              type="category"
-              dataKey="label"
-              width={148}
-              tick={{ fill: CHART_COLORS.ink500, fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              cursor={{ fill: CHART_COLORS.mist50 }}
-              contentStyle={{
-                border: `1px solid ${CHART_COLORS.sage100}`,
-                borderRadius: 10,
-                color: CHART_COLORS.moss700,
-                fontSize: 12,
-              }}
-            />
-            <Bar dataKey="chartValue" radius={[0, 4, 4, 0]} maxBarSize={26}>
-              {chartRows.map((row) => (
-                <Cell
-                  key={row.key}
-                  fill={row.alarm && row.value > 0 ? CHART_COLORS.clay500 : CHART_COLORS.moss700}
-                  fillOpacity={row.value === 0 ? 0.25 : 1}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

@@ -1,27 +1,30 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "@/i18n/LanguageProvider";
 import { Button } from "@/components/ui/Button";
 import { FunnelBar, type FunnelRow } from "@/components/admin/charts/FunnelBar";
-import {
-  METER_COLORS,
-  StageFact,
-  StageMeter,
-  type MeterRow,
-} from "@/components/admin/charts/StageMeter";
 import { formatDuration } from "./duration";
 import { useEndpoint } from "@/api/useEndpoint";
 import { WorkersPanel } from "./WorkersPanel";
 import { QueueInspector } from "./QueueInspector";
+import { KpiBanner } from "./KpiBanner";
+import { StageFlow, type FlowNode } from "./StageFlow";
+import { ErrorTable } from "./ErrorTable";
+import {
+  REFRESH_CHOICES,
+  REFRESH_STORAGE_KEY,
+  useAutoRefresh,
+  type RefreshChoice,
+} from "./useAutoRefresh";
 import { TOR_STATUS_ORDER, type PipelineStatus } from "./types";
 
 /**
  * Operational view of the three workers (FR-07).
  *
- * Manual refresh rather than polling: grading one document takes 1-3 minutes,
- * so a short interval would spend queries redrawing identical numbers. The
- * header states both the age of the data and the reason it does not move.
+ * Manual refresh by default: grading one document takes 1-3 minutes, so a
+ * short interval would mostly redraw identical numbers. Auto-refresh is an
+ * opt-in from the banner for when someone is actually watching a run.
  */
 export default function PipelinePage() {
   const t = useTranslations("admin");
@@ -29,6 +32,20 @@ export default function PipelinePage() {
   const { data, error, isLoading, refresh } = useEndpoint<PipelineStatus>(
     "/api/pipeline/status",
   );
+
+  // Remembered per browser. Read in the initializer, which is safe here only
+  // because the banner that shows the choice renders after the client fetch —
+  // the server HTML never contains it, so there is nothing to mismatch.
+  const [refreshChoice, setRefreshChoiceState] = useState<RefreshChoice>(readRefreshChoice);
+  const setRefreshChoice = (choice: RefreshChoice) => {
+    setRefreshChoiceState(choice);
+    try {
+      localStorage.setItem(REFRESH_STORAGE_KEY, String(choice));
+    } catch {
+      // Private mode or blocked storage: the choice just won't persist.
+    }
+  };
+  useAutoRefresh(refresh, refreshChoice);
 
   // Every relative time INSIDE the page is measured from the moment the server
   // built the payload, so the whole page tells one consistent story and nothing
@@ -87,6 +104,8 @@ export default function PipelinePage() {
         </div>
       </header>
 
+      <PageGuide />
+
       {error && (
         <section className="mt-8 rounded-field border border-sage-100 border-t-2 border-t-clay-500 bg-white px-5 py-4">
           <h2 className="text-sm font-medium text-moss-700">{t.pipeline.errorHeading}</h2>
@@ -109,28 +128,143 @@ export default function PipelinePage() {
         <p className="mt-10 text-center text-sm text-ink-500">{t.pipeline.loading}</p>
       )}
 
-      {data && <PipelineBody data={data} now={now} />}
+      {data && (
+        <PipelineBody
+          data={data}
+          now={now}
+          refresh={refresh}
+          refreshChoice={refreshChoice}
+          onRefreshChoice={setRefreshChoice}
+        />
+      )}
     </div>
   );
 }
 
-function PipelineBody({ data, now }: { data: PipelineStatus; now: number }) {
+/**
+ * The glossary, collapsed by default. Someone opening this page for the first
+ * time needs "what is a worker, what is a queue" once; after that it is noise.
+ */
+function PageGuide() {
+  const t = useTranslations("admin");
+  const steps = [
+    t.pipeline.guideImport,
+    t.pipeline.guideExtract,
+    t.pipeline.guideInspect,
+    t.pipeline.guidePublish,
+  ];
+
+  return (
+    <details className="group mt-6 rounded-field border border-sage-100 bg-white px-5 py-3 text-sm text-ink-600">
+      <summary className="cursor-pointer list-none font-medium text-moss-700 outline-none focus-visible:ring-2 focus-visible:ring-sage-600/40">
+        <span aria-hidden="true" className="mr-2 inline-block transition group-open:rotate-90">
+          ▸
+        </span>
+        {t.pipeline.guideSummary}
+      </summary>
+      <div className="mt-3 space-y-3 border-t border-sage-100 pt-3 leading-relaxed">
+        <p>{t.pipeline.guideIntro}</p>
+        <ol className="list-decimal space-y-1 pl-5">
+          {steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+        <p>{t.pipeline.guideQueue}</p>
+        <p>{t.pipeline.guideHeartbeat}</p>
+      </div>
+    </details>
+  );
+}
+
+/** The stored auto-refresh choice, or off. Anything unrecognised reads as off. */
+function readRefreshChoice(): RefreshChoice {
+  try {
+    const stored = typeof window === "undefined" ? null : localStorage.getItem(REFRESH_STORAGE_KEY);
+    return REFRESH_CHOICES.find((c) => String(c) === stored) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function PipelineBody({
+  data,
+  now,
+  refresh,
+  refreshChoice,
+  onRefreshChoice,
+}: {
+  data: PipelineStatus;
+  now: number;
+  refresh: () => void;
+  refreshChoice: RefreshChoice;
+  onRefreshChoice: (choice: RefreshChoice) => void;
+}) {
   const t = useTranslations("admin");
   const { ingest, extract, grade } = data.stages;
 
   const live = data.workers.filter((w) => w.health === "live").length;
   const quiet = data.workers.length - live;
-
-  const queued =
-    ingest.queue.pending + ingest.queue.working + extract.queue.pending + extract.queue.working;
   const failedRows = ingest.queue.failed + extract.queue.failed;
   const unreadable = data.torStatusCounts.extraction_incomplete ?? 0;
 
-  const queueRows = (q: typeof ingest.queue): MeterRow[] => [
-    { key: "pending", label: t.pipeline.queueStates.pending, value: q.pending, color: METER_COLORS.pending },
-    { key: "working", label: t.pipeline.queueStates.working, value: q.working, color: METER_COLORS.working },
-    { key: "done", label: t.pipeline.queueStates.done, value: q.done, color: METER_COLORS.done },
-    { key: "failed", label: t.pipeline.queueStates.failed, value: q.failed, color: METER_COLORS.failed, alarm: true },
+  const backlog = {
+    pending: ingest.queue.pending + extract.queue.pending,
+    working: ingest.queue.working + extract.queue.working,
+  };
+
+  // Degraded = something is wrong RIGHT NOW. Past failures are deliberately
+  // not a reason: they never go away on their own, so they would pin the
+  // badge at Degraded forever. They have their own card.
+  const healthReasons: string[] = [];
+  if (quiet > 0) {
+    healthReasons.push(t.pipeline.healthReasonQuiet.replace("{count}", String(quiet)));
+  }
+  if (live === 0 && backlog.pending > 0) {
+    healthReasons.push(
+      t.pipeline.healthReasonIdle.replace("{count}", backlog.pending.toLocaleString()),
+    );
+  }
+  const health = !data.mongo.ok ? "down" : healthReasons.length > 0 ? "degraded" : "ok";
+
+  const flow: FlowNode[] = [
+    {
+      key: "import",
+      label: t.pipeline.flowImport,
+      tip: t.pipeline.tipFlowImport,
+      pending: ingest.queue.pending,
+      working: ingest.queue.working,
+      failed: ingest.queue.failed,
+      latencyMs: data.latencyMs.ingest,
+    },
+    {
+      key: "extract",
+      label: t.pipeline.flowExtract,
+      tip: t.pipeline.tipFlowExtract,
+      pending: extract.queue.pending,
+      working: extract.queue.working,
+      // Unreadable PDFs are this stage's real failure mode, not queue throws.
+      failed: extract.queue.failed + unreadable,
+      latencyMs: data.latencyMs.extract,
+    },
+    {
+      key: "inspect",
+      label: t.pipeline.flowInspect,
+      tip: t.pipeline.tipFlowInspect,
+      pending: grade.awaitingGrade,
+      working: data.workers.filter((w) => w.kind === "grade" && w.state === "working").length,
+      failed: 0,
+      // No grade queue, so nothing to time.
+      latencyMs: null,
+    },
+    {
+      key: "published",
+      label: t.pipeline.flowPublished,
+      tip: t.pipeline.tipFlowPublished,
+      pending: data.torStatusCounts.published ?? 0,
+      working: 0,
+      failed: 0,
+      latencyMs: null,
+    },
   ];
 
   const funnel: FunnelRow[] = TOR_STATUS_ORDER.map((status) => ({
@@ -146,107 +280,29 @@ function PipelineBody({ data, now }: { data: PipelineStatus; now: number }) {
   return (
     <>
       {!data.mongo.ok && (
-        <p className="mt-8 rounded-field border border-clay-500/30 bg-clay-500/10 px-4 py-3 text-sm text-clay-500">
+        <p className="mt-6 rounded-field border border-clay-500/30 bg-clay-500/10 px-4 py-3 text-sm text-clay-500">
           {t.pipeline.mongoDown}
         </p>
       )}
 
-      {/* Health strip. Each cell carries a one-line gloss under the number —
-          the figure alone rarely says what it means. */}
-      <dl className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-field border border-sage-100 bg-sage-100 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
-          label={t.pipeline.statWorkers}
-          value={String(live)}
-          muted={live === 0}
-          note={
-            quiet > 0
-              ? t.pipeline.statWorkersQuiet.replace("{count}", String(quiet))
-              : t.pipeline.statWorkersAllLive
-          }
-        />
-        <Kpi
-          label={t.pipeline.statQueued}
-          value={queued.toLocaleString()}
-          muted={queued === 0}
-          note={t.pipeline.statQueuedNote
-            .replace("{pending}", String(ingest.queue.pending + extract.queue.pending))
-            .replace("{working}", String(ingest.queue.working + extract.queue.working))}
-        />
-        <Kpi
-          label={t.pipeline.statAwaitingGrade}
-          value={grade.awaitingGrade.toLocaleString()}
-          muted={grade.awaitingGrade === 0}
-          note={t.pipeline.statAwaitingNote}
-        />
-        <Kpi
-          label={t.pipeline.statFailed}
-          value={(failedRows + unreadable).toLocaleString()}
-          muted={failedRows + unreadable === 0}
-          alarm={failedRows + unreadable > 0}
-          note={t.pipeline.statFailedNote
-            .replace("{unreadable}", String(unreadable))
-            .replace("{threw}", String(failedRows))}
-        />
-      </dl>
+      <KpiBanner
+        liveWorkers={live}
+        quietWorkers={quiet}
+        backlog={backlog}
+        failed={{ rows: failedRows, unreadable }}
+        health={health}
+        healthReasons={healthReasons}
+        refreshChoice={refreshChoice}
+        onRefreshChoice={onRefreshChoice}
+      />
 
-      <WorkersPanel workers={data.workers} now={now} />
+      <StageFlow nodes={flow} />
 
-      <section className="mt-10 grid gap-4 lg:grid-cols-3">
-        <StagePanel title={t.pipeline.stageIngest} note={t.pipeline.stageIngestNote}>
-          <StageMeter rows={queueRows(ingest.queue)} emptyLabel={t.pipeline.queueEmpty} />
-          <StageFacts>
-            <StageFact
-              label={t.pipeline.ingestDiscovered}
-              value={(ingest.watermark?.totalRows ?? ingest.watermark?.lastOffset ?? 0).toLocaleString()}
-            />
-            <StageFact
-              label={t.pipeline.claimAge}
-              value={
-                data.claimAgeMs.ingest === null
-                  ? t.pipeline.claimAgeNone
-                  : formatDuration(data.claimAgeMs.ingest)
-              }
-            />
-          </StageFacts>
-        </StagePanel>
+      <WorkersPanel workers={data.workers} now={now} onChanged={refresh} />
 
-        <StagePanel title={t.pipeline.stageExtract} note={t.pipeline.stageExtractNote}>
-          <StageMeter rows={queueRows(extract.queue)} emptyLabel={t.pipeline.queueEmpty} />
-          <StageFacts>
-            <StageFact label={t.pipeline.extractFetched} value={ingest.documents.toLocaleString()} />
-            <StageFact
-              label={t.pipeline.extractUnreadable}
-              value={unreadable.toLocaleString()}
-              alarm={unreadable > 0}
-            />
-          </StageFacts>
-        </StagePanel>
+      <ErrorTable errors={data.recentErrors} now={now} onChanged={refresh} />
 
-        <StagePanel title={t.pipeline.stageGrade} note={t.pipeline.stageGradeNote}>
-          {/* Grading has no queue collection, so a queue meter would be a
-              fiction. Its real shape is the grade distribution. */}
-          <StageMeter
-            rows={[
-              { key: "A", label: t.pipeline.gradeA, value: grade.grades.A, color: METER_COLORS.gradeA },
-              { key: "B", label: t.pipeline.gradeB, value: grade.grades.B, color: METER_COLORS.gradeB },
-              { key: "C", label: t.pipeline.gradeC, value: grade.grades.C, color: METER_COLORS.gradeC },
-            ]}
-            emptyLabel={t.pipeline.gradeEmpty}
-          />
-          <StageFacts>
-            <StageFact
-              label={t.pipeline.gradeAwaiting}
-              value={grade.awaitingGrade.toLocaleString()}
-            />
-            <StageFact
-              label={t.pipeline.gradeVersionLabel}
-              value={`v${grade.graderVersion}`}
-            />
-          </StageFacts>
-        </StagePanel>
-      </section>
-
-      <section className="mt-10 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
+      <section className="mt-6 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-lg tracking-tight text-moss-700">
             {t.pipeline.funnelHeading}
@@ -259,96 +315,6 @@ function PipelineBody({ data, now }: { data: PipelineStatus; now: number }) {
       </section>
 
       <QueueInspector now={now} />
-
-      {data.recentErrors.length > 0 && (
-        <section className="mt-8 rounded-field border border-clay-500/30 border-t-2 border-t-clay-500 bg-white p-5 sm:p-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h2 className="text-lg tracking-tight text-moss-700">
-              {t.pipeline.errorsHeading}
-            </h2>
-            <p className="text-[0.8125rem] text-clay-500">{t.pipeline.errorsNote}</p>
-          </div>
-
-          <ul className="mt-4 grid gap-3 md:grid-cols-2">
-            {data.recentErrors.map((entry) => (
-              <li key={entry.id} className="rounded-field border border-sage-100 bg-paper-50 px-4 py-3">
-                <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-mono text-[0.8125rem] text-clay-500">{entry.kind}</span>
-                  {entry.projectId && (
-                    <span className="font-mono text-[0.8125rem] text-ink-600">
-                      {entry.projectId}
-                    </span>
-                  )}
-                  <span className="font-mono text-xs tabular-nums text-ink-500">
-                    {t.pipeline.ago.replace(
-                      "{time}",
-                      formatDuration(now - new Date(entry.at).getTime()),
-                    )}
-                  </span>
-                </p>
-                <p className="mt-2 text-[0.8125rem] leading-5 break-words text-ink-600">{entry.message}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </>
-  );
-}
-
-/** One cell of the health strip: label, figure, and a line saying what it means. */
-function Kpi({
-  label,
-  value,
-  note,
-  muted = false,
-  alarm = false,
-}: {
-  label: string;
-  value: string;
-  note: string;
-  muted?: boolean;
-  alarm?: boolean;
-}) {
-  return (
-    <div className="bg-white px-5 py-4">
-      <dt className="font-mono text-[0.625rem] tracking-[0.18em] text-ink-500 uppercase">
-        {label}
-      </dt>
-      <dd>
-        <span
-          className={`mt-1 block text-3xl tabular-nums ${
-            alarm ? "text-clay-500" : muted ? "text-ink-500" : "text-moss-700"
-          }`}
-        >
-          {value}
-        </span>
-        <span className="mt-1.5 block text-xs text-ink-500">{note}</span>
-      </dd>
-    </div>
-  );
-}
-
-function StagePanel({
-  title,
-  note,
-  children,
-}: {
-  title: string;
-  note: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="flex flex-col rounded-field border border-sage-100 bg-white px-5 py-5">
-      <h3 className="text-[0.9375rem] font-medium text-moss-700">{title}</h3>
-      <p className="mt-1.5 mb-5 text-xs leading-relaxed text-ink-500">{note}</p>
-      {children}
-    </section>
-  );
-}
-
-function StageFacts({ children }: { children: ReactNode }) {
-  return (
-    <dl className="mt-5 space-y-2 border-t border-sage-100 pt-4">{children}</dl>
   );
 }

@@ -36,6 +36,9 @@
 
   /* Feedback */
   --color-clay-500: #b4553c;
+  /* Warning, one step below clay: "gone quiet", not "failed". Earth-toned to
+     sit with clay and sage. 4.9:1 on white, so it passes AA as text too. */
+  --color-ochre-600: #9a6414;
 
   /* The one accent that survives on the moss panel.
      Measured against moss-700: sage-400 lands at 3.35:1 and the mockup's own
