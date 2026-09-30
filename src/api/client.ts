@@ -35,12 +35,12 @@ function backendBase(): string {
   return base;
 }
 
-async function request<T>(path: string, headers: HeadersInit = {}): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const base = backendBase();
 
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, { headers, cache: "no-store" });
+    res = await fetch(`${base}${path}`, { ...init, cache: "no-store" });
   } catch {
     // A refused connection is the normal case when the backend isn't running
     // locally, and "fetch failed" tells the reader nothing actionable.
@@ -83,10 +83,43 @@ export async function authedFetch<T>(path: string): Promise<T> {
   const session = await auth();
 
   return request<T>(path, {
-    Authorization: `Bearer ${internalToken(
-      session?.user?.id ?? "anonymous",
-      session?.user?.email,
-    )}`,
+    headers: {
+      Authorization: `Bearer ${internalToken(
+        session?.user?.id ?? "anonymous",
+        session?.user?.email,
+      )}`,
+    },
+  });
+}
+
+/** The Google identity fields the backend mirrors into the `users` collection. */
+export type SyncUserPayload = {
+  google_id: string;
+  email: string;
+  email_verified?: boolean;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  avatar_url?: string;
+  locale?: string;
+};
+
+/**
+ * Upsert the signed-in user in Mongo. Called from the NextAuth `jwt` callback
+ * on every sign-in — login and signup are the same Google flow, so the backend
+ * decides whether this is a new row.
+ *
+ * Takes no session: it runs mid-sign-in, before one exists. The route is gated
+ * by the backend's shared ADMIN_TOKEN, which is why this must stay server-only.
+ */
+export function syncBackendUser(payload: SyncUserPayload): Promise<{ id: string }> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.ADMIN_TOKEN) headers["X-Admin-Token"] = process.env.ADMIN_TOKEN;
+
+  return request<{ id: string }>("/api/user/sync", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
   });
 }
 

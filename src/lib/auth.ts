@@ -1,4 +1,6 @@
-import NextAuth from "next-auth";
+import NextAuth, { type Profile, type User } from "next-auth";
+import type { AdapterUser } from "next-auth/adapters";
+import type { SyncUserPayload } from "@/api/client";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
@@ -23,6 +25,32 @@ if (AUTH_BYPASS && process.env.NODE_ENV === "production") {
   throw new Error(
     "NEXT_PUBLIC_AUTH_BYPASS=true is set in a production build. Remove it.",
   );
+}
+
+/**
+ * Everything Google's OIDC profile gives us, in the backend's field names.
+ * The bypass user has no profile, so it falls back to the credentials `user`.
+ */
+function syncPayload(
+  googleId: unknown,
+  profile: Profile | undefined,
+  user: User | AdapterUser | undefined,
+): SyncUserPayload | null {
+  const email = profile?.email ?? user?.email;
+  if (typeof googleId !== "string" || !email) return null;
+
+  const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
+  return {
+    google_id: googleId,
+    email,
+    email_verified:
+      typeof profile?.email_verified === "boolean" ? profile.email_verified : undefined,
+    name: str(profile?.name) ?? str(user?.name),
+    given_name: str(profile?.given_name),
+    family_name: str(profile?.family_name),
+    avatar_url: str(profile?.picture) ?? str(user?.image),
+    locale: str(profile?.locale),
+  };
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -56,10 +84,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, account, profile, user }) {
       if (account?.provider === "bypass" && user) token.googleId = user.id;
       else if (account && profile) token.googleId = profile.sub;
+
+      // `account` is only present on the sign-in request itself, so this runs
+      // once per login, not on every session read.
+      if (account) {
+        const payload = syncPayload(token.googleId, profile, user);
+        if (payload) {
+          try {
+            // Dynamic for the same reason client.ts imports this file lazily:
+            // keep the two modules off each other's static graph.
+            const { syncBackendUser } = await import("@/api/client");
+            token.userId = (await syncBackendUser(payload)).id;
+          } catch (error) {
+            // A backend outage must not lock people out. The next sign-in
+            // retries the sync.
+            console.error("Could not sync user to backend:", error);
+          }
+        }
+      }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.googleId) session.user.id = token.googleId as string;
+      if (session.user && token.userId) session.user.dbId = token.userId as string;
       return session;
     },
   },
