@@ -1,13 +1,13 @@
 import type { SkillId } from "@/i18n/Translations";
+import { toBackendProfile, toProfile, type BackendProfile } from "@/api/profile";
 
 /**
  * The reader's skill profile — what /skills collects and what the matching
  * layer scores TORs against.
  *
- * ⚠ There is no profile API yet. `loadProfile`/`saveProfile` persist to
- * localStorage so the wizard behaves like a real settings page (values survive
- * a reload, step 4 can say when it last saved) without pretending a server is
- * involved. Both functions are the single seam where a fetch replaces storage.
+ * Stored on the backend against the signed-in user (`/api/me/profile`), via
+ * this app's own `/api/profile` route — see src/app/api/profile/route.ts.
+ * `loadProfile`/`saveProfile` are the only two functions that know that.
  */
 
 export type TeamSizeId = "solo" | "small" | "medium" | "large" | "xlarge";
@@ -113,41 +113,34 @@ export const DEFAULT_PROFILE: SkillProfile = {
   savedAt: null,
 };
 
-const STORAGE_KEY = "bangkoktor.skillProfile";
-
-/**
- * Reads the saved profile. Returns null when there isn't one — which is how a
- * caller tells a brand-new Google account from a returning reader.
- *
- * Never throws: private-browsing modes make `localStorage` itself throw on
- * access, and a settings page must still render when it does.
- */
-export function loadProfile(): SkillProfile | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-
-    // Spread over the defaults so a profile saved before a field existed still
-    // loads, rather than rendering `undefined` into a control.
-    return { ...DEFAULT_PROFILE, ...(JSON.parse(raw) as Partial<SkillProfile>) };
-  } catch {
-    return null;
-  }
+/** The server's `{ error }` message, or a generic one. */
+async function errorMessage(res: Response): Promise<string> {
+  const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+  return typeof body?.error === "string" ? body.error : `Request failed (${res.status})`;
 }
 
-/** Persists the profile and returns it with `savedAt` stamped. */
-export function saveProfile(profile: SkillProfile): SkillProfile {
-  const stamped = { ...profile, savedAt: new Date().toISOString() };
+/**
+ * Reads the saved profile. Resolves null when there isn't one — which is how a
+ * caller tells a brand-new account from a returning reader. Rejects when the
+ * profile could not be loaded at all, so the page can offer a retry instead of
+ * silently showing defaults the reader might then save over their real one.
+ */
+export async function loadProfile(): Promise<SkillProfile | null> {
+  const res = await fetch("/api/profile", { cache: "no-store" });
+  if (!res.ok) throw new Error(await errorMessage(res));
 
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stamped));
-  } catch {
-    // Storage unavailable (private mode, quota). The caller has already
-    // updated its own state, so the session still works — only persistence is
-    // lost, and there is nothing useful to tell the reader about that yet.
-  }
+  const body = (await res.json()) as BackendProfile | null;
+  return body ? toProfile(body) : null;
+}
 
-  return stamped;
+/** Persists the profile. Resolves with it as stored — `savedAt` is the server's. */
+export async function saveProfile(profile: SkillProfile): Promise<SkillProfile> {
+  const res = await fetch("/api/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(toBackendProfile(profile)),
+  });
+  if (!res.ok) throw new Error(await errorMessage(res));
+
+  return toProfile((await res.json()) as BackendProfile);
 }

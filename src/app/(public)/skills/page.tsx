@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { TextField } from "@/components/ui/TextField";
 import { Toggle } from "@/components/ui/Toggle";
 import { SkillChip } from "@/components/skills/SkillChip";
@@ -29,13 +30,16 @@ import {
  * The skill-profile wizard, and afterwards the permanent settings page.
  *
  * Google sign-in sends a profile-less account straight here; a returning reader
- * arrives with `loadProfile()` populated and step 4 as the useful landing spot.
+ * arrives with a saved profile and step 4 as the useful landing spot.
  * That is why the last step is written as a review rather than a finish line —
  * it is the same screen either way.
  *
  * ⚠ Reach figures come from the 50 ingested sample records via the placeholder
  * scorer. See `src/lib/profilePreview.ts`.
  */
+
+/** How long the wizard waits after the last edit before autosaving. */
+const AUTOSAVE_DELAY_MS = 700;
 
 const TEAM_SIZES: TeamSizeId[] = ["solo", "small", "medium", "large", "xlarge"];
 const DURATIONS: DurationId[] = ["short", "medium", "long", "veryLong"];
@@ -53,25 +57,46 @@ export default function SkillsPage() {
   const router = useRouter();
 
   /*
-   * The saved profile is read once, lazily, on the client's first render.
-   *
-   * `loadProfile` returns null on the server (no localStorage), so the server
-   * renders step 1 with defaults. The client's initializer runs before paint
-   * and picks up the stored profile — a returning reader never sees the empty
-   * wizard flash past. Reading it in an effect instead would render the default
-   * first and then overwrite it, which is the flash this avoids.
+   * The saved profile lives on the backend, so it arrives after first paint.
+   * Until it does the page shows a loading state rather than the default
+   * wizard — rendering defaults first would flash step 1 at a returning reader,
+   * and worse, an edit made in that window would autosave over their profile.
    */
-  const [initial] = useState(() => loadProfile());
-
-  // A reader with a profile is here to change something, not to be walked
-  // through onboarding again — open them on the review step, all steps unlocked.
-  const [step, setStep] = useState(initial ? 3 : 0);
-  const [furthestReached, setFurthestReached] = useState(initial ? 3 : 0);
-  const [profile, setProfile] = useState<SkillProfile>(
-    initial ?? DEFAULT_PROFILE,
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
+    "loading",
   );
+  const [step, setStep] = useState(0);
+  const [furthestReached, setFurthestReached] = useState(0);
+  const [profile, setProfile] = useState<SkillProfile>(DEFAULT_PROFILE);
+
+  const load = useCallback(async () => {
+    setLoadState("loading");
+    try {
+      const saved = await loadProfile();
+      if (saved) {
+        // A reader with a profile is here to change something, not to be
+        // walked through onboarding again — open on review, all steps unlocked.
+        setProfile(saved);
+        setStep(3);
+        setFurthestReached(3);
+      }
+      setLoadState("ready");
+    } catch {
+      setLoadState("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    // Fetch-on-mount: the state updates happen after the await, not
+    // synchronously in the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+
   const [query, setQuery] = useState("");
   const [hasSavedThisVisit, setHasSavedThisVisit] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   /*
    * `now` is captured once per mount rather than read inline. Called during
@@ -87,17 +112,64 @@ export default function SkillsPage() {
 
   /*
    * Autosave. The wizard advertises "Saved automatically", so every edit
-   * persists as it happens.
+   * persists — debounced, because clicking through five chips should be one
+   * request, not five.
    *
-   * This writes from the event rather than from an effect watching `profile`.
-   * An effect would also fire for the mount and for the load above, stamping
+   * This schedules from the event rather than from an effect watching
+   * `profile`. An effect would also fire for the load above, stamping
    * `savedAt` on a profile the reader never touched — which would make step 4
    * report a save that never happened.
+   *
+   * `pendingRef` holds the latest unsaved profile so an unmount (navigating
+   * away mid-debounce) can still flush it.
    */
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<SkillProfile | null>(null);
+
+  const persist = useCallback(async (next: SkillProfile) => {
+    try {
+      const saved = await saveProfile(next);
+      // Only take the timestamp: the reader may have kept editing while the
+      // request was in flight, and the server copy is already behind that.
+      setProfile((current) => ({ ...current, savedAt: saved.savedAt }));
+      setSaveError(null);
+      return saved;
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }, []);
+
+  function cancelPendingSave() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    pendingRef.current = null;
+  }
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      const pending = pendingRef.current;
+      if (pending) void saveProfile(pending).catch(() => {});
+    },
+    [],
+  );
+
   function update(changes: Partial<SkillProfile>) {
     const next = { ...profile, ...changes };
     setProfile(next);
-    saveProfile(next);
+
+    // An inverted budget range is a 400 on the backend. Step 3 already blocks
+    // moving on with one; don't autosave it either.
+    if (next.budgetMax !== null && next.budgetMin >= next.budgetMax) return;
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    pendingRef.current = next;
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      pendingRef.current = null;
+      void persist(next).catch(() => {});
+    }, AUTOSAVE_DELAY_MS);
   }
 
   function goToStep(next: number) {
@@ -157,15 +229,37 @@ export default function SkillsPage() {
   const isBudgetInvalid =
     profile.budgetMax !== null && profile.budgetMin >= profile.budgetMax;
 
-  function handleSave() {
-    const saved = saveProfile(profile);
-    setProfile(saved);
-    setHasSavedThisVisit(true);
-    router.push("/tor");
+  async function handleSave() {
+    cancelPendingSave();
+    setIsSaving(true);
+    try {
+      await persist(profile);
+      setHasSavedThisVisit(true);
+      router.push("/tor");
+    } catch {
+      // `persist` has already put the reason in `saveError`; stay on the page.
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function formatStop(amount: number | null) {
     return amount === null ? t.budgetNoMax : formatBudgetTHB(amount, locale);
+  }
+
+  if (loadState === "error") return <ErrorState reset={() => void load()} />;
+
+  if (loadState === "loading") {
+    return (
+      <div className="mx-auto w-full max-w-[110rem] px-6 py-10">
+        <p
+          role="status"
+          className="animate-pulse font-mono text-xs tracking-widest text-ink-500 uppercase"
+        >
+          {t.loadingProfile}
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -548,12 +642,25 @@ export default function SkillsPage() {
                     >
                       {t.back}
                     </Button>
-                    <Button type="button" onClick={handleSave}>
-                      {t.saveProfile}
+                    <Button
+                      type="button"
+                      onClick={() => void handleSave()}
+                      disabled={isSaving || isBudgetInvalid}
+                    >
+                      {isSaving ? t.saving : t.saveProfile}
                     </Button>
                   </div>
                 </div>
               </div>
+
+              {saveError && (
+                <p
+                  role="alert"
+                  className="mt-4 rounded-field border border-clay-500/40 bg-white px-4 py-3 text-sm text-clay-500"
+                >
+                  {t.saveFailed.replace("{reason}", saveError)}
+                </p>
+              )}
 
               {/* The confirmation is a live region rather than a floating toast:
                   it must be announced, and there is nowhere to dismiss it to. */}

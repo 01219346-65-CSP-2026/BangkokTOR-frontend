@@ -48,8 +48,18 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, `Backend responded ${res.status} for ${path}`);
+    // The backend answers errors as `{ error }`. Pass that on when it is there:
+    // a 400 like "Unknown skills: foo" is actionable, "responded 400" is not.
+    const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+    const message =
+      typeof body?.error === "string"
+        ? body.error
+        : `Backend responded ${res.status} for ${path}`;
+    throw new ApiError(res.status, message);
   }
+
+  // 204 is a real answer on some routes ("no profile yet"), not an error.
+  if (res.status === 204) return null as T;
 
   return res.json() as Promise<T>;
 }
@@ -74,22 +84,24 @@ function internalToken(subject: string, email?: string | null): string {
 /**
  * Call the backend as the signed-in user.
  *
- * The backend has no auth middleware yet, so the Authorization header is
- * currently ignored on the far end. It is sent anyway so that the day auth
- * lands, this caller already speaks the protocol.
+ * The backend's `/api/me/*` routes verify this token (requireUser there) and
+ * resolve the user from its `sub`; older routes still ignore it. Pass `init`
+ * for a write — a JSON `body` gets its Content-Type set here.
  */
-export async function authedFetch<T>(path: string): Promise<T> {
+export async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { auth } = await import("@/lib/auth");
   const session = await auth();
 
-  return request<T>(path, {
-    headers: {
-      Authorization: `Bearer ${internalToken(
-        session?.user?.id ?? "anonymous",
-        session?.user?.email,
-      )}`,
-    },
-  });
+  const headers = new Headers(init.headers);
+  headers.set(
+    "Authorization",
+    `Bearer ${internalToken(session?.user?.id ?? "anonymous", session?.user?.email)}`,
+  );
+  if (init.body !== undefined && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return request<T>(path, { ...init, headers });
 }
 
 /** The Google identity fields the backend mirrors into the `users` collection. */
