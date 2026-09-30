@@ -51,3 +51,15 @@ export function formatDate(timestampMs: number, locale: Locale): string {
     day: "numeric",
   }).format(timestampMs);
 }
+/** e.g. "1.4 MB". Binary units, one decimal from KB up. */
+export function formatBytes(bytes: number, locale: Locale): string {
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const digits = unit === 0 ? 0 : 1;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(value)} ${units[unit]}`;
+}

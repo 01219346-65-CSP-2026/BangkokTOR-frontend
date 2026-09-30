@@ -3,13 +3,11 @@
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
 import { Select } from "@/components/ui/Select";
-import { MOCK_TORS } from "@/data/torListings";
 import {
   activeFilterCount,
-  budgetCeiling,
+  BUDGET_FLOOR,
   budgetToSlider,
   EMPTY_FILTERS,
-  facetCounts,
   sliderToBudget,
   type DeadlineWindowId,
   type PublishedWindowId,
@@ -25,6 +23,12 @@ type TorFiltersProps = {
   agencies: string[];
   categories: TorCategoryId[];
   methods: TorMethodId[];
+  /** Per-option totals from /api/tors/stats, over every listed record — not
+   *  narrowed by the other active filters. */
+  categoryCounts: Record<string, number>;
+  methodCounts: Record<string, number>;
+  /** Largest listed budget, from /api/tors/stats. Null until it loads. */
+  budgetMax: number | null;
 };
 
 export function TorFilters({
@@ -33,34 +37,19 @@ export function TorFilters({
   agencies,
   categories,
   methods,
+  categoryCounts,
+  methodCounts,
+  budgetMax,
 }: TorFiltersProps) {
   const t = useTranslations("tor");
   const { locale } = useLanguage();
-  // The ceiling is the largest budget in the data, so the slider's right edge
-  // always means "no limit" rather than an arbitrary round number.
-  const ceiling = budgetCeiling(MOCK_TORS);
+  // The right edge is the largest listed budget, so it always means "no
+  // limit". Before stats arrive, a floor-level ceiling keeps the log math sane.
+  const ceiling = Math.max(budgetMax ?? 0, BUDGET_FLOOR * 10);
 
   function update<K extends keyof Filters>(key: K, value: Filters[K]) {
     onChange({ ...filters, [key]: value });
   }
-
-  /*
-   * Counts are computed against the other active filters, so an option always
-   * shows what it would actually return. Only the two closed vocabularies get
-   * them — agency has 14 values and would make the labels unreadable.
-   */
-  const categoryTotals = facetCounts(
-    MOCK_TORS,
-    filters,
-    "category",
-    (tor) => tor.category,
-  );
-  const methodTotals = facetCounts(
-    MOCK_TORS,
-    filters,
-    "method",
-    (tor) => tor.procurementMethod,
-  );
 
   /** "e-bidding (24)" — the count is part of the option label. */
   function withCount(label: string, count: number | undefined) {
@@ -204,7 +193,7 @@ export function TorFilters({
         }
         options={categories.map((id) => ({
           value: id,
-          label: withCount(t.categories[id], categoryTotals[id]),
+          label: withCount(t.categories[id], categoryCounts[id]),
         }))}
       />
 
@@ -281,7 +270,7 @@ export function TorFilters({
         onChange={(event) => update("method", event.target.value)}
         options={methods.map((id) => ({
           value: id,
-          label: withCount(t.methodLabels[id], methodTotals[id]),
+          label: withCount(t.methodLabels[id], methodCounts[id]),
         }))}
       />
     </aside>

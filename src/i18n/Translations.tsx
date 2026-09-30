@@ -388,6 +388,12 @@ const en = {
     statReferencePrice: "Reference price",
     statAgency: "Agency",
     statDocuments: "Documents",
+    statStatus: "Status",
+    sourceUnavailable: "No link to the original listing",
+    torUnread: "Not read yet",
+    download: "Open",
+    fileSizeUnknown: "Size not recorded",
+    documentsFromBundle: "{count} PDFs from the bundle",
     searchLabel: "Search",
     searchPlaceholder: "Title, agency, or project number",
     agencyLabel: "Agency",
@@ -460,7 +466,7 @@ const en = {
     // budget figure moved to the record table, where an identifier belongs —
     // in prose they turned the paragraph into a data dump.
     detailSummaryBody:
-      "{agency} is procuring this as a {contract}, with a published budget of {budget}. The portal listed it on {date}, and this platform reads it as falling under {category}.",
+      "A {contract} procurement, listed on the source portal on {date}. This platform reads it as falling under {category}.",
     detailInterpretationNote:
       "Category and contract type are this platform's reading of the portal's Thai classification. Budget, agency and dates are reproduced from the source record.",
     detailFacts: "Record",
@@ -533,7 +539,9 @@ const en = {
       referencePrice: "Reference price",
       invitation: "Invitation to bid",
       draftBidding: "Draft bidding documents",
-      bundle: "Document bundle",
+      bundle: "Document bundle (zip)",
+      extractedPdf: "PDF from the bundle",
+      announcement: "Announcement",
       other: "Other document",
     },
     budgetBrackets: {
@@ -1088,6 +1096,12 @@ const th: typeof en = {
     statReferencePrice: "ราคากลาง",
     statAgency: "หน่วยงาน",
     statDocuments: "เอกสาร",
+    statStatus: "สถานะ",
+    sourceUnavailable: "ไม่มีลิงก์ประกาศต้นฉบับ",
+    torUnread: "ยังไม่ได้อ่านไฟล์",
+    download: "เปิดไฟล์",
+    fileSizeUnknown: "ไม่ทราบขนาดไฟล์",
+    documentsFromBundle: "PDF {count} ไฟล์จากชุดเอกสาร",
     searchLabel: "ค้นหา",
     searchPlaceholder: "ชื่อโครงการ หน่วยงาน หรือเลขที่โครงการ",
     agencyLabel: "หน่วยงาน",
@@ -1148,7 +1162,7 @@ const th: typeof en = {
     backToList: "กลับไปยังรายการทั้งหมด",
     detailSummary: "โครงการนี้คืออะไร",
     detailSummaryBody:
-      "{agency} จัดซื้อจัดจ้างโครงการนี้ในรูปแบบ{contract} วงเงินงบประมาณที่ประกาศไว้ {budget} โดยเผยแพร่บนเว็บไซต์ต้นทางเมื่อวันที่ {date} และแพลตฟอร์มนี้ตีความว่าอยู่ในหมวด{category}",
+      "จัดซื้อจัดจ้างในรูปแบบ{contract} เผยแพร่บนเว็บไซต์ต้นทางเมื่อวันที่ {date} และแพลตฟอร์มนี้ตีความว่าอยู่ในหมวด{category}",
     detailInterpretationNote:
       "หมวดหมู่และประเภทสัญญาเป็นการตีความของแพลตฟอร์มจากการจัดประเภทภาษาไทยของเว็บไซต์ต้นทาง ส่วนงบประมาณ หน่วยงาน และวันที่ นำมาจากข้อมูลต้นทางโดยตรง",
     detailFacts: "ข้อมูลโครงการ",
@@ -1221,7 +1235,9 @@ const th: typeof en = {
       referencePrice: "ประกาศราคากลาง",
       invitation: "ประกาศเชิญชวน",
       draftBidding: "ร่างเอกสารประกวดราคา",
-      bundle: "ชุดเอกสาร",
+      bundle: "ชุดเอกสาร (zip)",
+      extractedPdf: "ไฟล์ PDF จากชุดเอกสาร",
+      announcement: "ประกาศ",
       other: "เอกสารอื่น ๆ",
     },
     budgetBrackets: {

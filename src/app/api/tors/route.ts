@@ -20,7 +20,21 @@ import type { TorListResponse } from "@/api/tors";
  */
 
 /** Only these reach the backend. Anything else a client sends is dropped. */
-const FORWARDED = ["q", "agency", "category", "province", "isSoftware", "minBudget", "maxBudget", "page", "limit"] as const;
+const FORWARDED = [
+  "q",
+  "agency",
+  "category",
+  "method",
+  "province",
+  "isSoftware",
+  "minBudget",
+  "maxBudget",
+  "publishedFrom",
+  "publishedTo",
+  "sort",
+  "page",
+  "limit",
+] as const;
 
 const MAX_LIMIT = 100;
 

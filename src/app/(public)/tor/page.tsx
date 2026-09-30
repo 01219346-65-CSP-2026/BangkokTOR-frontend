@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslations } from "@/i18n/LanguageProvider";
 import { TorCard } from "@/components/tor/TorCard";
 import { TorTable } from "@/components/tor/TorTable";
@@ -9,16 +9,21 @@ import { TorActiveFilters } from "@/components/tor/TorActiveFilters";
 import { TorSortSelect } from "@/components/tor/TorSortSelect";
 import { TorPagination } from "@/components/tor/TorPagination";
 import { useEndpoint } from "@/api/useEndpoint";
-import { toTors, type ApiTor, type TorListResponse } from "@/api/tors";
-import { withMatches } from "@/lib/torMatching";
 import {
-  agencyOptions,
-  categoryOptions,
+  toTors,
+  type AgencyOption,
+  type ApiTor,
+  type TorListResponse,
+  type TorStatsResponse,
+} from "@/api/tors";
+import { withMatches } from "@/lib/torMatching";
+import { translations } from "@/i18n/Translations";
+import type { TorCategoryId, TorMethodId } from "@/types/tor";
+import {
+  buildTorQuery,
   EMPTY_FILTERS,
-  filterTors,
-  methodOptions,
-  pageCount,
-  paginate,
+  filterMockOnly,
+  PAGE_SIZE,
   sortTors,
   type SortId,
   type TorFilters as Filters,
@@ -41,28 +46,50 @@ const TODAY_UTC = (() => {
 type DensityId = "cards" | "table";
 
 /**
- * One page of rows, filtered in memory afterwards. Right while the corpus is
- * small — every filter stays instant and the facet counts are honest. When it
- * outgrows this, pass `filters` into the query string instead: the backend
- * already accepts q, agency, category, minBudget, maxBudget, page and limit.
+ * Every field except `fitBands`/`deadline` is sent to the backend as a query
+ * string (`buildTorQuery`, src/lib/torFilters.ts) and filtered/sorted/paginated
+ * there. Those two stay client-side because they read the PLACEHOLDER matching
+ * layer (src/lib/torMatching.ts), which has no backend field behind it.
+ * Debounced so a fast typist in the search box doesn't fire a request per key.
  */
-const FETCH_LIMIT = 100;
+const FILTER_DEBOUNCE_MS = 300;
 
 /**
  * The discovery dashboard (FR-12, FR-13) — the product's main screen and the
  * only one a guest can use without signing in.
  *
  * Data comes from `GET /api/tors`, the server-side proxy over the backend
- * (src/app/api/tors/route.ts). The rows are fetched once and then filtered,
- * sorted and paginated in memory, which is right while the corpus is small:
- * every filter stays instant and the facet counts can be computed honestly.
- * When the corpus outgrows one page of results, the same shape moves
- * server-side by passing `filters` into the query string instead.
+ * (src/app/api/tors/route.ts), which in turn forwards to the real filter/sort/
+ * paginate query in tor.service.ts's `listTors`. Each filter, sort and page
+ * change re-requests that endpoint; nothing below filters an already-fetched
+ * array except the two placeholder-only fields noted above.
  *
  * What arrives carries NO grade — the backend strips it (FR-19). `signalCount`
  * and the neutral `signals[]` are the whole public surface, by design.
  */
 /** Declares the entrance order in the markup, exactly as AuthShell does. */
+const CATEGORY_IDS = new Set<string>(Object.keys(translations.en.tor.categories));
+const METHOD_IDS = new Set<string>(Object.keys(translations.en.tor.methodLabels));
+const isCategory = (id: string): id is TorCategoryId => CATEGORY_IDS.has(id);
+const isMethod = (id: string): id is TorMethodId => METHOD_IDS.has(id);
+
+/** Known ids with a non-zero count, largest first, plus the counts by id. */
+function facet<Row extends { count: number }, Id extends string>(
+  rows: Row[] | undefined,
+  key: (row: Row) => string | null,
+  isKnown: (id: string) => id is Id,
+): { ids: Id[]; counts: Record<string, number> } {
+  const ids: Id[] = [];
+  const counts: Record<string, number> = {};
+  for (const row of rows ?? []) {
+    const id = key(row);
+    if (!id || !isKnown(id) || row.count === 0) continue;
+    ids.push(id);
+    counts[id] = row.count;
+  }
+  return { ids, counts };
+}
+
 const delay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperties;
 
 export default function TorListingsPage() {
@@ -73,43 +100,93 @@ export default function TorListingsPage() {
   const [sort, setSort] = useState<SortId>("bestMatch");
   const [page, setPage] = useState(1);
   const [density, setDensity] = useState<DensityId>("cards");
+
+  // Debounced separately from `filters` itself so every keystroke in the
+  // search box updates the input instantly while the request it triggers
+  // waits — typing four characters fast should cost one fetch, not four.
+  const [debouncedFilters, setDebouncedFilters] = useState<Filters>(filters);
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => setDebouncedFilters(filters),
+      FILTER_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, [filters]);
+
+  const query = useMemo(
+    () => buildTorQuery(debouncedFilters, sort, page, PAGE_SIZE, TODAY_UTC).toString(),
+    [debouncedFilters, sort, page],
+  );
+
   // The whole request lives in one hook (src/api/useEndpoint.ts): stale-response
   // guarding, aborting and error shape are decided there rather than per page.
-  // `select` maps the backend shape at the boundary, so nothing below this line
-  // ever sees a raw BackendTor.
+  // `select` maps the backend shape at the boundary — including the pagination
+  // metadata — so nothing below this line ever sees a raw BackendTor.
   const {
     data,
     error,
     isLoading,
     refresh,
-  } = useEndpoint<TorListResponse, ApiTor[]>(`/api/tors?limit=${FETCH_LIMIT}`, {
-    select: toTors,
-  });
+  } = useEndpoint<TorListResponse, { items: ApiTor[]; page: number; pages: number; total: number }>(
+    `/api/tors?${query}`,
+    {
+      select: (response) => ({
+        items: toTors(response),
+        page: response.page,
+        pages: response.pages,
+        total: response.total,
+      }),
+    },
+  );
 
   // Null until the first response lands. Kept explicit here rather than hidden
   // inside the hook: "no data yet" and "an empty result" are different states,
   // and only the second should render the empty message.
-  const tors = useMemo(() => data ?? [], [data]);
+  const tors = useMemo(() => data?.items ?? [], [data]);
 
-  const agencies = useMemo(() => agencyOptions(tors), [tors]);
-  const categories = useMemo(() => categoryOptions(tors), [tors]);
-  const methods = useMemo(() => methodOptions(tors), [tors]);
+  // Fetched once and unfiltered: an option list derived from the current page
+  // would lose every agency the active filters hide.
+  const { data: agencyList } = useEndpoint<AgencyOption[]>("/api/tors/agencies");
+  const { data: stats } = useEndpoint<TorStatsResponse>("/api/tors/stats");
+
+  const agencies = useMemo(
+    () =>
+      (agencyList ?? [])
+        .map((row) => row.agency)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "th")),
+    [agencyList],
+  );
+  // Options are the values that actually occur in the listed records, with
+  // their counts — a closed vocabulary still offers nothing when every record
+  // falls in one bucket.
+  const categoryFacet = useMemo(
+    () => facet(stats?.byCategory, (row) => row.category, isCategory),
+    [stats],
+  );
+  const methodFacet = useMemo(
+    () => facet(stats?.byMethod, (row) => row.method, isMethod),
+    [stats],
+  );
 
   /*
-   * The placeholder matching layer is attached once, before filtering, so fit
-   * and deadline are available to both the filters and the sort.
+   * The placeholder matching layer is attached to the fetched page, so fit and
+   * deadline are available to the client-only filters and to the sort.
    */
   const matched = useMemo(() => withMatches(tors, TODAY_UTC), [tors]);
 
-  const results = useMemo(
-    () => sortTors(filterTors(matched, filters), sort),
+  // `sortTors` here only re-orders the placeholder-driven sorts (bestMatch,
+  // closingSoon) within the one page the backend already sorted and paginated
+  // — for the real sorts (newest/oldest/budgetHigh/budgetLow) the backend's
+  // order already matches and this is a no-op.
+  const visible = useMemo(
+    () => sortTors(filterMockOnly(matched, filters), sort),
     [matched, filters, sort],
   );
 
-  const totalPages = pageCount(results.length);
-  // Guard against landing past the end after a filter narrows the list.
-  const currentPage = Math.min(page, totalPages);
-  const visible = paginate(results, currentPage);
+  const totalPages = data?.pages ?? 1;
+  const currentPage = data?.page ?? page;
+  const totalResults = data?.total ?? 0;
 
   function handleFilterChange(next: Filters) {
     setFilters(next);
@@ -162,10 +239,10 @@ export default function TorListingsPage() {
             >
               {t.resultCount
                 .replace("{shown}", String(visible.length))
-                .replace("{total}", String(results.length))}
+                .replace("{total}", String(totalResults))}
               {" · "}
               {t.subheading
-                .replace("{count}", String(tors.length))
+                .replace("{count}", String(totalResults))
                 .replace("{agencies}", String(agencies.length))}
             </p>
           </div>
@@ -225,8 +302,11 @@ export default function TorListingsPage() {
               filters={filters}
               onChange={handleFilterChange}
               agencies={agencies}
-              categories={categories}
-              methods={methods}
+              categories={categoryFacet.ids}
+              methods={methodFacet.ids}
+              categoryCounts={categoryFacet.counts}
+              methodCounts={methodFacet.counts}
+              budgetMax={stats?.maxBudget ?? null}
             />
           </div>
 

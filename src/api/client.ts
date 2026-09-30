@@ -74,6 +74,19 @@ export function publicFetch<T>(path: string): Promise<T> {
   return request<T>(path);
 }
 
+/**
+ * Like `publicFetch`, but returns the backend's raw response so a binary body
+ * (a PDF) can be streamed through untouched. Status handling is the caller's.
+ */
+export async function publicRaw(path: string): Promise<Response> {
+  const base = backendBase();
+  try {
+    return await fetch(`${base}${path}`, { cache: "no-store" });
+  } catch {
+    throw new ApiError(503, `Cannot reach the backend at ${base}. Is it running?`);
+  }
+}
+
 /** Short-lived HS256 token the backend can verify. */
 function internalToken(subject: string, email?: string | null): string {
   return jwt.sign({ sub: subject, email }, process.env.INTERNAL_JWT_SECRET!, {

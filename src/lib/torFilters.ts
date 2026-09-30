@@ -1,10 +1,10 @@
-import type { MatchedTor, Tor, TorCategoryId, TorMethodId } from "@/types/tor";
+import type { MatchedTor, Tor, TorCategoryId } from "@/types/tor";
 import { fitBand, type FitBandId } from "@/lib/torMatching";
 
 /**
- * Filtering, sorting and pagination for the TOR listings page. Pure functions
- * over an array so the page stays declarative and this stays testable — and so
- * the whole file can be swapped for query params when a real API lands.
+ * Filter state for the TOR listings page and its translation into the
+ * `GET /api/tors` query string. Only the placeholder-layer filters (fit band,
+ * deadline) and sorts still run in memory.
  */
 
 export type PublishedWindowId = "last30Days" | "last90Days" | "thisYear";
@@ -60,20 +60,15 @@ const WINDOW_DAYS: Record<Exclude<PublishedWindowId, "thisYear">, number> = {
   last90Days: 90,
 };
 
-/**
- * Budgets run from about ฿3k to ฿78m, so a linear slider would pile four fifths
- * of the records into the first few pixels. The track is logarithmic instead:
- * every step is a constant *ratio*, which is how people actually think about
- * money at this spread ("under a million" vs "under ten million").
- */
-export function budgetCeiling(tors: Tor[]): number {
-  return Math.max(...tors.map((tor) => tor.budget));
-}
-
 /** The track's left edge in baht. Below the smallest real budget (฿3,360). */
 export const BUDGET_FLOOR = 1_000;
 
-/** Slider position (0–100) → baht. */
+/**
+ * Slider position (0–100) → baht. Budgets run from a few thousand baht to over
+ * ฿100m, so a linear track would pile most records into the first few pixels.
+ * It is logarithmic instead: every step is a constant ratio, which is how
+ * people think about money at this spread ("under a million" vs "under ten").
+ */
 export function sliderToBudget(position: number, ceiling: number): number {
   if (position >= 100) return ceiling;
   const min = Math.log10(BUDGET_FLOOR);
@@ -88,83 +83,6 @@ export function budgetToSlider(budget: number, ceiling: number): number {
   return Math.round(((Math.log10(budget) - min) / (max - min)) * 100);
 }
 
-/** Agencies present in the data, alphabetised — never hardcode this list. */
-export function agencyOptions(tors: Tor[]): string[] {
-  return [...new Set(tors.map((tor) => tor.agency))].sort((a, b) =>
-    a.localeCompare(b, "th")
-  );
-}
-
-/** Interpreted categories present in the data. */
-export function categoryOptions(tors: Tor[]): TorCategoryId[] {
-  return [...new Set(tors.map((tor) => tor.category))].sort();
-}
-
-/** Procurement methods present in the data. */
-export function methodOptions(tors: Tor[]): TorMethodId[] {
-  return [...new Set(tors.map((tor) => tor.procurementMethod))].sort();
-}
-
-function matchesSearch(tor: Tor, search: string): boolean {
-  const needle = search.trim().toLowerCase();
-  if (!needle) return true;
-
-  return [tor.title, tor.agency, tor.department, tor.projectNumber].some(
-    (field) => field?.toLowerCase().includes(needle) ?? false
-  );
-}
-
-/** Inclusive on both ends; either end may be open. */
-function matchesBudget(
-  tor: Tor,
-  minBudget: number | null,
-  maxBudget: number | null
-): boolean {
-  return (
-    (minBudget === null || tor.budget >= minBudget) &&
-    (maxBudget === null || tor.budget <= maxBudget)
-  );
-}
-
-function matchesPublished(
-  tor: Tor,
-  window: PublishedWindowId | "",
-  now: number
-): boolean {
-  if (!window) return true;
-
-  const published = new Date(tor.publishedAt).getTime();
-  if (Number.isNaN(published)) return false;
-
-  if (window === "thisYear") {
-    return new Date(published).getFullYear() === new Date(now).getFullYear();
-  }
-
-  const cutoff = now - WINDOW_DAYS[window] * 24 * 60 * 60 * 1000;
-  return published >= cutoff;
-}
-
-/**
- * Every active filter must match (AND). `now` is injected so the published-date
- * windows are deterministic in tests.
- */
-export function filterTors<T extends Tor>(
-  tors: T[],
-  filters: TorFilters,
-  now: number = Date.now()
-): T[] {
-  return tors.filter(
-    (tor) =>
-      matchesSearch(tor, filters.search) &&
-      (!filters.agency || tor.agency === filters.agency) &&
-      (!filters.category || tor.category === filters.category) &&
-      (!filters.method || tor.procurementMethod === filters.method) &&
-      matchesBudget(tor, filters.minBudget, filters.maxBudget) &&
-      matchesPublished(tor, filters.published, now) &&
-      matchesFit(tor, filters.fitBands) &&
-      matchesDeadline(tor, filters.deadline)
-  );
-}
 
 /**
  * Fit and deadline only apply to records carrying the placeholder matching
@@ -193,6 +111,73 @@ function matchesDeadline(tor: Tor, deadline: DeadlineWindowId | ""): boolean {
   return tor.daysRemaining >= 0 && tor.daysRemaining <= DEADLINE_DAYS[deadline];
 }
 
+/**
+ * `fitBands` and `deadline` filter on the PLACEHOLDER matching layer
+ * (src/lib/torMatching.ts) — there is no backend field behind either, so
+ * these two stay client-side while the rest of `TorFilters` goes to the API
+ * query string. Applied to one already-fetched page of results.
+ */
+export function filterMockOnly<T extends Tor>(
+  tors: T[],
+  filters: Pick<TorFilters, "fitBands" | "deadline">
+): T[] {
+  return tors.filter(
+    (tor) => matchesFit(tor, filters.fitBands) && matchesDeadline(tor, filters.deadline)
+  );
+}
+
+const SORT_TO_API: Record<SortId, string | null> = {
+  // Neither reads a real backend field (fit score, deadline) — leaving the
+  // API sort unset keeps the server's default (newest) order, and the page
+  // re-sorts the fetched page client-side against the placeholder layer.
+  bestMatch: null,
+  closingSoon: null,
+  newest: "newest",
+  oldest: "oldest",
+  budgetHigh: "budgetHigh",
+  budgetLow: "budgetLow",
+};
+
+/**
+ * Turns filter/sort/page state into the query string `GET /api/tors` expects
+ * (src/app/api/tors/route.ts's own FORWARDED allowlist). `now` drives the
+ * published-window math so the range is deterministic in tests.
+ */
+export function buildTorQuery(
+  filters: TorFilters,
+  sort: SortId,
+  page: number,
+  limit: number,
+  now: number = Date.now()
+): URLSearchParams {
+  const params = new URLSearchParams();
+
+  const search = filters.search.trim();
+  if (search) params.set("q", search);
+  if (filters.agency) params.set("agency", filters.agency);
+  if (filters.category) params.set("category", filters.category);
+  if (filters.method) params.set("method", filters.method);
+  if (filters.minBudget !== null) params.set("minBudget", String(filters.minBudget));
+  if (filters.maxBudget !== null) params.set("maxBudget", String(filters.maxBudget));
+
+  if (filters.published) {
+    if (filters.published === "thisYear") {
+      params.set("publishedFrom", new Date(new Date(now).getFullYear(), 0, 1).toISOString());
+    } else {
+      const cutoff = now - WINDOW_DAYS[filters.published] * 24 * 60 * 60 * 1000;
+      params.set("publishedFrom", new Date(cutoff).toISOString());
+    }
+  }
+
+  const apiSort = SORT_TO_API[sort];
+  if (apiSort) params.set("sort", apiSort);
+
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  return params;
+}
+
 export function sortTors<T extends Tor>(tors: T[], sort: SortId): T[] {
   const sorted = [...tors];
 
@@ -218,38 +203,6 @@ export function sortTors<T extends Tor>(tors: T[], sort: SortId): T[] {
     case "budgetLow":
       return sorted.sort((a, b) => a.budget - b.budget);
   }
-}
-
-export function pageCount(total: number): number {
-  return Math.max(1, Math.ceil(total / PAGE_SIZE));
-}
-
-export function paginate<T extends Tor>(tors: T[], page: number): T[] {
-  const start = (page - 1) * PAGE_SIZE;
-  return tors.slice(start, start + PAGE_SIZE);
-}
-
-/**
- * How many records each option would yield, given the *other* active filters.
- * Facet counts let people see what is behind a filter before spending a click
- * on it, and stop them selecting something that returns nothing.
- */
-export function facetCounts<K extends keyof TorFilters>(
-  tors: Tor[],
-  filters: TorFilters,
-  key: K,
-  pick: (tor: Tor) => string,
-  now: number = Date.now()
-): Record<string, number> {
-  // Drop this filter's own value, or every option but the selected one reads 0.
-  const others = { ...filters, [key]: "" } as TorFilters;
-  const pool = filterTors(tors, others, now);
-
-  return pool.reduce<Record<string, number>>((counts, tor) => {
-    const value = pick(tor);
-    counts[value] = (counts[value] ?? 0) + 1;
-    return counts;
-  }, {});
 }
 
 /** How many filters are narrowing the list — drives the "clear all" affordance. */
