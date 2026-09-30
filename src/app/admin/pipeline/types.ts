@@ -30,6 +30,8 @@ export type Worker = {
   failedThisRun: number;
   /** Went quiet while still holding a row — a worse failure than dying idle. */
   wasWorking: boolean;
+  /** Set once the dashboard has asked it to stop; it finishes its row first. */
+  stopRequestedAt: string | null;
 };
 
 export type IngestStage = {
@@ -87,8 +89,14 @@ export type TorStatus = (typeof TOR_STATUS_ORDER)[number];
 export type PipelineError = {
   id: string;
   kind: string;
+  sourceId: string;
   projectId: string | null;
   message: string;
+  /** Parsed download size, oversize errors only. Format with formatBytes. */
+  bytes: number | null;
+  /** HTTP status of the failed fetch, when there was one. */
+  status: number | null;
+  url: string | null;
   at: string;
 };
 
@@ -97,6 +105,8 @@ export type PipelineStatus = {
   mongo: { ok: boolean; state: string };
   /** Median age of an in-flight claim per stage; null when nothing is held. */
   claimAgeMs: { ingest: number | null; extract: number | null };
+  /** Median time one finished row was held, last 50 rows. No grade queue to time. */
+  latencyMs: { ingest: number | null; extract: number | null };
   errorsByKind: { kind: string; count: number }[];
   stages: {
     ingest: IngestStage;
