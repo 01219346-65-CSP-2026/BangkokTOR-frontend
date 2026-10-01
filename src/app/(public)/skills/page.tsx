@@ -4,11 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { TextField } from "@/components/ui/TextField";
 import { Toggle } from "@/components/ui/Toggle";
 import { SkillChip } from "@/components/skills/SkillChip";
 import { StepRail } from "@/components/skills/StepRail";
 import { PreviewRail } from "@/components/skills/PreviewRail";
+import { RadioCards } from "@/components/skills/RadioCards";
+import { BudgetRange } from "@/components/skills/BudgetRange";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import type { SkillId } from "@/i18n/Translations";
 import { formatBudgetTHB, formatRelativeTime } from "@/i18n/format";
@@ -306,17 +307,33 @@ export default function SkillsPage() {
               </p>
 
               <div className="mt-8 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
-                <TextField
-                  id="skill-search"
-                  label={t.stackSearchLabel}
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={t.stackSearchPlaceholder.replace(
-                    "{count}",
-                    String(ALL_SKILL_IDS.length),
-                  )}
-                />
+                <label htmlFor="skill-search" className="sr-only">
+                  {t.stackSearchLabel}
+                </label>
+                <div className="relative">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-sage-600"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <circle cx="8.5" cy="8.5" r="5.5" />
+                    <path d="M13 13l4 4" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    id="skill-search"
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={t.stackSearchPlaceholder.replace(
+                      "{count}",
+                      String(ALL_SKILL_IDS.length),
+                    )}
+                    className="w-full rounded-full border border-sage-400/70 bg-mist-50 py-3 pr-4 pl-10 text-sm text-moss-700 transition duration-200 ease-soft outline-none placeholder:text-ink-500 hover:border-sage-600 focus-visible:border-sage-600 focus-visible:bg-white focus-visible:ring-[3px] focus-visible:ring-sage-600/20"
+                  />
+                </div>
 
                 {visibleGroups.length === 0 ? (
                   <p className="mt-6 text-sm text-ink-500">
@@ -371,6 +388,7 @@ export default function SkillsPage() {
                           label={t.skillNames[id]}
                           isSelected={false}
                           isSuggested
+                          addLabel={t.suggestAdd}
                           onToggle={() => toggleSkill(id)}
                         />
                       ))}
@@ -399,37 +417,46 @@ export default function SkillsPage() {
               </p>
 
               <div className="mt-8 flex flex-col gap-7 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
-                <ChoiceRow
-                  label={t.sizeTeamLabel}
+                <RadioCards
+                  legend={t.sizeTeamLabel}
                   hint={t.sizeTeamHint}
+                  name="team-size"
+                  value={profile.teamSize}
                   options={TEAM_SIZES.map((id) => ({
-                    id,
+                    value: id,
                     label: t.teamSizes[id],
+                    description: t.teamSizeNotes[id],
                   }))}
-                  selected={profile.teamSize}
-                  onSelect={(id) => update({ teamSize: id })}
+                  onChange={(id) => update({ teamSize: id })}
                 />
 
-                <ChoiceRow
-                  label={t.sizeDurationLabel}
+                <RadioCards
+                  legend={t.sizeDurationLabel}
                   hint={t.sizeDurationHint}
+                  name="duration"
+                  value={profile.duration}
+                  columns="sm:grid-cols-4"
                   options={DURATIONS.map((id) => ({
-                    id,
+                    value: id,
                     label: t.durations[id],
+                    description: t.durationNotes[id],
                   }))}
-                  selected={profile.duration}
-                  onSelect={(id) => update({ duration: id })}
+                  onChange={(id) => update({ duration: id })}
                 />
 
-                <ChoiceRow
-                  label={t.sizeConcurrentLabel}
+                <RadioCards
+                  legend={t.sizeConcurrentLabel}
                   hint={t.sizeConcurrentHint}
+                  name="concurrent"
+                  value={profile.concurrent}
+                  columns="sm:grid-cols-4"
                   options={CONCURRENT_OPTIONS.map((value) => ({
-                    id: value,
+                    value,
                     label: new Intl.NumberFormat(locale).format(value),
+                    description:
+                      t.concurrentNotes[String(value) as keyof typeof t.concurrentNotes],
                   }))}
-                  selected={profile.concurrent}
-                  onSelect={(value) => update({ concurrent: value })}
+                  onChange={(value) => update({ concurrent: value })}
                 />
               </div>
 
@@ -460,34 +487,30 @@ export default function SkillsPage() {
                   {formatStop(profile.budgetMax)}
                 </p>
 
-                <div className="mt-7 grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <StopSelect
-                    id="budget-min"
-                    label={t.budgetMinLabel}
-                    // The maximum is never offered as a minimum, so the two
-                    // controls can't be driven into an invalid pair.
-                    stops={BUDGET_STOPS.filter(
-                      (stop): stop is number => stop !== null,
-                    )}
-                    value={profile.budgetMin}
-                    format={formatStop}
-                    // The null stop is filtered out of `stops` above, so this
-                    // branch is unreachable — it satisfies the shared signature.
-                    onSelect={(value) =>
-                      update({ budgetMin: value ?? 0 })
-                    }
-                    error={isBudgetInvalid ? t.budgetInvalid : undefined}
-                  />
-
-                  <StopSelect
-                    id="budget-max"
-                    label={t.budgetMaxLabel}
+                <div className="mt-6">
+                  <BudgetRange
                     stops={BUDGET_STOPS}
-                    value={profile.budgetMax}
+                    min={profile.budgetMin}
+                    max={profile.budgetMax}
                     format={formatStop}
-                    onSelect={(value) => update({ budgetMax: value })}
+                    onChange={(budgetMin, budgetMax) => update({ budgetMin, budgetMax })}
+                    labels={{
+                      group: t.budgetRangeLabel,
+                      min: t.budgetMinInput,
+                      max: t.budgetMaxInput,
+                      maxHint: t.budgetMaxInputHint,
+                      snap: t.budgetSnapHint,
+                    }}
                   />
                 </div>
+
+                {/* The slider can't produce an inverted range; a profile saved
+                    before it could still hold one. */}
+                {isBudgetInvalid && (
+                  <p role="alert" className="mt-4 text-xs text-clay-500">
+                    {t.budgetInvalid}
+                  </p>
+                )}
               </div>
 
               <StepFooter
@@ -526,7 +549,7 @@ export default function SkillsPage() {
                 {t.reviewSubheading}
               </p>
 
-              <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="mt-8 grid grid-cols-1 items-stretch gap-5 md:grid-cols-2">
                 <ReviewCard
                   title={t.stackNavTitle}
                   editLabel={t.edit}
@@ -616,30 +639,23 @@ export default function SkillsPage() {
               </div>
 
               {/*
-                The save bar. It used to sit on a hardcoded three-stop gradient
-                in raw hex, which is the one thing the design system forbids
-                outright — none of those values were tokens, so the panel could
-                not follow a palette change and did not match any other surface
-                in the app. A flat sage border on paper does the same job of
-                separating the bar from the cards above it.
+                The save bar, sticky to the bottom of the viewport so the final
+                action is always in reach while the reader scrolls the review.
+                Flat tokens only — the design system forbids raw-hex gradients.
               */}
-              <div className="mt-8 rounded-field border border-sage-400/60 bg-mist-50 p-6">
-                <div className="flex flex-wrap items-center justify-between gap-5">
-                  <p className="flex items-baseline gap-3">
-                    <span className="text-3xl leading-none text-moss-700">
+              <div className="sticky bottom-0 z-20 mt-8 -mx-2 rounded-t-field border border-sage-400/60 bg-white/95 px-5 py-4 shadow-[0_-8px_24px_-16px_rgba(47,71,57,0.35)] backdrop-blur sm:mx-0">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <p className="flex items-center gap-3">
+                    <span className="flex h-10 min-w-10 items-center justify-center rounded-full bg-mist-50 px-2 font-display text-lg text-moss-700 tabular-nums">
                       {preview.reachableCount}
                     </span>
-                    <span className="max-w-[34ch] text-xs leading-relaxed text-ink-500">
-                      {t.previewMatchesToday}
+                    <span className="max-w-[30ch] text-xs leading-relaxed text-ink-500">
+                      {t.stickyReach.replace("{count}", String(preview.reachableCount))}
                     </span>
                   </p>
 
                   <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setStep(2)}
-                    >
+                    <Button type="button" variant="ghost" onClick={() => setStep(2)}>
                       {t.back}
                     </Button>
                     <Button
@@ -647,7 +663,7 @@ export default function SkillsPage() {
                       onClick={() => void handleSave()}
                       disabled={isSaving || isBudgetInvalid}
                     >
-                      {isSaving ? t.saving : t.saveProfile}
+                      {isSaving ? t.saving : `${t.saveProfile} →`}
                     </Button>
                   </div>
                 </div>
@@ -729,122 +745,6 @@ function StepFooter({
   );
 }
 
-/** A labelled row of mutually-exclusive chips — a radio group, styled. */
-function ChoiceRow<T extends string | number>({
-  label,
-  hint,
-  options,
-  selected,
-  onSelect,
-}: {
-  label: string;
-  hint: string;
-  options: { id: T; label: string }[];
-  selected: T;
-  onSelect: (id: T) => void;
-}) {
-  return (
-    <div>
-      <p className="text-sm font-medium text-moss-700">{label}</p>
-      <p className="mt-0.5 text-xs text-ink-500">{hint}</p>
-
-      <div
-        role="radiogroup"
-        aria-label={label}
-        className="mt-3 flex flex-wrap gap-2"
-      >
-        {options.map((option) => {
-          const isSelected = option.id === selected;
-
-          return (
-            <button
-              key={String(option.id)}
-              type="button"
-              role="radio"
-              aria-checked={isSelected}
-              onClick={() => onSelect(option.id)}
-              className={`rounded-field px-3.5 py-1.5 text-sm transition duration-200 ease-soft outline-none focus-visible:ring-2 focus-visible:ring-sage-600/40 active:scale-[0.985] ${
-                isSelected
-                  ? "border border-moss-700 bg-moss-700 font-medium text-white"
-                  : "border border-sage-400/70 bg-white text-moss-700 hover:border-sage-600 hover:bg-sage-100/60"
-              }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/**
- * A budget stop picker. A native `<select>` rather than the mockup's two-handle
- * slider: a range input carries no accessible way to pick "no maximum", and
- * dragging to an exact ฿8,000,000 on a touch screen is a coin flip. The value
- * is a fixed set of stops either way, which is exactly what a select is for.
- */
-function StopSelect({
-  id,
-  label,
-  stops,
-  value,
-  format,
-  onSelect,
-  error,
-}: {
-  id: string;
-  label: string;
-  stops: (number | null)[];
-  value: number | null;
-  format: (amount: number | null) => string;
-  /** Receives null for the "no maximum" stop, so the caller handles it openly. */
-  onSelect: (value: number | null) => void;
-  error?: string;
-}) {
-  const messageId = error ? `${id}-error` : undefined;
-
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 block text-sm font-medium text-moss-700"
-      >
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value === null ? "none" : String(value)}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={messageId}
-        onChange={(event) =>
-          // "none" is the no-maximum stop. Passing it through as null rather
-          // than letting Number("none") produce NaN into the saved profile.
-          onSelect(
-            event.target.value === "none" ? null : Number(event.target.value),
-          )
-        }
-        className={`w-full rounded-field border bg-white px-3.5 py-2.5 text-sm text-moss-700 transition duration-200 ease-soft outline-none focus-visible:ring-[3px] focus-visible:ring-sage-600/20 ${
-          error
-            ? "border-clay-500 focus-visible:border-clay-500"
-            : "border-sage-400/70 hover:border-sage-600 focus-visible:border-sage-600"
-        }`}
-      >
-        {stops.map((stop) => (
-          <option key={stop === null ? "none" : stop} value={stop === null ? "none" : stop}>
-            {format(stop)}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <p id={messageId} className="mt-1.5 text-xs text-clay-500">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
 function ReviewCard({
   title,
   editLabel,
@@ -857,8 +757,8 @@ function ReviewCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-field border border-sage-100 bg-white p-5">
-      <div className="mb-4 flex items-baseline justify-between gap-4">
+    <div className="flex h-full flex-col rounded-field border border-sage-100 bg-white p-5 transition duration-200 ease-soft hover:border-sage-400/60">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className=" text-lg tracking-tight text-moss-700">
           {title}
         </h2>
@@ -866,8 +766,11 @@ function ReviewCard({
           <button
             type="button"
             onClick={onEdit}
-            className="rounded text-xs text-sage-600 underline-offset-4 outline-none hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600/40"
+            className="inline-flex items-center gap-1.5 rounded-full border border-sage-400/60 px-2.5 py-1 text-xs font-medium text-sage-600 outline-none transition duration-200 ease-soft hover:border-sage-600 hover:bg-sage-100/60 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600/40"
           >
+            <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M11 2.5l2.5 2.5L6 12.5 3 13l.5-3L11 2.5z" strokeLinejoin="round" />
+            </svg>
             {editLabel}
           </button>
         )}

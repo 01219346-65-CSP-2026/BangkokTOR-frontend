@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useAnimatedNumber } from "@/lib/useAnimatedNumber";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import type { ProfilePreview } from "@/lib/profilePreview";
 
@@ -18,6 +20,21 @@ export function PreviewRail({ preview }: { preview: ProfilePreview }) {
   const { locale } = useLanguage();
   const skillNames = t.skillNames;
 
+  // Counts up to the new reach instead of jumping, so picking a skill visibly
+  // moves the number.
+  const shownCount = useAnimatedNumber(preview.reachableCount);
+
+  // A gain gets a "+N" badge. Derived during render from the previous count
+  // (React's "adjust state when a prop changes" pattern) rather than set in an
+  // effect; the badge fades itself out with a CSS animation, so no timer.
+  const [lastCount, setLastCount] = useState(preview.reachableCount);
+  const [gain, setGain] = useState<{ amount: number; id: number } | null>(null);
+  if (preview.reachableCount !== lastCount) {
+    const delta = preview.reachableCount - lastCount;
+    setLastCount(preview.reachableCount);
+    setGain(delta > 0 ? { amount: delta, id: (gain?.id ?? 0) + 1 } : null);
+  }
+
   return (
     <aside className="flex flex-col gap-6" aria-live="polite">
       <h2 className="font-mono text-xs tracking-widest text-ink-500 uppercase">
@@ -31,10 +48,20 @@ export function PreviewRail({ preview }: { preview: ProfilePreview }) {
         it reads more clearly at full contrast on paper than reversed out of a
         dark ramp.
       */}
-      <div className="rounded-field border border-sage-400/60 bg-mist-50 p-5">
-        <p className="font-display text-4xl leading-none text-moss-700">
-          {preview.reachableCount}
-        </p>
+      <div className="relative overflow-hidden rounded-field border border-sage-400/60 bg-mist-50 p-5">
+        <div className="flex items-baseline gap-2">
+          <p className="font-display text-4xl leading-none text-moss-700 tabular-nums">
+            {new Intl.NumberFormat(locale).format(shownCount)}
+          </p>
+          {gain && (
+            <span
+              key={gain.id}
+              className="gain-pop rounded-full bg-sage-600 px-2 py-0.5 text-xs font-semibold text-white"
+            >
+              {t.previewGained.replace("{count}", String(gain.amount))}
+            </span>
+          )}
+        </div>
         <p className="mt-2 text-xs leading-relaxed text-ink-500">
           {t.previewReach.replace("{count}", String(preview.totalCount))}
         </p>

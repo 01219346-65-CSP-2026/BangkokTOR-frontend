@@ -171,3 +171,82 @@ body {
 :lang(th) .font-display {
   font-family: var(--font-thai), "Noto Sans Thai", sans-serif;
 }
+/*
+ * Dual-thumb range (components/skills/BudgetRange.tsx): two range inputs
+ * stacked on one visual track. Each input is transparent and ignores the
+ * pointer; only its thumb takes it, so both thumbs stay draggable.
+ */
+.dual-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  outline: none;
+}
+.dual-range::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+.dual-range::-moz-range-track {
+  background: transparent;
+}
+.dual-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-top: calc((2.5rem - 1.375rem) / 2);
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid var(--color-sage-600);
+  box-shadow: 0 1px 3px rgba(47, 71, 57, 0.25);
+  cursor: grab;
+  transition: transform 150ms, box-shadow 150ms;
+}
+.dual-range::-moz-range-thumb {
+  pointer-events: auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid var(--color-sage-600);
+  box-shadow: 0 1px 3px rgba(47, 71, 57, 0.25);
+  cursor: grab;
+}
+.dual-range:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.12);
+}
+.dual-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgb(74 107 85 / 0.25);
+}
+.dual-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgb(74 107 85 / 0.25);
+}
+
+/* The live preview's "+N" badge (components/skills/PreviewRail.tsx): pops in,
+   holds, fades out — on its own, so no timer has to remove it. */
+@keyframes gain-pop {
+  0% { opacity: 0; transform: translateY(4px) scale(0.9); }
+  12% { opacity: 1; transform: translateY(0) scale(1.05); }
+  20% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+.gain-pop {
+  animation: gain-pop 2.2s ease-out forwards;
+}
+
+/* Toast entrance (components/profile/SkillManager.tsx). */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.toast-in {
+  animation: toast-in 180ms ease-out;
+}

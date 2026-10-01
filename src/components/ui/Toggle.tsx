@@ -36,7 +36,11 @@ export function Toggle({
       <span
         aria-hidden="true"
         className={`relative h-6 w-11 shrink-0 rounded-full transition duration-200 ease-soft ${
-          isOn ? "bg-sage-600" : "bg-sage-100 group-hover:bg-sage-400/50"
+          // High contrast in both states: "off" is a clearly grey track with
+          // an outline, not a pale green that reads as half-on.
+          isOn
+            ? "bg-sage-600 shadow-[inset_0_0_0_1px_var(--color-moss-700)]"
+            : "bg-ink-500/25 shadow-[inset_0_0_0_1px_rgba(82,82,91,0.35)] group-hover:bg-ink-500/35"
         }`}
       >
         <span

@@ -11,6 +11,7 @@ import type { TextLayer, TorDocument } from "@/types/tor";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FitDial } from "@/components/tor/FitDial";
+import { BookmarkButton } from "@/components/tor/BookmarkButton";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
 import { loadProfile, type SkillProfile } from "@/lib/skillProfile";
@@ -411,13 +412,7 @@ export default function TorDetailPage({
                   {t.sourceUnavailable}
                 </Button>
               )}
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => console.log("Save to watchlist:", tor.id)}
-              >
-                {t.saveToWatchlist}
-              </Button>
+              <BookmarkButton torId={tor.id} />
             </div>
 
             {/* Scored against the reader's saved profile. Skills are found by

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/skills", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/skills", "/profile", "/admin"];
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
@@ -20,5 +20,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/skills/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/skills/:path*", "/profile/:path*", "/admin/:path*"],
 };
