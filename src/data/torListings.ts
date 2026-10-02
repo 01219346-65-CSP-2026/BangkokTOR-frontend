@@ -10,7 +10,7 @@ import type { Tor } from "@/types/tor";
  * currently mounts only a health check and its TOR data model is undesigned, so
  * this file is the single seam where a fetch will replace an import.
  */
-type MockTor = Omit<Tor, "biddingStatus" | "stage" | "fiscalYear" | "closesAt" | "opensAt" | "deadlineEvidence">;
+type MockTor = Omit<Tor, "biddingStatus" | "stage" | "fiscalYear" | "province" | "closesAt" | "opensAt" | "deadlineEvidence">;
 
 const RECORDS: MockTor[] = [
   {
@@ -2294,6 +2294,7 @@ export const MOCK_TORS: Tor[] = RECORDS.map((tor) => ({
   biddingStatus: "closed",
   stage: null,
   fiscalYear: null,
+  province: null,
   closesAt: null,
   opensAt: null,
   deadlineEvidence: null,

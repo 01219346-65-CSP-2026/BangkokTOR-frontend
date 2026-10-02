@@ -127,14 +127,10 @@ export default function TorDetailPage({
     tor.budget >= profile.budgetMin &&
     (profile.budgetMax === null || tor.budget <= profile.budgetMax);
 
-  // Once extraction has expanded the bundle, its PDFs replace it in the list;
-  // the zip stays reachable as a single link underneath.
+  // The PDFs expanded from a bundle are deleted after extraction, so only the
+  // zip is offered; the PDF rows just feed the document count.
   const pdfs = tor.documents.filter((document) => document.kind === "extractedPdf");
-  const bundles = tor.documents.filter((document) => document.kind === "bundle");
-  const listed =
-    pdfs.length > 0
-      ? [...tor.documents.filter((document) => document.kind !== "extractedPdf" && document.kind !== "bundle"), ...pdfs]
-      : tor.documents;
+  const listed = tor.documents.filter((document) => document.kind !== "extractedPdf");
   // A bundle can expand to 40+ PDFs; the list stays short until asked.
   const collapsible = listed.length > COLLAPSED_DOCUMENTS;
   const visibleDocuments =
@@ -345,9 +341,7 @@ export default function TorDetailPage({
                   {t.detailDocuments}
                 </h2>
                 <span className="shrink-0 font-mono text-[0.6875rem] tracking-widest text-ink-500 uppercase">
-                  {pdfs.length > 0
-                    ? t.documentsFromBundle.replace("{count}", String(pdfs.length))
-                    : t.documentCount.replace("{count}", String(tor.documents.length))}
+                  {t.documentCount.replace("{count}", String(listed.length))}
                 </span>
               </div>
 
@@ -386,22 +380,6 @@ export default function TorDetailPage({
                   </span>
                 </button>
               )}
-
-              {pdfs.length > 0 &&
-                bundles.map(
-                  (bundle, index) =>
-                    bundle.url && (
-                      <a
-                        key={bundle.id ?? `bundle-${index}`}
-                        href={bundle.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-block rounded-field text-xs text-sage-600 underline-offset-4 hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
-                      >
-                        {t.documentKinds.bundle} ↗
-                      </a>
-                    ),
-                )}
 
               {routine.length > 0 && (
                 <dl className="mt-4 border-t border-sage-100 pt-4">
@@ -527,6 +505,9 @@ export default function TorDetailPage({
                 </Fact>
                 <Fact label={t.factPublished}>
                   <span className="tabular-nums">{published}</span>
+                </Fact>
+                <Fact label={t.factProvince}>
+                  <span lang="th">{tor.province ?? t.stageUnknown}</span>
                 </Fact>
                 <Fact label={t.factFiscalYear}>
                   <span className="tabular-nums">

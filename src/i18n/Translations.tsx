@@ -472,7 +472,7 @@ const en = {
   tor: {
     eyebrow: "Discovery",
     heading: "Terms of reference",
-    subheading: "{count} tenders from {agencies} Bangkok agencies.",
+    subheading: "{count} tenders from {agencies} agencies across Thailand.",
     filtersHeading: "Filters",
     filtersReset: "Reset",
     // ── Matching UI. Every value behind these is placeholder; see
@@ -530,7 +530,6 @@ const en = {
     torUnread: "Not read yet",
     download: "Open",
     fileSizeUnknown: "Size not recorded",
-    documentsFromBundle: "{count} PDFs from the bundle",
     showAllDocuments: "Show all {count} files",
     showFewerDocuments: "Show fewer",
     searchLabel: "Search",
@@ -632,6 +631,9 @@ const en = {
     factNumber: "Project number",
     factPublished: "First published",
     factFiscalYear: "Fiscal year",
+    factProvince: "Province",
+    provinceLabel: "Province",
+    provinceAll: "All of Thailand",
     // Thai fiscal year runs 1 Oct – 30 Sep; BE 2570 is Oct 2026 – Sep 2027.
     fiscalYearValue: "FY {be} (Oct {start} – Sep {end})",
     factDeadline: "Bid deadline",
@@ -1467,7 +1469,7 @@ const th: typeof en = {
   tor: {
     eyebrow: "ค้นหาโครงการ",
     heading: "ขอบเขตของงาน",
-    subheading: "{count} โครงการ จาก {agencies} หน่วยงานในกรุงเทพมหานคร",
+    subheading: "{count} โครงการ จาก {agencies} หน่วยงานทั่วประเทศ",
     filtersHeading: "ตัวกรอง",
     filtersReset: "ล้างค่า",
     fitCaption: "ตรงกัน",
@@ -1516,7 +1518,6 @@ const th: typeof en = {
     torUnread: "ยังไม่ได้อ่านไฟล์",
     download: "เปิดไฟล์",
     fileSizeUnknown: "ไม่ทราบขนาดไฟล์",
-    documentsFromBundle: "PDF {count} ไฟล์จากชุดเอกสาร",
     showAllDocuments: "แสดงทั้งหมด {count} ไฟล์",
     showFewerDocuments: "ย่อรายการ",
     searchLabel: "ค้นหา",
@@ -1606,6 +1607,9 @@ const th: typeof en = {
     factNumber: "เลขที่โครงการ",
     factPublished: "ประกาศครั้งแรก",
     factFiscalYear: "ปีงบประมาณ",
+    factProvince: "จังหวัด",
+    provinceLabel: "จังหวัด",
+    provinceAll: "ทั่วประเทศ",
     fiscalYearValue: "{be}",
     factDeadline: "วันยื่นเสนอราคา",
     stageUnknown: "ไม่มีข้อมูล",

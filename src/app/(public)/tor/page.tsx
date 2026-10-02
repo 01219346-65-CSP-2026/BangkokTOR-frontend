@@ -374,6 +374,7 @@ export default function TorListingsPage() {
               workTypeCounts={workTypeFacet.counts}
               methodCounts={methodFacet.counts}
               stages={stats?.byStage ?? []}
+              provinces={stats?.byProvince ?? []}
               budgetMax={stats?.maxBudget ?? null}
               showFit={hasProfile}
             />

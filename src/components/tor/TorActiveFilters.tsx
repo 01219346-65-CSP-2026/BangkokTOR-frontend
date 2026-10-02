@@ -40,6 +40,9 @@ export function TorActiveFilters({
   if (filters.agency) {
     chips.push({ key: "agency", label: t.agencyLabel, value: filters.agency });
   }
+  if (filters.province) {
+    chips.push({ key: "province", label: t.provinceLabel, value: filters.province });
+  }
   if (filters.workType) {
     chips.push({
       key: "workType",

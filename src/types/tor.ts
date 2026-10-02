@@ -183,6 +183,8 @@ export type Tor = {
   stage: BiddingStageId | null;
   /** ปีงบประมาณ, Buddhist era (e.g. 2570). Null when not known yet. */
   fiscalYear: number | null;
+  /** จังหวัด as the portal records it (Thai). Null when not recorded. */
+  province: string | null;
   /** End of the bid submission window. ISO 8601; null when not published or
    *  not readable yet — never estimated. */
   closesAt: string | null;

@@ -28,6 +28,8 @@ type TorFiltersProps = {
   methodCounts: Record<string, number>;
   /** สถานะโครงการ — the procurement stages present, with counts, from /api/tors/stats. */
   stages: Array<{ stage: BiddingStageId; count: number }>;
+  /** จังหวัด with counts, most TORs first, from /api/tors/stats. */
+  provinces: Array<{ province: string; count: number }>;
   /** Largest listed budget, from /api/tors/stats. Null until it loads. */
   budgetMax: number | null;
   /** Only a reader with saved skills has a fit to filter on. */
@@ -43,6 +45,7 @@ export function TorFilters({
   workTypeCounts,
   methodCounts,
   stages,
+  provinces,
   budgetMax,
   showFit,
 }: TorFiltersProps) {
@@ -153,6 +156,23 @@ export function TorFilters({
         value={filters.agency}
         onChange={(event) => update("agency", event.target.value)}
         options={agencies.map((agency) => ({ value: agency, label: agency }))}
+      />
+
+      {/*
+        จังหวัด — every province is in scope, most TORs first. The options and
+        counts come from /api/tors/stats, so only provinces with records show.
+      */}
+      <Select
+        wrapperClassName="mt-3.5 border-t border-sage-100 pt-3.5"
+        id="tor-province"
+        label={t.provinceLabel}
+        placeholder={t.provinceAll}
+        value={filters.province}
+        onChange={(event) => update("province", event.target.value)}
+        options={provinces.map(({ province, count }) => ({
+          value: province,
+          label: withCount(province, count),
+        }))}
       />
 
       {/*

@@ -42,6 +42,7 @@ export function TorCard({ tor }: { tor: CardTor }) {
               {tor.agency}
               {tor.department ? ` · ${tor.department}` : ""}
             </span>
+            {tor.province && <ProvinceTag province={tor.province} />}
 
             {tor.extractionIncomplete && (
               <Badge tone="caution">{t.extractionIncomplete}</Badge>
@@ -93,6 +94,25 @@ export function TorCard({ tor }: { tor: CardTor }) {
     </Link>
   );
 }
+
+/**
+ * Where the work is. Every province is listed now; Bangkok is set apart
+ * (accent) because it is still the product's home market.
+ */
+export function ProvinceTag({ province }: { province: string }) {
+  return (
+    <span
+      lang="th"
+      className={`rounded-field px-1.5 py-px text-[0.6875rem] font-medium ${
+        province === BANGKOK ? "bg-sage-600 text-white" : "border border-sage-400/60 text-ink-500"
+      }`}
+    >
+      {province}
+    </span>
+  );
+}
+
+const BANGKOK = "กรุงเทพมหานคร";
 
 /**
  * A required qualification. Matched skills read as confirmed; unmatched ones

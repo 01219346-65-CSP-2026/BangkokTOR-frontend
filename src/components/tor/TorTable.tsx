@@ -5,6 +5,7 @@ import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
 import { Badge } from "@/components/ui/Badge";
 import { DeadlineBadge } from "@/components/tor/DeadlineBadge";
+import { ProvinceTag } from "@/components/tor/TorCard";
 import type { CardTor } from "@/types/tor";
 
 /**
@@ -85,6 +86,11 @@ export function TorTable({ tors }: { tors: CardTor[] }) {
                 </td>
                 <td lang="th" className="px-4 py-3 text-xs text-ink-600">
                   {tor.agency}
+                  {tor.province && (
+                    <span className="mt-1 block">
+                      <ProvinceTag province={tor.province} />
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-xs text-moss-700 tabular-nums">
                   {formatBudgetTHB(tor.budget, locale)}

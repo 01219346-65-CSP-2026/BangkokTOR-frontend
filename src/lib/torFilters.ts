@@ -22,6 +22,8 @@ export const BIDDING_IDS: BiddingStatusId[] = ["open", "upcoming", "closed"];
 export type TorFilters = {
   search: string;
   agency: string | "";
+  /** จังหวัด exactly as stored (e.g. กรุงเทพมหานคร). "" = all of Thailand. */
+  province: string;
   /**
    * หมวดหมู่: our reading of what kind of software work this is. Replaced the
    * goods category, which the national e-GP data does not carry — every record
@@ -50,6 +52,7 @@ export type TorFilters = {
 export const EMPTY_FILTERS: TorFilters = {
   search: "",
   agency: "",
+  province: "",
   workType: "",
   minBudget: null,
   maxBudget: null,
@@ -127,6 +130,7 @@ export function buildTorQuery(
   const search = filters.search.trim();
   if (search) params.set("q", search);
   if (filters.agency) params.set("agency", filters.agency);
+  if (filters.province) params.set("province", filters.province);
   if (filters.workType) params.set("workType", filters.workType);
   if (filters.method) params.set("method", filters.method);
   if (filters.stage) params.set("stage", filters.stage);

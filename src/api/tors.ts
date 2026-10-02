@@ -60,6 +60,7 @@ export type BackendTor = {
   biddingStatus?: BiddingStatusId | null;
   stage?: BiddingStageId | null;
   fiscalYear?: number | null;
+  province?: string | null;
   bidOpensAt?: string | null;
   bidClosesAt?: string | null;
   deadlineEvidence?: { quote?: string | null; documentUrl?: string | null } | null;
@@ -113,6 +114,8 @@ export type TorStatsResponse = {
   byMethod: Array<{ method: string | null; count: number }>;
   /** สถานะโครงการ: procurement stages present in the listed records, in e-GP order. */
   byStage: Array<{ stage: BiddingStageId; count: number }>;
+  /** จังหวัด with counts, most TORs first. */
+  byProvince?: Array<{ province: string; count: number }>;
   /** Open / upcoming / closed counts — the bidding toggle's numbers. */
   byBidding?: Array<{ status: BiddingStatusId; count: number }>;
   /** The fiscal year (Buddhist era) the listings cover. Null before any ingest. */
@@ -256,6 +259,7 @@ export function toTor(row: BackendTor): ApiTor {
     biddingStatus: oneOf(BIDDING, row.biddingStatus, "closed"),
     stage: row.stage && STAGES.has(row.stage) ? row.stage : null,
     fiscalYear: row.fiscalYear ?? null,
+    province: row.province ?? null,
     closesAt: row.bidClosesAt ?? null,
     opensAt: row.bidOpensAt ?? null,
     deadlineEvidence:
