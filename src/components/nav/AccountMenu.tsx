@@ -120,6 +120,13 @@ export function AccountMenu({ account }: { account: Account }) {
 
           <div className="py-1">
             <Link
+              href="/profile"
+              role="menuitem"
+              className="block px-4 py-2.5 text-sm text-ink-600 transition duration-200 ease-soft hover:bg-sage-100 hover:text-moss-700 focus-visible:bg-sage-100 focus-visible:text-moss-700 focus-visible:outline-none"
+            >
+              {t.accountProfile}
+            </Link>
+            <Link
               href="/skills"
               role="menuitem"
               className="block px-4 py-2.5 text-sm text-ink-600 transition duration-200 ease-soft hover:bg-sage-100 hover:text-moss-700 focus-visible:bg-sage-100 focus-visible:text-moss-700 focus-visible:outline-none"

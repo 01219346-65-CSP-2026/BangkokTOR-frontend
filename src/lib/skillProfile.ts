@@ -1,5 +1,9 @@
 import type { SkillId } from "@/i18n/Translations";
-import { toBackendProfile, toProfile, type BackendProfile } from "@/api/profile";
+import {
+  toBackendProfile,
+  toProfile,
+  type BackendProfile,
+} from "@/api/profile";
 
 /**
  * The reader's skill profile — what /skills collects and what the matching
@@ -37,7 +41,19 @@ export const SKILL_GROUPS = [
   {
     id: "frontend",
     labelKey: "groupFrontend",
-    skills: ["react", "vue", "angular", "flutter", "reactNative"],
+    skills: [
+      "react",
+      "vue",
+      "angular",
+      "flutter",
+      "reactNative",
+      "android",
+      "ios",
+      "php",
+      "uxui",
+      "wcag",
+      "cms",
+    ],
   },
   {
     id: "backend",
@@ -51,18 +67,78 @@ export const SKILL_GROUPS = [
       "python",
       "timescaledb",
       "docker",
-      "powerBi",
       "restApi",
+      "mysql",
+      "oracleDb",
+      "sqlServer",
+      "microservices",
+      "messageQueue",
+      "erp",
     ],
+  },
+  {
+    id: "data",
+    labelKey: "groupData",
+    skills: [
+      "aiMl",
+      "llm",
+      "chatbot",
+      "computerVision",
+      "powerBi",
+      "dataWarehouse",
+      "bigData",
+      "dashboardBi",
+      "remoteSensing",
+    ],
+  },
+  {
+    id: "infra",
+    labelKey: "groupInfra",
+    skills: [
+      "govCloud",
+      "publicCloud",
+      "virtualization",
+      "linux",
+      "backupDr",
+      "network",
+      "monitoring",
+    ],
+  },
+  {
+    id: "security",
+    labelKey: "groupSecurity",
+    skills: ["iso27001", "sso", "ldap", "firewall", "pentest", "soc", "sslTls"],
   },
   {
     id: "government",
     labelKey: "groupGovernment",
-    skills: ["gisQgis", "thaiEDocument", "thaiD", "egpApi", "pdpa"],
+    skills: [
+      "gisQgis",
+      "thaiEDocument",
+      "thaiD",
+      "egpApi",
+      "pdpa",
+      "gdx",
+      "dopa",
+      "digitalSignature",
+      "lineApi",
+      "ePayment",
+      "openData",
+      "his",
+      "lms",
+      "iot",
+      "itil",
+    ],
   },
 ] as const satisfies ReadonlyArray<{
   id: string;
-  labelKey: "groupFrontend" | "groupBackend" | "groupGovernment";
+  labelKey:
+    | "groupFrontend"
+    | "groupBackend"
+    | "groupData"
+    | "groupInfra"
+    | "groupSecurity"
+    | "groupGovernment";
   skills: readonly SkillId[];
 }>;
 
@@ -97,6 +173,50 @@ export const SKILL_MATCH_NAMES: Record<SkillId, string> = {
   thaiD: "ThaiD",
   egpApi: "SCADA",
   pdpa: "MQTT / IoT",
+  android: "Android / Kotlin",
+  ios: "iOS / Swift",
+  php: "PHP / Laravel",
+  uxui: "UX/UI design",
+  wcag: "Web accessibility (WCAG)",
+  cms: "CMS / WordPress",
+  mysql: "MySQL / MariaDB",
+  oracleDb: "Oracle Database",
+  sqlServer: "SQL Server",
+  microservices: "Microservices / API gateway",
+  messageQueue: "Kafka / message queue",
+  erp: "ERP / SAP",
+  aiMl: "AI / machine learning",
+  llm: "LLM / generative AI",
+  chatbot: "Chatbot",
+  computerVision: "Computer vision / OCR",
+  dataWarehouse: "Data warehouse / ETL",
+  bigData: "Big data",
+  dashboardBi: "Dashboard / BI",
+  remoteSensing: "Satellite / remote sensing",
+  govCloud: "GDCC / government cloud",
+  publicCloud: "AWS / Azure / GCP",
+  virtualization: "VMware / virtualization",
+  linux: "Linux server",
+  backupDr: "Backup & disaster recovery",
+  network: "Network infrastructure",
+  monitoring: "Monitoring (Grafana / Zabbix)",
+  iso27001: "ISO/IEC 27001",
+  sso: "SSO / OAuth / MFA",
+  ldap: "LDAP / Active Directory",
+  firewall: "Firewall / WAF",
+  pentest: "Penetration testing / VA",
+  soc: "SOC / SIEM",
+  sslTls: "SSL/TLS certificates",
+  gdx: "GDX / data exchange",
+  dopa: "DOPA / ID-card linkage",
+  digitalSignature: "Digital signature / PKI",
+  lineApi: "LINE OA / LINE API",
+  ePayment: "e-Payment / PromptPay",
+  openData: "Open data / CKAN",
+  his: "Hospital IS (HIS / HL7)",
+  lms: "LMS / e-Learning",
+  iot: "IoT / MQTT",
+  itil: "ITIL / service desk",
 };
 
 /** Sensible starting point: nothing claimed, a mid-size team, no budget ceiling. */
@@ -115,8 +235,12 @@ export const DEFAULT_PROFILE: SkillProfile = {
 
 /** The server's `{ error }` message, or a generic one. */
 async function errorMessage(res: Response): Promise<string> {
-  const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
-  return typeof body?.error === "string" ? body.error : `Request failed (${res.status})`;
+  const body = (await res.json().catch(() => null)) as {
+    error?: unknown;
+  } | null;
+  return typeof body?.error === "string"
+    ? body.error
+    : `Request failed (${res.status})`;
 }
 
 /**
@@ -134,7 +258,9 @@ export async function loadProfile(): Promise<SkillProfile | null> {
 }
 
 /** Persists the profile. Resolves with it as stored — `savedAt` is the server's. */
-export async function saveProfile(profile: SkillProfile): Promise<SkillProfile> {
+export async function saveProfile(
+  profile: SkillProfile,
+): Promise<SkillProfile> {
   const res = await fetch("/api/profile", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
