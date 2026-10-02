@@ -27,12 +27,14 @@ const FORWARDED = [
   "workType",
   "method",
   "province",
-  "projectStatus",
+  "stage",
   "minBudget",
   "maxBudget",
   "publishedFrom",
   "publishedTo",
   "sort",
+  // open,upcoming,closed — the bidding toggle.
+  "bidding",
   // The reader's own profile skill ids and fit bands. Not identifying, and
   // sending them keeps this route free of NextAuth — see publicFetch above.
   "skills",

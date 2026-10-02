@@ -6,6 +6,7 @@ import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
 import { Badge } from "@/components/ui/Badge";
 import { FitDial } from "@/components/tor/FitDial";
+import { DeadlineBadge } from "@/components/tor/DeadlineBadge";
 import type { CardTor } from "@/types/tor";
 
 /**
@@ -15,9 +16,10 @@ import type { CardTor } from "@/types/tor";
  * of competing small links.
  *
  * On /tor the fit dial and skill chips are real: skills detected in the TOR's
- * documents, scored against the reader's profile (src/lib/torFit.ts). There is
- * no deadline — the portal publishes no closing date, and an invented one is a
- * date someone would plan around.
+ * documents, scored against the reader's profile (src/lib/torFit.ts).
+ *
+ * The bid deadline leads the right-hand column, above the budget: whether a
+ * team can still bid, and until when, is the first thing the list is for.
  */
 export function TorCard({ tor }: { tor: CardTor }) {
   const t = useTranslations("tor");
@@ -76,8 +78,10 @@ export function TorCard({ tor }: { tor: CardTor }) {
           </div>
         </div>
 
-        <div className="flex w-[11rem] shrink-0 flex-col items-end gap-1 text-right">
-          <p className="font-mono text-base leading-snug font-semibold text-moss-700 tabular-nums">
+        <div className="flex w-[13rem] shrink-0 flex-col items-end gap-1 text-right">
+          <DeadlineBadge tor={tor} />
+
+          <p className="mt-1.5 font-mono text-sm leading-snug font-semibold text-moss-700 tabular-nums">
             {formatBudgetTHB(tor.budget, locale)}
           </p>
 

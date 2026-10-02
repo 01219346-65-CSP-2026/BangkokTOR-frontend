@@ -88,11 +88,11 @@ export function TorActiveFilters({
     });
   }
 
-  if (filters.projectStatus) {
+  if (filters.stage) {
     chips.push({
-      key: "projectStatus",
+      key: "stage",
       label: t.projectStatusLabel,
-      value: filters.projectStatus,
+      value: t.stages[filters.stage],
     });
   }
 

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FitDial } from "@/components/tor/FitDial";
 import { BookmarkButton } from "@/components/tor/BookmarkButton";
+import { useDeadline } from "@/components/tor/DeadlineBadge";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
 import { loadProfile, type SkillProfile } from "@/lib/skillProfile";
@@ -102,6 +103,10 @@ export default function TorDetailPage({
   const summaryPoints = tor.summaryPoints ?? [];
 
   const published = formatDate(new Date(tor.publishedAt).getTime(), locale);
+  // สถานะ: e-GP's procurement step — the same value the list's สถานะโครงการ
+  // filter uses. The portal's own status read ระหว่างดำเนินการ for nearly
+  // every record, open tenders included.
+  const stageLabel = tor.stage ? t.stages[tor.stage] : t.stageUnknown;
   const { notable, routine } = deriveObservations(tor);
   // "No TOR attached" decides whether the record can be read at all, so it
   // leads the page as a banner instead of waiting at the bottom of the rail.
@@ -213,12 +218,15 @@ export default function TorDetailPage({
               </div>
 
               {/*
-                Three cells, all real. The mockup's "closes" cell is gone: the
-                portal publishes no closing date, and a made-up countdown sat
-                beside the real procurement status and contradicted it.
+                Four cells, all real. The bid deadline leads: it is read from
+                the TOR's ประกาศเชิญชวน by the backend, and quoted below the
+                grid so it can be checked against the document.
                 Agency is not repeated here — it is the line under the title.
               */}
-              <dl className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-field border border-sage-100 bg-sage-100 sm:grid-cols-[1.4fr_1fr_1fr]">
+              <dl className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-field border border-sage-100 bg-sage-100 sm:grid-cols-2 lg:grid-cols-[1.5fr_1.3fr_1fr_0.8fr]">
+                <Stat label={t.deadline.label}>
+                  <DeadlineStat tor={tor} />
+                </Stat>
                 <Stat label={t.statBudget}>
                   <span className="font-mono text-2xl font-semibold text-moss-700 tabular-nums">
                     {formatBudgetTHB(tor.budget, locale)}
@@ -226,7 +234,7 @@ export default function TorDetailPage({
                 </Stat>
                 <Stat label={t.statStatus}>
                   <Badge tone="accent" withDot>
-                    {t.statusLabels[tor.status]}
+                    {stageLabel}
                   </Badge>
                 </Stat>
                 <Stat label={t.statDocuments}>
@@ -238,6 +246,25 @@ export default function TorDetailPage({
                   </span>
                 </Stat>
               </dl>
+
+              {tor.deadlineEvidence && (
+                <figure className="mt-4 rounded-field border-l-2 border-sage-400 bg-mist-50 px-4 py-3">
+                  <blockquote lang="th" className="text-sm leading-relaxed text-ink-600">
+                    “{tor.deadlineEvidence.quote}”
+                  </blockquote>
+                  <figcaption className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
+                    <span>{t.deadline.evidence}</span>
+                    <a
+                      href={tor.deadlineEvidence.documentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-field font-medium text-sage-600 underline underline-offset-4 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                    >
+                      {t.deadline.openInvitation}
+                    </a>
+                  </figcaption>
+                </figure>
+              )}
             </header>
 
             {/* Our plain-language reading. One or two sentences, so a compact
@@ -489,7 +516,7 @@ export default function TorDetailPage({
                 <Fact label={t.factMethod}>
                   {t.methodLabels[tor.procurementMethod]}
                 </Fact>
-                <Fact label={t.factStatus}>{t.statusLabels[tor.status]}</Fact>
+                <Fact label={t.factStatus}>{stageLabel}</Fact>
                 <Fact label={t.factBudget}>
                   <span className="tabular-nums">
                     {formatBudgetTHB(tor.budget, locale)}
@@ -500,6 +527,14 @@ export default function TorDetailPage({
                 </Fact>
                 <Fact label={t.factPublished}>
                   <span className="tabular-nums">{published}</span>
+                </Fact>
+                <Fact label={t.factFiscalYear}>
+                  <span className="tabular-nums">
+                    {tor.fiscalYear ? fiscalYearLabel(tor.fiscalYear, t.fiscalYearValue) : t.stageUnknown}
+                  </span>
+                </Fact>
+                <Fact label={t.factDeadline}>
+                  <DeadlineFact tor={tor} />
                 </Fact>
               </dl>
             </section>
@@ -717,6 +752,45 @@ function FitRow({
         {children}
       </dd>
     </div>
+  );
+}
+
+/**
+ * "FY 2570 (Oct 2026 – Sep 2027)" in English; Thai readers know the BE year,
+ * so it is just "2570". The Thai fiscal year starts 1 October of the year before.
+ */
+function fiscalYearLabel(be: number, template: string): string {
+  const end = be - 543;
+  return template
+    .replace("{be}", String(be))
+    .replace("{start}", String(end - 1))
+    .replace("{end}", String(end));
+}
+
+/** The deadline as a record row: date and window, or what is known instead. */
+function DeadlineFact({ tor }: { tor: ApiTor }) {
+  const view = useDeadline(tor);
+  return (
+    <span className="tabular-nums" suppressHydrationWarning>
+      {view.detail ?? view.headline}
+    </span>
+  );
+}
+
+/** The deadline cell: the countdown large, the date and window under it. */
+function DeadlineStat({ tor }: { tor: ApiTor }) {
+  const view = useDeadline(tor);
+  const tone =
+    view.tone === "urgent" ? "text-ochre-600" : view.tone === "open" ? "text-sage-600" : "text-ink-500";
+  return (
+    <>
+      <span className={`block text-lg leading-snug font-semibold ${tone}`} suppressHydrationWarning>
+        {view.headline}
+      </span>
+      {view.detail && (
+        <span className="mt-0.5 block font-mono text-xs text-ink-500 tabular-nums">{view.detail}</span>
+      )}
+    </>
   );
 }
 

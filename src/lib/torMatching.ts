@@ -3,11 +3,10 @@ import type { MatchedTor, Tor, TorSkillRequirement } from "@/types/tor";
 /**
  * ⚠ PLACEHOLDER MATCHING LAYER — see `src/types/tor.ts`.
  *
- * The UI mockups show a fit score, a submission deadline and skill chips on
- * every TOR. None of the three exists: the source portal publishes no closing
- * date, there is no scoring service, and there is no stored user skill profile.
- * This module invents all of them so the screens can be built and reviewed
- * before the backend lands.
+ * Used only by the mock-driven dashboard and skills pages. The live pages read
+ * the real deadline (`Tor.closesAt`, from the ประกาศเชิญชวน) and the real fit
+ * (src/lib/torFit.ts). This module invents all three for the mock records so
+ * those screens can be reviewed.
  *
  * Everything here is derived from the record's own fields — no randomness — for
  * two reasons: a `Math.random()` score would differ between the server render
@@ -137,7 +136,5 @@ export function withMatches(tors: Tor[], now: number): MatchedTor[] {
 // One definition of the bands, shared with the real matching in torFit.ts.
 export { fitBand, type FitBandId } from "@/lib/torFit";
 
-/** A deadline inside a week is the one the mockups colour as urgent. */
-export function isClosingSoon(daysRemaining: number): boolean {
-  return daysRemaining >= 0 && daysRemaining <= 7;
-}
+// One definition of "urgent", shared with the real deadlines.
+export { isClosingSoon } from "@/lib/deadline";
