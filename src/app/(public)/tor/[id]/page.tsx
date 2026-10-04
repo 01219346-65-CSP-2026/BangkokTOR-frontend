@@ -102,7 +102,11 @@ export default function TorDetailPage({
   const fitScore = hasProfile ? fitFor(tor.requiredSkillIds, profileSkills) : null;
   const summaryPoints = tor.summaryPoints ?? [];
 
-  const published = formatDate(new Date(tor.publishedAt).getTime(), locale);
+  // Many e-GP records carry no announcement date, so publishedAt is "". That
+  // parses to NaN, and Intl.DateTimeFormat throws on NaN — taking the whole
+  // page down to the error boundary.
+  const publishedMs = new Date(tor.publishedAt).getTime();
+  const published = Number.isFinite(publishedMs) ? formatDate(publishedMs, locale) : "—";
   // สถานะ: e-GP's procurement step — the same value the list's สถานะโครงการ
   // filter uses. The portal's own status read ระหว่างดำเนินการ for nearly
   // every record, open tenders included.
