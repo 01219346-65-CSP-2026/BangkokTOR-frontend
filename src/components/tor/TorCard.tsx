@@ -6,6 +6,7 @@ import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
 import { Badge } from "@/components/ui/Badge";
 import { FitDial } from "@/components/tor/FitDial";
+import { DeadlineBadge } from "@/components/tor/DeadlineBadge";
 import type { CardTor } from "@/types/tor";
 
 /**
@@ -15,9 +16,10 @@ import type { CardTor } from "@/types/tor";
  * of competing small links.
  *
  * On /tor the fit dial and skill chips are real: skills detected in the TOR's
- * documents, scored against the reader's profile (src/lib/torFit.ts). There is
- * no deadline — the portal publishes no closing date, and an invented one is a
- * date someone would plan around.
+ * documents, scored against the reader's profile (src/lib/torFit.ts).
+ *
+ * The bid deadline leads the right-hand column, above the budget: whether a
+ * team can still bid, and until when, is the first thing the list is for.
  */
 export function TorCard({ tor }: { tor: CardTor }) {
   const t = useTranslations("tor");
@@ -40,6 +42,7 @@ export function TorCard({ tor }: { tor: CardTor }) {
               {tor.agency}
               {tor.department ? ` · ${tor.department}` : ""}
             </span>
+            {tor.province && <ProvinceTag province={tor.province} />}
 
             {tor.extractionIncomplete && (
               <Badge tone="caution">{t.extractionIncomplete}</Badge>
@@ -76,8 +79,10 @@ export function TorCard({ tor }: { tor: CardTor }) {
           </div>
         </div>
 
-        <div className="flex w-[11rem] shrink-0 flex-col items-end gap-1 text-right">
-          <p className="font-mono text-base leading-snug font-semibold text-moss-700 tabular-nums">
+        <div className="flex w-[13rem] shrink-0 flex-col items-end gap-1 text-right">
+          <DeadlineBadge tor={tor} />
+
+          <p className="mt-1.5 font-mono text-sm leading-snug font-semibold text-moss-700 tabular-nums">
             {formatBudgetTHB(tor.budget, locale)}
           </p>
 
@@ -89,6 +94,25 @@ export function TorCard({ tor }: { tor: CardTor }) {
     </Link>
   );
 }
+
+/**
+ * Where the work is. Every province is listed now; Bangkok is set apart
+ * (accent) because it is still the product's home market.
+ */
+export function ProvinceTag({ province }: { province: string }) {
+  return (
+    <span
+      lang="th"
+      className={`rounded-field px-1.5 py-px text-[0.6875rem] font-medium ${
+        province === BANGKOK ? "bg-sage-600 text-white" : "border border-sage-400/60 text-ink-500"
+      }`}
+    >
+      {province}
+    </span>
+  );
+}
+
+const BANGKOK = "กรุงเทพมหานคร";
 
 /**
  * A required qualification. Matched skills read as confirmed; unmatched ones

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
-import { formatBudgetTHB, formatDate } from "@/i18n/format";
+import { formatBudgetTHB } from "@/i18n/format";
 import { fitBand } from "@/lib/torFit";
+import { DeadlineBadge } from "@/components/tor/DeadlineBadge";
 import type { CardTor } from "@/types/tor";
 
 const MATCH_TONE = {
@@ -14,12 +15,11 @@ const MATCH_TONE = {
 } as const;
 
 /**
- * A saved TOR on /profile. Three figures lead — budget, announcement date,
- * match — because they are what decides whether to keep following it.
+ * A saved TOR on /profile. Three figures lead — budget, bid deadline, match —
+ * because they are what decides whether to keep following it.
  *
- * The date is the ANNOUNCEMENT date, not a deadline: neither e-GP feed
- * publishes a closing date, and an invented one is a date someone would plan
- * around (FR-13 is still open for that reason).
+ * The deadline is read from the TOR's ประกาศเชิญชวน by the backend; when it is
+ * not published or not readable, the card says so rather than estimate one.
  *
  * Remove lives in the ⋯ menu with the other actions, so the card's one
  * prominent click target stays "open this TOR".
@@ -38,7 +38,6 @@ export function SavedTorCard({
   const torT = useTranslations("tor");
   const { locale } = useLanguage();
 
-  const announced = tor.publishedAt ? Date.parse(tor.publishedAt) : NaN;
 
   return (
     <article className="group relative rounded-field border border-sage-100 bg-white transition duration-200 ease-soft hover:border-sage-400 hover:shadow-[0_1px_2px_rgba(47,71,57,0.04),0_10px_28px_-14px_rgba(47,71,57,0.22)]">
@@ -52,7 +51,7 @@ export function SavedTorCard({
           ))}
           <span className="inline-flex items-center gap-1 rounded-full border border-sage-400/60 px-2.5 py-0.5 text-[0.6875rem] text-ink-600">
             <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-sage-600" />
-            {torT.statusLabels[tor.status]}
+            {tor.stage ? torT.stages[tor.stage] : torT.stageUnknown}
           </span>
         </div>
 
@@ -77,13 +76,9 @@ export function SavedTorCard({
             </dd>
           </div>
           <div>
-            <dt className="text-[0.6875rem] text-ink-500">{t.cardAnnounced}</dt>
-            <dd className="mt-0.5 text-sm font-medium text-moss-700">
-              {Number.isNaN(announced) ? (
-                <span className="text-xs font-normal text-ink-500">{t.cardNoDate}</span>
-              ) : (
-                formatDate(announced, locale)
-              )}
+            <dt className="text-[0.6875rem] text-ink-500">{torT.deadline.tableHeader}</dt>
+            <dd className="mt-0.5">
+              <DeadlineBadge tor={tor} variant="compact" />
             </dd>
           </div>
           <div>

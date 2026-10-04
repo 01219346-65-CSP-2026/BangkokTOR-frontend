@@ -4,19 +4,18 @@ import Link from "next/link";
 
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
+import { DeadlineBadge } from "@/components/tor/DeadlineBadge";
 import type { Tor } from "@/types/tor";
 
 /**
  * A TOR as the landing page shows it — every value on this card is a field the
  * ingest actually read off the portal.
  *
- * Deliberately NOT `TorCard`: that one takes a `MatchedTor` and leads with the
- * fit dial, the skill chips and a submission deadline, none of which the portal
- * publishes (see `src/lib/torMatching.ts`). Inside the app those are labelled
- * placeholders behind a banner; on the landing page they would be the first
- * numbers a stranger sees while being told the records are real. So this card
- * shows budget, reference price, page count and text layer instead, and reads
- * `Tor` rather than `MatchedTor` so an invented field cannot reach it.
+ * Deliberately NOT `TorCard`: that one leads with the fit dial and skill
+ * chips, which are scored against a reader's profile a stranger does not
+ * have. This card shows the bid deadline (read from the TOR's ประกาศเชิญชวน),
+ * budget, reference price, page count and text layer instead, and reads `Tor`
+ * rather than `MatchedTor` so an invented field cannot reach it.
  */
 export function TorPreviewCard({ tor }: { tor: Tor }) {
   const t = useTranslations("tor");
@@ -89,8 +88,9 @@ export function TorPreviewCard({ tor }: { tor: Tor }) {
           </div>
         </div>
 
-        <div className="flex w-[11rem] shrink-0 flex-col items-end gap-1 text-right">
-          <p className="font-mono text-base leading-snug font-semibold text-moss-700 tabular-nums">
+        <div className="flex w-[13rem] shrink-0 flex-col items-end gap-1 text-right">
+          <DeadlineBadge tor={tor} />
+          <p className="mt-1.5 font-mono text-sm leading-snug font-semibold text-moss-700 tabular-nums">
             {formatBudgetTHB(tor.budget, locale)}
           </p>
           {hasComparable && (

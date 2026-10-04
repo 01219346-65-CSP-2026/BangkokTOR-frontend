@@ -40,6 +40,9 @@ export function TorActiveFilters({
   if (filters.agency) {
     chips.push({ key: "agency", label: t.agencyLabel, value: filters.agency });
   }
+  if (filters.province) {
+    chips.push({ key: "province", label: t.provinceLabel, value: filters.province });
+  }
   if (filters.workType) {
     chips.push({
       key: "workType",
@@ -88,11 +91,11 @@ export function TorActiveFilters({
     });
   }
 
-  if (filters.projectStatus) {
+  if (filters.stage) {
     chips.push({
-      key: "projectStatus",
+      key: "stage",
       label: t.projectStatusLabel,
-      value: filters.projectStatus,
+      value: t.stages[filters.stage],
     });
   }
 

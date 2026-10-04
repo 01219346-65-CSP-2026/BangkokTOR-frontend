@@ -10,7 +10,9 @@ import type { Tor } from "@/types/tor";
  * currently mounts only a health check and its TOR data model is undesigned, so
  * this file is the single seam where a fetch will replace an import.
  */
-export const MOCK_TORS: Tor[] = [
+type MockTor = Omit<Tor, "biddingStatus" | "stage" | "fiscalYear" | "province" | "closesAt" | "opensAt" | "deadlineEvidence">;
+
+const RECORDS: MockTor[] = [
   {
     "id": "3a9519e3-e92b-4f04-bc67-69409888973b",
     "projectNumber": "69089197783",
@@ -2284,3 +2286,16 @@ export const MOCK_TORS: Tor[] = [
     "signalCount": 0
   }
 ];
+
+/** The mock pages render their own placeholder countdown (torMatching.ts);
+ *  these records carry no real deadline. */
+export const MOCK_TORS: Tor[] = RECORDS.map((tor) => ({
+  ...tor,
+  biddingStatus: "closed",
+  stage: null,
+  fiscalYear: null,
+  province: null,
+  closesAt: null,
+  opensAt: null,
+  deadlineEvidence: null,
+}));

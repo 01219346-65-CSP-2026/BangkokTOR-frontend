@@ -10,6 +10,8 @@ import type {
   TorMethodId,
   TorStatusId,
   TorDocumentKindId,
+  BiddingStageId,
+  BiddingStatusId,
 } from "@/types/tor";
 
 /**
@@ -55,6 +57,13 @@ export type BackendTor = {
   status: string | null;
   statusReason: string | null;
   announcedAt: string | null;
+  biddingStatus?: BiddingStatusId | null;
+  stage?: BiddingStageId | null;
+  fiscalYear?: number | null;
+  province?: string | null;
+  bidOpensAt?: string | null;
+  bidClosesAt?: string | null;
+  deadlineEvidence?: { quote?: string | null; documentUrl?: string | null } | null;
   sourceUrl: string | null;
   signalCount: number | null;
   signals?: TorSignalRef[];
@@ -103,8 +112,12 @@ export type TorStatsResponse = {
   /** Multi-label: a TOR counts under each of its work types. */
   byWorkType: Array<{ workType: string; count: number }>;
   byMethod: Array<{ method: string | null; count: number }>;
-  /** สถานะโครงการ values present in the listed records, as the portal writes them. */
-  byProjectStatus: Array<{ status: string; count: number }>;
+  /** สถานะโครงการ: procurement stages present in the listed records, in e-GP order. */
+  byStage: Array<{ stage: BiddingStageId; count: number }>;
+  /** จังหวัด with counts, most TORs first. */
+  byProvince?: Array<{ province: string; count: number }>;
+  /** Open / upcoming / closed counts — the bidding toggle's numbers. */
+  byBidding?: Array<{ status: BiddingStatusId; count: number }>;
   /** The fiscal year (Buddhist era) the listings cover. Null before any ingest. */
   fiscalYear: number | null;
   maxBudget: number | null;
@@ -132,6 +145,9 @@ const METHODS = new Set<TorMethodId>(["eBidding", "specific", "competitive"]);
 const STATUSES = new Set<TorStatusId>([
   "inProgress", "contracted", "deliveredOnTime", "deliveredComplete", "contractEnded",
 ]);
+
+const BIDDING = new Set<BiddingStatusId>(["open", "upcoming", "closed"]);
+const STAGES = new Set<BiddingStageId>(["tor", "purchaseReport", "invitation", "awarded", "contract", "cancelled"]);
 
 const WORK_TYPES = new Set<TorWorkTypeId>([
   "development", "aiData", "cloudInfra", "maintenance", "consulting", "learning", "other",
@@ -240,6 +256,16 @@ export function toTor(row: BackendTor): ApiTor {
     status: procurementStatus(row),
     sourceUrl: row.sourceUrl ?? "",
     publishedAt: row.announcedAt ?? "",
+    biddingStatus: oneOf(BIDDING, row.biddingStatus, "closed"),
+    stage: row.stage && STAGES.has(row.stage) ? row.stage : null,
+    fiscalYear: row.fiscalYear ?? null,
+    province: row.province ?? null,
+    closesAt: row.bidClosesAt ?? null,
+    opensAt: row.bidOpensAt ?? null,
+    deadlineEvidence:
+      row.deadlineEvidence?.quote && row.deadlineEvidence.documentUrl
+        ? { quote: row.deadlineEvidence.quote, documentUrl: row.deadlineEvidence.documentUrl }
+        : null,
     extractionIncomplete: extractionIncomplete(row),
     signalCount: row.signalCount ?? 0,
     signals: row.signals ?? [],

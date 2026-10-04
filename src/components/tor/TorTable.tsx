@@ -4,14 +4,17 @@ import Link from "next/link";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
 import { Badge } from "@/components/ui/Badge";
+import { DeadlineBadge } from "@/components/tor/DeadlineBadge";
+import { ProvinceTag } from "@/components/tor/TorCard";
 import type { CardTor } from "@/types/tor";
 
 /**
  * The compact listing density (mockup 1e) — the same records as the cards, at
  * roughly a fifth of the height, for scanning twenty at a time.
  *
- * Fit is scored against the reader's profile (src/lib/torFit.ts). There is no
- * deadline column: the portal publishes no closing date.
+ * The deadline is the first column: the list is sorted by it, and it is the
+ * question a reader scans for. Fit is scored against the reader's profile
+ * (src/lib/torFit.ts).
  */
 export function TorTable({ tors }: { tors: CardTor[] }) {
   const t = useTranslations("tor");
@@ -21,9 +24,10 @@ export function TorTable({ tors }: { tors: CardTor[] }) {
     /* Scrolls inside its own container so the page body never scrolls
        sideways at 375px (CLAUDE.md §7). */
     <div className="overflow-x-auto rounded-field border border-sage-100 bg-white">
-      <table className="w-full min-w-[40rem] text-left text-sm">
+      <table className="w-full min-w-[48rem] text-left text-sm">
         <thead className="border-b border-sage-100 bg-mist-50">
           <tr className="font-mono text-[0.625rem] tracking-widest text-ink-500 uppercase">
+            <th className="px-4 py-3 font-medium">{t.deadline.tableHeader}</th>
             <th className="px-4 py-3 text-right font-medium">{t.tableFit}</th>
             <th className="px-4 py-3 font-medium">{t.tableTitle}</th>
             <th className="px-4 py-3 font-medium">{t.tableAgency}</th>
@@ -39,6 +43,9 @@ export function TorTable({ tors }: { tors: CardTor[] }) {
                 key={tor.id}
                 className="transition duration-200 ease-soft hover:bg-mist-50/60"
               >
+                <td className="w-[12rem] px-4 py-3 align-top">
+                  <DeadlineBadge tor={tor} variant="compact" />
+                </td>
                 <td className="px-4 py-3 text-right">
                   <span
                     className={`font-mono text-sm font-semibold tabular-nums ${
@@ -79,6 +86,11 @@ export function TorTable({ tors }: { tors: CardTor[] }) {
                 </td>
                 <td lang="th" className="px-4 py-3 text-xs text-ink-600">
                   {tor.agency}
+                  {tor.province && (
+                    <span className="mt-1 block">
+                      <ProvinceTag province={tor.province} />
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-xs text-moss-700 tabular-nums">
                   {formatBudgetTHB(tor.budget, locale)}

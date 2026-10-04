@@ -13,7 +13,7 @@ import {
   type TorFilters as Filters,
 } from "@/lib/torFilters";
 import type { FitBandId } from "@/lib/torFit";
-import type { TorMethodId, TorWorkTypeId } from "@/types/tor";
+import type { BiddingStageId, TorMethodId, TorWorkTypeId } from "@/types/tor";
 
 type TorFiltersProps = {
   filters: Filters;
@@ -26,8 +26,10 @@ type TorFiltersProps = {
    *  narrowed by the other active filters. */
   workTypeCounts: Record<string, number>;
   methodCounts: Record<string, number>;
-  /** สถานะโครงการ values with their counts, straight from /api/tors/stats. */
-  projectStatuses: Array<{ status: string; count: number }>;
+  /** สถานะโครงการ — the procurement stages present, with counts, from /api/tors/stats. */
+  stages: Array<{ stage: BiddingStageId; count: number }>;
+  /** จังหวัด with counts, most TORs first, from /api/tors/stats. */
+  provinces: Array<{ province: string; count: number }>;
   /** Largest listed budget, from /api/tors/stats. Null until it loads. */
   budgetMax: number | null;
   /** Only a reader with saved skills has a fit to filter on. */
@@ -42,7 +44,8 @@ export function TorFilters({
   methods,
   workTypeCounts,
   methodCounts,
-  projectStatuses,
+  stages,
+  provinces,
   budgetMax,
   showFit,
 }: TorFiltersProps) {
@@ -156,6 +159,23 @@ export function TorFilters({
       />
 
       {/*
+        จังหวัด — every province is in scope, most TORs first. The options and
+        counts come from /api/tors/stats, so only provinces with records show.
+      */}
+      <Select
+        wrapperClassName="mt-3.5 border-t border-sage-100 pt-3.5"
+        id="tor-province"
+        label={t.provinceLabel}
+        placeholder={t.provinceAll}
+        value={filters.province}
+        onChange={(event) => update("province", event.target.value)}
+        options={provinces.map(({ province, count }) => ({
+          value: province,
+          label: withCount(province, count),
+        }))}
+      />
+
+      {/*
         What kind of software work — our reading of the title, not a portal
         field (the national e-GP data has no goods category). A TOR can carry
         several, so the counts can sum past the total.
@@ -222,8 +242,8 @@ export function TorFilters({
       </div>
 
       {/*
-       * Published, not deadline: the source portal publishes no closing date at
-       * all, so a deadline filter would have nothing behind it.
+       * When the TOR was announced. Open / upcoming / closed — the deadline
+       * filter — is the toggle above the results, next to the sort.
        */}
       <Select
         wrapperClassName="mt-3.5 border-t border-sage-100 pt-3.5"
@@ -253,20 +273,22 @@ export function TorFilters({
       />
 
       {/*
-        The portal's own words, not a translated vocabulary: data.go.th ships
-        contract-stage values (ระหว่างดำเนินการ, สิ้นสุดสัญญา, …), and the
-        options are exactly the ones present in the listed records.
+        e-GP's procurement step, in the order a project moves through it. The
+        portal's own สถานะโครงการ was a contract status that read
+        ระหว่างดำเนินการ for nearly everything, open tenders included. Only
+        stages present in the listed records are offered. Combines with the
+        Open / Upcoming / Closed toggle, so a closed stage needs Closed on.
       */}
       <Select
         wrapperClassName="mt-3.5 border-t border-sage-100 pt-3.5"
         id="tor-project-status"
         label={t.projectStatusLabel}
         placeholder={t.projectStatusAll}
-        value={filters.projectStatus}
-        onChange={(event) => update("projectStatus", event.target.value)}
-        options={projectStatuses.map(({ status, count }) => ({
-          value: status,
-          label: withCount(status, count),
+        value={filters.stage}
+        onChange={(event) => update("stage", event.target.value as BiddingStageId | "")}
+        options={stages.map(({ stage, count }) => ({
+          value: stage,
+          label: withCount(t.stages[stage], count),
         }))}
       />
     </aside>

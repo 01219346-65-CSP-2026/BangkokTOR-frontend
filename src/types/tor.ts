@@ -1,17 +1,21 @@
 /**
  * Shape of a term of reference scraped from a Bangkok procurement portal.
  *
+ * The bid deadline is real: read by the backend from each TOR's ประกาศเชิญชวน
+ * (invitation to bid), see `closesAt` on `Tor`. The `closesAt` on `TorMatch`
+ * below is the older mock, used only by the mock-driven dashboard and skills
+ * pages.
+ *
  * The portal publishes Thai free text, not a controlled vocabulary, so status,
  * procurement method and document kind are narrowed to id keys at generation
  * time (see `src/data/torListings.ts`) and rendered through the `tor`
  * translation namespace.
  *
- * ── Matching fields (`fitScore`, `closesAt`, `requiredSkills`) ──
- * These back the fit dial, the deadline countdown and the skill chips in the
- * UI mockups. They are NOT scraped and NOT published by the source portal —
- * the portal ships no closing date at all, and there is no scoring service
- * yet. `src/lib/torMatching.ts` derives them deterministically from each
- * record so the screens can be built and reviewed ahead of the backend.
+ * ── Mock matching fields (`TorMatch`: `fitScore`, `closesAt`, `requiredSkills`) ──
+ * These back the mock-driven dashboard and skills pages only.
+ * `src/lib/torMatching.ts` derives them deterministically from each mock
+ * record. The live pages use real values instead: `Tor.closesAt` (read from
+ * the ประกาศเชิญชวน) and the fit from src/lib/torFit.ts.
  *
  * Every one of them must be replaced by a real value before this ships to
  * users: a fit score is a claim about someone's business, and a deadline is a
@@ -36,6 +40,36 @@ export type TorStatusId =
   | "contractEnded";
 
 export type TorMethodId = "eBidding" | "specific" | "competitive";
+
+/**
+ * Can a team still bid? Derived by the backend from e-GP's live stage and the
+ * deadline (tor.bidding.ts there).
+ *   open     — the invitation is out and the deadline has not passed
+ *   upcoming — still at TOR / purchase-report stage
+ *   closed   — past the deadline, awarded, or contracted
+ */
+export type BiddingStatusId = "open" | "upcoming" | "closed";
+
+/**
+ * สถานะโครงการ — e-GP's procurement step, in order (backend
+ * lib/sources/egp/procurement.ts). Finer than BiddingStatusId: "closed" covers
+ * awarded, contract and cancelled.
+ */
+export type BiddingStageId =
+  | "tor"
+  | "purchaseReport"
+  | "invitation"
+  | "awarded"
+  | "contract"
+  | "cancelled";
+
+/** Where a deadline was read from, so a reader can check it. */
+export type DeadlineEvidence = {
+  /** The sentence from the invitation, verbatim (Thai). */
+  quote: string;
+  /** The invitation PDF (or e-GP bundle) it came from. */
+  documentUrl: string;
+};
 
 /**
  * Our reading of the record, not a field the portal publishes. The source ships
@@ -144,6 +178,19 @@ export type Tor = {
   summaryPoints?: TorSummaryPoint[];
   /** Derived: earliest document publish date. ISO 8601. */
   publishedAt: string;
+  biddingStatus: BiddingStatusId;
+  /** สถานะโครงการ: e-GP's procurement step. Null when nothing says. */
+  stage: BiddingStageId | null;
+  /** ปีงบประมาณ, Buddhist era (e.g. 2570). Null when not known yet. */
+  fiscalYear: number | null;
+  /** จังหวัด as the portal records it (Thai). Null when not recorded. */
+  province: string | null;
+  /** End of the bid submission window. ISO 8601; null when not published or
+   *  not readable yet — never estimated. */
+  closesAt: string | null;
+  /** Start of the submission window, the same day. */
+  opensAt: string | null;
+  deadlineEvidence: DeadlineEvidence | null;
   /** FR-11: the TOR document is absent, unattached, or has no readable text. */
   extractionIncomplete: boolean;
   /**
@@ -169,7 +216,7 @@ export type TorSkillRequirement = {
 export type TorMatch = {
   /** 0–100. Mock: derived from the record, not from anyone's actual profile. */
   fitScore: number;
-  /** ISO 8601. Mock: the portal publishes no closing date whatsoever. */
+  /** ISO 8601. Mock: derived from the record id. The real one is `Tor.closesAt`. */
   closesAt: string;
   /** Whole days from now until `closesAt`. Negative once past. */
   daysRemaining: number;

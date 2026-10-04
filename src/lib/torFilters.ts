@@ -1,4 +1,4 @@
-import type { TorWorkTypeId } from "@/types/tor";
+import type { BiddingStageId, BiddingStatusId, TorWorkTypeId } from "@/types/tor";
 import type { FitBandId } from "@/lib/torFit";
 
 /**
@@ -9,15 +9,21 @@ import type { FitBandId } from "@/lib/torFit";
 
 export type PublishedWindowId = "last30Days" | "last90Days" | "thisYear";
 /**
- * `bestMatch` needs the reader's profile skills; the page only offers it when
- * there are some. There is no "closing soon": the portal publishes no closing
- * date, so there is nothing real to sort on.
+ * `closingSoon` is the default: open TORs by deadline, soonest first, then
+ * upcoming, then closed (backend tor.bidding.ts). `bestMatch` needs the
+ * reader's profile skills; the page only offers it when there are some.
  */
-export type SortId = "bestMatch" | "newest" | "oldest" | "budgetHigh" | "budgetLow";
+export type SortId = "closingSoon" | "bestMatch" | "newest" | "oldest" | "budgetHigh" | "budgetLow";
+
+/** What a team can still act on. The toggle's starting state. */
+export const DEFAULT_BIDDING: BiddingStatusId[] = ["open", "upcoming"];
+export const BIDDING_IDS: BiddingStatusId[] = ["open", "upcoming", "closed"];
 
 export type TorFilters = {
   search: string;
   agency: string | "";
+  /** จังหวัด exactly as stored (e.g. กรุงเทพมหานคร). "" = all of Thailand. */
+  province: string;
   /**
    * หมวดหมู่: our reading of what kind of software work this is. Replaced the
    * goods category, which the national e-GP data does not carry — every record
@@ -34,10 +40,11 @@ export type TorFilters = {
   published: PublishedWindowId | "";
   method: string | "";
   /**
-   * สถานะโครงการ exactly as data.go.th ships it (e.g. ระหว่างดำเนินการ). The
-   * options come from the data via /api/tors/stats, so there is no id list.
+   * สถานะโครงการ: where the procurement stands in e-GP (backend
+   * tor.bidding.ts stageFilter). Replaced the portal's contract-level status,
+   * which read ระหว่างดำเนินการ for open tenders and finished contracts alike.
    */
-  projectStatus: string;
+  stage: BiddingStageId | "";
   /** Scored server-side against the reader's skills; ignored without them. */
   fitBands: FitBandId[];
 };
@@ -45,12 +52,13 @@ export type TorFilters = {
 export const EMPTY_FILTERS: TorFilters = {
   search: "",
   agency: "",
+  province: "",
   workType: "",
   minBudget: null,
   maxBudget: null,
   published: "",
   method: "",
-  projectStatus: "",
+  stage: "",
   fitBands: [],
 };
 
@@ -87,6 +95,7 @@ export function budgetToSlider(budget: number, ceiling: number): number {
 
 /** Every sort is the backend's own — see TOR_SORTS in tor.model.ts there. */
 const SORT_TO_API: Record<SortId, string> = {
+  closingSoon: "closingSoon",
   bestMatch: "bestMatch",
   newest: "newest",
   oldest: "oldest",
@@ -109,16 +118,22 @@ export function buildTorQuery(
   page: number,
   limit: number,
   now: number = Date.now(),
-  profileSkills: readonly string[] = []
+  profileSkills: readonly string[] = [],
+  bidding: readonly BiddingStatusId[] = DEFAULT_BIDDING,
 ): URLSearchParams {
   const params = new URLSearchParams();
+
+  // Always sent, in a fixed order: the backend's default is open+upcoming,
+  // but the query string should say what the page is showing.
+  params.set("bidding", BIDDING_IDS.filter((id) => bidding.includes(id)).join(","));
 
   const search = filters.search.trim();
   if (search) params.set("q", search);
   if (filters.agency) params.set("agency", filters.agency);
+  if (filters.province) params.set("province", filters.province);
   if (filters.workType) params.set("workType", filters.workType);
   if (filters.method) params.set("method", filters.method);
-  if (filters.projectStatus) params.set("projectStatus", filters.projectStatus);
+  if (filters.stage) params.set("stage", filters.stage);
   if (filters.minBudget !== null) params.set("minBudget", String(filters.minBudget));
   if (filters.maxBudget !== null) params.set("maxBudget", String(filters.maxBudget));
 
@@ -136,7 +151,7 @@ export function buildTorQuery(
     if (filters.fitBands.length > 0) params.set("fit", filters.fitBands.join(","));
     params.set("sort", SORT_TO_API[sort]);
   } else {
-    params.set("sort", SORT_TO_API[sort === "bestMatch" ? "newest" : sort]);
+    params.set("sort", SORT_TO_API[sort === "bestMatch" ? "closingSoon" : sort]);
   }
 
   params.set("page", String(page));

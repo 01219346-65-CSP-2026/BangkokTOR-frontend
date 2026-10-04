@@ -40,7 +40,7 @@ const en = {
     // see lib/torMatching.ts. Saying so is the difference between a prototype
     // and a misleading one.
     mockNotice:
-      "Match scores and closing dates on this page are placeholders generated from the record id, not real matching. The source portal publishes no closing date.",
+      "Match scores and closing dates on this page are placeholders generated from the record id, not real matching. Real deadlines are on the Terms of reference page.",
   },
   error: {
     heading: "Something went wrong",
@@ -472,7 +472,7 @@ const en = {
   tor: {
     eyebrow: "Discovery",
     heading: "Terms of reference",
-    subheading: "{count} tenders from {agencies} Bangkok agencies.",
+    subheading: "{count} tenders from {agencies} agencies across Thailand.",
     filtersHeading: "Filters",
     filtersReset: "Reset",
     // ── Matching UI. Every value behind these is placeholder; see
@@ -530,7 +530,6 @@ const en = {
     torUnread: "Not read yet",
     download: "Open",
     fileSizeUnknown: "Size not recorded",
-    documentsFromBundle: "{count} PDFs from the bundle",
     showAllDocuments: "Show all {count} files",
     showFewerDocuments: "Show fewer",
     searchLabel: "Search",
@@ -631,6 +630,14 @@ const en = {
     factStatus: "Status",
     factNumber: "Project number",
     factPublished: "First published",
+    factFiscalYear: "Fiscal year",
+    factProvince: "Province",
+    provinceLabel: "Province",
+    provinceAll: "All of Thailand",
+    // Thai fiscal year runs 1 Oct – 30 Sep; BE 2570 is Oct 2026 – Sep 2027.
+    fiscalYearValue: "FY {be} (Oct {start} – Sep {end})",
+    factDeadline: "Bid deadline",
+    stageUnknown: "Not recorded",
     notRecorded: "Not recorded",
     openSource: "Open the original listing",
     documentsNote:
@@ -706,7 +713,38 @@ const en = {
       last90Days: "Last 90 days",
       thisYear: "This year",
     },
+    // The bid deadline, read from each TOR's ประกาศเชิญชวน (invitation to bid).
+    deadline: {
+      label: "Bid deadline",
+      tableHeader: "Deadline",
+      closesIn: "Closes in {days} days",
+      closesTomorrow: "Closes tomorrow",
+      closesToday: "Closes today",
+      window: "{date} · {from}–{to}",
+      unknown: "Open for bids — deadline not read yet",
+      upcoming: "Awaiting the invitation to bid",
+      closed: "Bidding closed",
+      closedOn: "Bidding closed {date}",
+      evidence: "From the invitation to bid (ประกาศเชิญชวน)",
+      openInvitation: "Open the invitation PDF",
+    },
+    bidding: {
+      label: "Bidding",
+      open: "Open",
+      upcoming: "Upcoming",
+      closed: "Closed",
+    },
+    // สถานะโครงการ: e-GP's procurement steps, in order.
+    stages: {
+      tor: "Drafting the TOR",
+      purchaseReport: "Purchase request",
+      invitation: "Invitation to bid",
+      awarded: "Winner announced",
+      contract: "Contract signed",
+      cancelled: "Cancelled",
+    },
     sortOptions: {
+      closingSoon: "Closing soonest",
       bestMatch: "Best match",
       newest: "Newest first",
       oldest: "Oldest first",
@@ -1012,7 +1050,7 @@ const th: typeof en = {
     placeholderBody:
       "ส่วนนี้เตรียมไว้สำหรับกราฟที่ยังไม่มีข้อมูลจริง เป็นเพียงโครงร่างเท่านั้น",
     mockNotice:
-      "คะแนนความตรงกันและวันปิดรับข้อเสนอในหน้านี้เป็นข้อมูลตัวอย่างที่สร้างจากรหัสโครงการ ไม่ใช่การจับคู่จริง เว็บไซต์ต้นทางไม่ได้เผยแพร่วันปิดรับ",
+      "คะแนนความตรงกันและวันปิดรับข้อเสนอในหน้านี้เป็นข้อมูลตัวอย่างที่สร้างจากรหัสโครงการ ไม่ใช่การจับคู่จริง วันปิดรับจริงอยู่ที่หน้าเอกสาร TOR",
   },
   error: {
     heading: "เกิดข้อผิดพลาด",
@@ -1431,7 +1469,7 @@ const th: typeof en = {
   tor: {
     eyebrow: "ค้นหาโครงการ",
     heading: "ขอบเขตของงาน",
-    subheading: "{count} โครงการ จาก {agencies} หน่วยงานในกรุงเทพมหานคร",
+    subheading: "{count} โครงการ จาก {agencies} หน่วยงานทั่วประเทศ",
     filtersHeading: "ตัวกรอง",
     filtersReset: "ล้างค่า",
     fitCaption: "ตรงกัน",
@@ -1480,7 +1518,6 @@ const th: typeof en = {
     torUnread: "ยังไม่ได้อ่านไฟล์",
     download: "เปิดไฟล์",
     fileSizeUnknown: "ไม่ทราบขนาดไฟล์",
-    documentsFromBundle: "PDF {count} ไฟล์จากชุดเอกสาร",
     showAllDocuments: "แสดงทั้งหมด {count} ไฟล์",
     showFewerDocuments: "ย่อรายการ",
     searchLabel: "ค้นหา",
@@ -1569,6 +1606,13 @@ const th: typeof en = {
     factStatus: "สถานะ",
     factNumber: "เลขที่โครงการ",
     factPublished: "ประกาศครั้งแรก",
+    factFiscalYear: "ปีงบประมาณ",
+    factProvince: "จังหวัด",
+    provinceLabel: "จังหวัด",
+    provinceAll: "ทั่วประเทศ",
+    fiscalYearValue: "{be}",
+    factDeadline: "วันยื่นเสนอราคา",
+    stageUnknown: "ไม่มีข้อมูล",
     notRecorded: "ไม่มีข้อมูล",
     openSource: "เปิดประกาศต้นฉบับ",
     documentsNote:
@@ -1644,7 +1688,36 @@ const th: typeof en = {
       last90Days: "90 วันล่าสุด",
       thisYear: "ปีนี้",
     },
+    deadline: {
+      label: "วันยื่นเสนอราคา",
+      tableHeader: "กำหนดยื่น",
+      closesIn: "ปิดรับใน {days} วัน",
+      closesTomorrow: "ปิดรับพรุ่งนี้",
+      closesToday: "ปิดรับวันนี้",
+      window: "{date} · {from}–{to} น.",
+      unknown: "เปิดรับข้อเสนอ — ยังอ่านกำหนดวันไม่ได้",
+      upcoming: "รอประกาศเชิญชวน",
+      closed: "ปิดรับข้อเสนอแล้ว",
+      closedOn: "ปิดรับเมื่อ {date}",
+      evidence: "จากประกาศเชิญชวน",
+      openInvitation: "เปิดประกาศเชิญชวน (PDF)",
+    },
+    bidding: {
+      label: "สถานะการเสนอราคา",
+      open: "เปิดรับ",
+      upcoming: "กำลังจะเปิด",
+      closed: "ปิดแล้ว",
+    },
+    stages: {
+      tor: "จัดทำร่าง TOR",
+      purchaseReport: "รายงานขอซื้อขอจ้าง",
+      invitation: "ประกาศเชิญชวน",
+      awarded: "ประกาศผู้ชนะการเสนอราคา",
+      contract: "จัดทำสัญญา/บริหารสัญญา",
+      cancelled: "ยกเลิกโครงการ",
+    },
     sortOptions: {
+      closingSoon: "ใกล้ปิดรับก่อน",
       bestMatch: "ตรงกันมากที่สุด",
       newest: "ใหม่ที่สุดก่อน",
       oldest: "เก่าที่สุดก่อน",

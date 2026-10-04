@@ -20,9 +20,11 @@ import {
 import { loadProfile } from "@/lib/skillProfile";
 import { fitFor, requirementsFor } from "@/lib/torFit";
 import { translations, type SkillId } from "@/i18n/Translations";
-import type { CardTor, TorMethodId, TorWorkTypeId } from "@/types/tor";
+import type { BiddingStatusId, CardTor, TorMethodId, TorWorkTypeId } from "@/types/tor";
 import {
+  BIDDING_IDS,
   buildTorQuery,
+  DEFAULT_BIDDING,
   EMPTY_FILTERS,
   PAGE_SIZE,
   type SortId,
@@ -102,11 +104,22 @@ export default function TorListingsPage() {
   }, []);
   const hasProfile = (profileSkills?.length ?? 0) > 0;
 
-  // The mockups open on best match, which is the point of the fit score — but
-  // only a reader with skills has a match to rank by. Until they pick a sort,
-  // the default follows whether they do.
+  // Deadline first, for everyone: what can still be bid on, soonest first.
+  // Best match stays one click away for a reader with skills.
   const [chosenSort, setSort] = useState<SortId | null>(null);
-  const sort: SortId = chosenSort ?? (hasProfile ? "bestMatch" : "newest");
+  const sort: SortId = chosenSort ?? "closingSoon";
+
+  // Open / upcoming / closed. Starts on what a team can still act on; closed
+  // (awarded) TORs are history, kept one click away.
+  const [bidding, setBidding] = useState<BiddingStatusId[]>(DEFAULT_BIDDING);
+  function toggleBidding(id: BiddingStatusId) {
+    const next = bidding.includes(id) ? bidding.filter((b) => b !== id) : [...bidding, id];
+    // Never none: an empty set would read as "no tenders exist".
+    if (next.length === 0) return;
+    setBidding(next);
+    setPage(1);
+  }
+
   const [page, setPage] = useState(1);
   const [density, setDensity] = useState<DensityId>("cards");
 
@@ -128,8 +141,8 @@ export default function TorListingsPage() {
     () =>
       profileSkills === null
         ? null
-        : buildTorQuery(debouncedFilters, sort, page, PAGE_SIZE, TODAY_UTC, profileSkills).toString(),
-    [debouncedFilters, sort, page, profileSkills],
+        : buildTorQuery(debouncedFilters, sort, page, PAGE_SIZE, TODAY_UTC, profileSkills, bidding).toString(),
+    [debouncedFilters, sort, page, profileSkills, bidding],
   );
 
   // The whole request lives in one hook (src/api/useEndpoint.ts): stale-response
@@ -162,6 +175,10 @@ export default function TorListingsPage() {
   // would lose every agency the active filters hide.
   const { data: agencyList } = useEndpoint<AgencyOption[]>("/api/tors/agencies");
   const { data: stats } = useEndpoint<TorStatsResponse>("/api/tors/stats");
+  const biddingCounts = useMemo<Record<string, number>>(
+    () => Object.fromEntries((stats?.byBidding ?? []).map((row) => [row.status, row.count])),
+    [stats],
+  );
 
   const agencies = useMemo(
     () =>
@@ -259,6 +276,35 @@ export default function TorListingsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* Open / upcoming / closed — multi-select, never empty. */}
+            <div
+              role="group"
+              aria-label={t.bidding.label}
+              className="inline-flex items-center gap-1 rounded-field border border-sage-100 bg-white p-1"
+            >
+              {BIDDING_IDS.map((id) => {
+                const on = bidding.includes(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => toggleBidding(id)}
+                    aria-pressed={on}
+                    className={`rounded-field px-3 py-1 text-xs font-medium transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none ${
+                      on ? "bg-sage-600 text-white" : "text-ink-600 hover:bg-sage-100 hover:text-moss-700"
+                    }`}
+                  >
+                    {t.bidding[id]}
+                    {biddingCounts[id] !== undefined && (
+                      <span className={`ml-1.5 font-mono tabular-nums ${on ? "text-white/80" : "text-ink-500"}`}>
+                        {biddingCounts[id]}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
             <TorSortSelect value={sort} onChange={setSort} showBestMatch={hasProfile} />
 
             {/* Cards | Table, as the mockups draw it. */}
@@ -327,7 +373,8 @@ export default function TorListingsPage() {
               methods={methodFacet.ids}
               workTypeCounts={workTypeFacet.counts}
               methodCounts={methodFacet.counts}
-              projectStatuses={stats?.byProjectStatus ?? []}
+              stages={stats?.byStage ?? []}
+              provinces={stats?.byProvince ?? []}
               budgetMax={stats?.maxBudget ?? null}
               showFit={hasProfile}
             />
