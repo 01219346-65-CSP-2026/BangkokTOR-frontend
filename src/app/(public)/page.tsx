@@ -63,13 +63,14 @@ export default function Home() {
   );
 
   return (
-    <main className="flex w-full flex-col">
+    // A <div>, not <main>: the (public) layout already wraps every page in
+    // <main id="main">, which the NavBar's skip link targets.
+    <div className="flex w-full flex-col">
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className={`${SECTION} pt-16`}>
         <div className={`${SHELL} flex flex-col items-center text-center`}>
-          <Logo size="lg" />
-
-          <h1 className="mt-8 max-w-4xl text-4xl leading-tight font-semibold text-balance text-moss-700 sm:text-5xl lg:text-6xl">
+          {/* No hero logo: the shared NavBar already carries it directly above. */}
+          <h1 className="max-w-4xl text-4xl leading-tight font-semibold text-balance text-moss-700 sm:text-5xl lg:text-6xl">
             {t.heroTitleLead}{" "}
             <span className="text-sage-600">{t.heroTitleAccent}</span>
           </h1>
@@ -432,6 +433,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-    </main>
+    </div>
   );
 }

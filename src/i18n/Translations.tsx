@@ -193,7 +193,50 @@ const en = {
     back: "Back",
     savedAutomatically: "Saved automatically",
     edit: "Edit",
-    // Step 1 — tech stack
+    // Step 1 — what kind of TOR
+    categoryNavTitle: "TOR types",
+    categoryNavHint: "The work you want to bid on",
+    categoryHeading: "What kinds of TOR are you looking for?",
+    categorySubheading:
+      "Pick the closest fit. We'll suggest skills to start from — you can still choose any skill on the next step.",
+    categoryLegend: "TOR types",
+    categoryHint: "Pick all that apply.",
+    categoryNone: "Not chosen",
+    workTypeOptions: {
+      development: {
+        label: "Development",
+        description: "New systems, platforms, websites and mobile apps.",
+      },
+      aiData: {
+        label: "AI & data",
+        description: "AI, chatbots, big data, dashboards and GIS projects.",
+      },
+      cloudInfra: {
+        label: "Cloud & infrastructure",
+        description: "Cloud, servers, networks, data centres and cybersecurity.",
+      },
+      maintenance: {
+        label: "Maintenance (MA)",
+        description: "Looking after, renewing and supporting existing systems.",
+      },
+      consulting: {
+        label: "Consulting",
+        description: "Studies, IT master plans, standards and advisory work.",
+      },
+      learning: {
+        label: "Digital learning",
+        description: "E-learning, LMS, credit banks and digital-skills training.",
+      },
+      other: {
+        label: "Not sure yet",
+        description: "Show me everything — I'll pick skills myself.",
+      },
+    },
+    categoryNext: "Next: tech stack",
+    recommendedHeading: "Recommended for your TOR types",
+    recommendedAddAll: "Add all",
+    reviewCategory: "TOR types",
+    // Step 2 — tech stack
     stackNavTitle: "Tech stack",
     stackNavHint: "What your team builds with",
     stackHeading: "What does your team build with?",
@@ -230,7 +273,7 @@ const en = {
     stackSearchPlaceholder: "Search {count} skills",
     stackSelectedCount: "{count} selected",
     stackNoMatches: "No skills match that search.",
-    stackSuggestedHeading: "Suggested from your past matches",
+    stackSuggestedHeading: "Would open the most TORs",
     stackNext: "Next — project size",
     groupFrontend: "Web & mobile",
     groupBackend: "Backend & databases",
@@ -300,7 +343,13 @@ const en = {
     saveFailed: "Couldn't save your profile: {reason}",
     // Live preview rail
     previewHeading: "Live preview",
-    previewReach: "open TORs reachable with these {count} skills",
+    previewReach: "of {total} TORs open for bidding, reachable with these {skills} skills",
+    previewLoading: "Checking TORs open for bidding…",
+    previewError: "Couldn't refresh the preview. Your profile still saves.",
+    previewOpenNow: "Open for bidding now",
+    previewRandomNote:
+      "None of the open TORs match these skills yet — here are a few to look at.",
+    previewRandomNoSkills: "Pick skills to see your best matches. Meanwhile, a few open now:",
     previewMatchesToday:
       "open TORs match this profile today. Matching runs nightly against every newly ingested TOR.",
     previewTopMatches: "Top matches right now",
@@ -1195,6 +1244,48 @@ const th: typeof en = {
     back: "ย้อนกลับ",
     savedAutomatically: "บันทึกอัตโนมัติ",
     edit: "แก้ไข",
+    categoryNavTitle: "ประเภท TOR",
+    categoryNavHint: "งานที่คุณอยากยื่นประมูล",
+    categoryHeading: "คุณกำลังมองหา TOR ประเภทไหน?",
+    categorySubheading:
+      "เลือกประเภทที่ใกล้เคียงที่สุด เราจะแนะนำทักษะให้เริ่มต้น — ในขั้นถัดไปคุณยังเลือกทักษะอื่นได้ทั้งหมด",
+    categoryLegend: "ประเภท TOR",
+    categoryHint: "เลือกได้มากกว่าหนึ่งข้อ",
+    categoryNone: "ยังไม่ได้เลือก",
+    workTypeOptions: {
+      development: {
+        label: "พัฒนาระบบ/แพลตฟอร์ม",
+        description: "ระบบใหม่ แพลตฟอร์ม เว็บไซต์ และแอปพลิเคชันมือถือ",
+      },
+      aiData: {
+        label: "AI/ข้อมูล/ภูมิสารสนเทศ",
+        description: "AI แชตบอต ข้อมูลขนาดใหญ่ แดชบอร์ด และ GIS",
+      },
+      cloudInfra: {
+        label: "คลาวด์/โครงสร้างพื้นฐาน",
+        description: "คลาวด์ เซิร์ฟเวอร์ เครือข่าย ศูนย์ข้อมูล และความมั่นคงปลอดภัยไซเบอร์",
+      },
+      maintenance: {
+        label: "บำรุงรักษา (MA)",
+        description: "ดูแล ต่ออายุ และสนับสนุนระบบที่มีอยู่",
+      },
+      consulting: {
+        label: "ที่ปรึกษา",
+        description: "งานศึกษา แผนแม่บทไอที มาตรฐาน และงานให้คำปรึกษา",
+      },
+      learning: {
+        label: "การเรียนรู้ดิจิทัล",
+        description: "อีเลิร์นนิง LMS ธนาคารหน่วยกิต และการอบรมทักษะดิจิทัล",
+      },
+      other: {
+        label: "ยังไม่แน่ใจ",
+        description: "แสดงทั้งหมด — ฉันจะเลือกทักษะเอง",
+      },
+    },
+    categoryNext: "ถัดไป: เทคโนโลยีที่ใช้",
+    recommendedHeading: "แนะนำตามประเภท TOR ที่คุณเลือก",
+    recommendedAddAll: "เพิ่มทั้งหมด",
+    reviewCategory: "ประเภท TOR",
     stackNavTitle: "เทคโนโลยีที่ใช้",
     stackNavHint: "สิ่งที่ทีมของคุณใช้พัฒนา",
     stackHeading: "ทีมของคุณพัฒนางานด้วยอะไร?",
@@ -1231,7 +1322,7 @@ const th: typeof en = {
     stackSearchPlaceholder: "ค้นหา {count} ทักษะ",
     stackSelectedCount: "เลือกแล้ว {count} รายการ",
     stackNoMatches: "ไม่พบทักษะที่ตรงกับคำค้นหา",
-    stackSuggestedHeading: "แนะนำจากโครงการที่คุณเคยตรงกัน",
+    stackSuggestedHeading: "เพิ่มแล้วเข้าถึงโครงการได้มากที่สุด",
     stackNext: "ถัดไป — ขนาดโครงการ",
     groupFrontend: "เว็บและโมบาย",
     groupBackend: "แบ็กเอนด์และฐานข้อมูล",
@@ -1297,7 +1388,12 @@ const th: typeof en = {
     loadingProfile: "กำลังโหลดโปรไฟล์ของคุณ…",
     saveFailed: "บันทึกโปรไฟล์ไม่สำเร็จ: {reason}",
     previewHeading: "ตัวอย่างแบบสด",
-    previewReach: "โครงการที่เปิดรับซึ่งเข้าถึงได้ด้วย {count} ทักษะนี้",
+    previewReach: "จาก {total} โครงการที่เปิดรับข้อเสนอ เข้าถึงได้ด้วย {skills} ทักษะนี้",
+    previewLoading: "กำลังตรวจสอบโครงการที่เปิดรับข้อเสนอ…",
+    previewError: "รีเฟรชตัวอย่างไม่สำเร็จ โปรไฟล์ของคุณยังบันทึกได้ตามปกติ",
+    previewOpenNow: "เปิดรับข้อเสนออยู่ตอนนี้",
+    previewRandomNote: "ยังไม่มีโครงการที่เปิดรับตรงกับทักษะเหล่านี้ — ลองดูโครงการเหล่านี้ก่อน",
+    previewRandomNoSkills: "เลือกทักษะเพื่อดูโครงการที่ตรงที่สุด ระหว่างนี้ นี่คือโครงการที่เปิดรับอยู่:",
     previewMatchesToday:
       "โครงการที่เปิดรับตรงกับโปรไฟล์นี้ในวันนี้ ระบบจับคู่ทำงานทุกคืนกับทุกโครงการที่นำเข้าใหม่",
     previewTopMatches: "โครงการที่ตรงกันมากที่สุดตอนนี้",

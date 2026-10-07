@@ -37,7 +37,8 @@ const ADMIN_NAV_ITEMS = [
 
 /**
  * Two-tier public header, in the shape institutional data portals use: an
- * identity row (logo, tagline, language) over a solid nav band.
+ * identity row (logo, tagline, language) over a nav band. Both rows are
+ * neutral white; brand green marks interaction only.
  *
  * Splitting the rows is what keeps it even — brand and navigation each own a
  * row instead of competing for one, so nothing has to be nudged to sit
@@ -85,7 +86,7 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
   }
 
   return (
-    <header className="sticky top-0 z-50">
+    <header className="sticky top-0 z-50 bg-white shadow-sm">
       <a
         href="#main"
         className="sr-only rounded-field bg-white px-4 py-2 text-sm font-medium text-moss-700 shadow-sm focus:not-sr-only focus:absolute focus:top-3 focus:left-4 focus:z-50 focus:ring-2 focus:ring-sage-600 focus:outline-none"
@@ -94,7 +95,7 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
       </a>
 
       {/* Tier 1 — identity, with the language control alone on the right */}
-      <div className="border-b border-sage-100 bg-white">
+      <div className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-[4.5rem] max-w-[110rem] items-center justify-between gap-5 px-6">
           <Link
             href="/"
@@ -105,7 +106,7 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
                 dataset next to the institution that publishes it. */}
             <span
               aria-hidden="true"
-              className="hidden h-7 w-px bg-sage-400/50 sm:block"
+              className="hidden h-7 w-px bg-gray-200 sm:block"
             />
             <span className="hidden text-sm font-medium text-zinc-500 sm:block">
               {t.tagline}
@@ -129,7 +130,7 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
               aria-expanded={isMenuOpen}
               aria-controls="nav-mobile-menu"
               aria-label={isMenuOpen ? t.closeMenu : t.openMenu}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-field text-moss-700 transition duration-200 ease-soft hover:bg-sage-100 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none md:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-field text-moss-700 transition duration-200 ease-soft hover:bg-moss-700/5 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none md:hidden"
             >
               <MenuIcon isOpen={isMenuOpen} />
             </button>
@@ -137,8 +138,13 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
         </div>
       </div>
 
-      {/* Tier 2 — one consistent institutional green across public and admin. */}
-      <div className="hidden bg-moss-700 md:block">
+      {/*
+        Tier 2 — the nav band. White with a 1px gray-200 rule, not a solid
+        green fill: the brand green is kept for interaction only — the active
+        link's text and indicator bar, and a 5% green wash on hover — so the
+        band no longer opens every page on its heaviest element.
+      */}
+      <div className="hidden border-b border-gray-200 bg-white md:block">
         <div className="mx-auto flex h-11 max-w-[110rem] items-stretch justify-between px-6">
           <nav
             aria-label={t.primaryLabel}
@@ -153,10 +159,10 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
                   key={href}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center px-4 text-xs font-semibold tracking-wider uppercase transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 focus-visible:outline-none ${
+                  className={`relative flex items-center px-4 text-sm transition duration-200 ease-soft after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:rounded-full after:transition after:duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sage-600/50 focus-visible:outline-none ${
                     active
-                      ? "bg-white/15 text-white"
-                      : "text-sage-100 hover:bg-white/10 hover:text-white"
+                      ? "font-semibold text-moss-700 after:bg-moss-700"
+                      : "font-medium text-ink-600 after:bg-transparent hover:bg-moss-700/5 hover:text-moss-700 hover:after:bg-moss-700/30"
                   }`}
                 >
                   {t[key]}
@@ -172,10 +178,10 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
                     key={href}
                     href={href}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center px-4 text-xs font-semibold tracking-wider uppercase transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70 focus-visible:outline-none ${
+                    className={`relative flex items-center px-4 text-sm transition duration-200 ease-soft after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:rounded-full after:transition after:duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sage-600/50 focus-visible:outline-none ${
                       active
-                        ? "bg-white/15 text-white"
-                        : "text-sage-100 hover:bg-white/10 hover:text-white"
+                        ? "font-semibold text-moss-700 after:bg-moss-700"
+                        : "font-medium text-ink-600 after:bg-transparent hover:bg-moss-700/5 hover:text-moss-700 hover:after:bg-moss-700/30"
                     }`}
                   >
                     {adminT.nav[key]}
@@ -190,14 +196,14 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
             <div className="flex items-center gap-1">
               <Link
                 href="/login"
-                className="flex items-center gap-1.5 rounded-field px-3 py-1.5 text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+                className="flex items-center gap-1.5 rounded-field px-3 py-1.5 text-sm font-medium text-ink-600 transition duration-200 ease-soft hover:bg-moss-700/5 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
               >
                 <UserIcon />
                 {t.login}
               </Link>
               <Link
                 href="/signup"
-                className="rounded-field bg-white/95 px-3 py-1.5 text-xs font-semibold tracking-wider text-moss-700 uppercase transition duration-200 ease-soft hover:bg-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+                className="rounded-field bg-moss-700 px-3 py-1.5 text-sm font-semibold text-white transition duration-200 ease-soft hover:bg-sage-600 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 {t.signup}
               </Link>
@@ -214,7 +220,7 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
       {isMenuOpen && (
         <div
           id="nav-mobile-menu"
-          className="bg-moss-700 md:hidden"
+          className="border-b border-gray-200 bg-white md:hidden"
         >
           <nav
             aria-label={t.primaryLabel}
@@ -228,10 +234,10 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
                   key={href}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-field px-3 py-2.5 text-xs font-semibold tracking-wider uppercase transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none ${
+                  className={`rounded-field px-3 py-2.5 text-sm transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none ${
                     active
-                      ? "bg-white/15 text-white"
-                      : "text-sage-100 hover:bg-white/10 hover:text-white"
+                      ? "bg-moss-700/5 font-semibold text-moss-700 shadow-[inset_2px_0_0_var(--color-moss-700)]"
+                      : "font-medium text-ink-600 hover:bg-moss-700/5 hover:text-moss-700"
                   }`}
                 >
                   {t[key]}
@@ -247,10 +253,10 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
                     key={href}
                     href={href}
                     aria-current={active ? "page" : undefined}
-                    className={`rounded-field px-3 py-2.5 text-xs font-semibold tracking-wider uppercase transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none ${
+                    className={`rounded-field px-3 py-2.5 text-sm transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none ${
                       active
-                        ? "bg-white/15 text-white"
-                        : "text-sage-100 hover:bg-white/10 hover:text-white"
+                        ? "bg-moss-700/5 font-semibold text-moss-700 shadow-[inset_2px_0_0_var(--color-moss-700)]"
+                        : "font-medium text-ink-600 hover:bg-moss-700/5 hover:text-moss-700"
                     }`}
                   >
                     {adminT.nav[key]}
@@ -260,19 +266,19 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
 
             {/* The header row's language toggle is hidden behind the hamburger
                 on this breakpoint, so the sheet carries its own. */}
-            <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/15 pt-3">
-              <span className="text-xs font-semibold tracking-wider text-sage-100 uppercase">
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-gray-200 pt-3">
+              <span className="text-sm font-medium text-ink-600">
                 {t.accountLanguage}
               </span>
               <LanguageSwitcher />
             </div>
 
-            <div className="mt-3 flex items-center gap-2 border-t border-white/15 pt-3">
+            <div className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-3">
               {account ? (
                 <button
                   type="button"
                   onClick={() => signOut({ callbackUrl: "/login" })}
-                  className="flex-1 rounded-field px-3 py-2 text-center text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white"
+                  className="flex-1 rounded-field px-3 py-2 text-center text-sm font-medium text-ink-600 transition duration-200 ease-soft hover:bg-moss-700/5 hover:text-moss-700"
                 >
                   {t.accountLogout}
                 </button>
@@ -280,13 +286,13 @@ export function NavBar({ admin = false }: { admin?: boolean }) {
                 <>
                   <Link
                     href="/login"
-                    className="flex-1 rounded-field px-3 py-2 text-center text-xs font-semibold tracking-wider text-sage-100 uppercase transition duration-200 ease-soft hover:bg-white/10 hover:text-white"
+                    className="flex-1 rounded-field px-3 py-2 text-center text-sm font-medium text-ink-600 transition duration-200 ease-soft hover:bg-moss-700/5 hover:text-moss-700"
                   >
                     {t.login}
                   </Link>
                   <Link
                     href="/signup"
-                    className="flex-1 rounded-field bg-white/95 px-3 py-2 text-center text-xs font-semibold tracking-wider text-moss-700 uppercase transition duration-200 ease-soft hover:bg-white"
+                    className="flex-1 rounded-field bg-moss-700 px-3 py-2 text-center text-sm font-semibold text-white transition duration-200 ease-soft hover:bg-sage-600"
                   >
                     {t.signup}
                   </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -9,17 +9,20 @@ import { SkillChip } from "@/components/skills/SkillChip";
 import { StepRail } from "@/components/skills/StepRail";
 import { PreviewRail } from "@/components/skills/PreviewRail";
 import { RadioCards } from "@/components/skills/RadioCards";
+import { CheckboxCards } from "@/components/skills/CheckboxCards";
 import { BudgetRange } from "@/components/skills/BudgetRange";
+import { WorkTypeIcon } from "@/components/skills/WorkTypeIcon";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import type { SkillId } from "@/i18n/Translations";
+import type { TorWorkTypeId } from "@/types/tor";
 import { formatBudgetTHB, formatRelativeTime } from "@/i18n/format";
-import { MOCK_TORS } from "@/data/torListings";
-import { withMatches } from "@/lib/torMatching";
-import { buildPreview } from "@/lib/profilePreview";
+import { useProfilePreview } from "@/lib/useProfilePreview";
 import {
   ALL_SKILL_IDS,
   DEFAULT_PROFILE,
   SKILL_GROUPS,
+  WORK_TYPE_OPTIONS,
+  WORK_TYPE_RECOMMENDED_SKILLS,
   loadProfile,
   saveProfile,
   type DurationId,
@@ -35,8 +38,8 @@ import {
  * That is why the last step is written as a review rather than a finish line —
  * it is the same screen either way.
  *
- * ⚠ Reach figures come from the 50 ingested sample records via the placeholder
- * scorer. See `src/lib/profilePreview.ts`.
+ * The live preview (reach, top matches, suggestions) is computed by the
+ * backend over every TOR open for bidding — see `src/api/profilePreview.ts`.
  */
 
 /** How long the wizard waits after the last edit before autosaving. */
@@ -45,6 +48,9 @@ const AUTOSAVE_DELAY_MS = 700;
 const TEAM_SIZES: TeamSizeId[] = ["solo", "small", "medium", "large", "xlarge"];
 const DURATIONS: DurationId[] = ["short", "medium", "long", "veryLong"];
 const CONCURRENT_OPTIONS = [1, 2, 3, 5];
+
+/** Wizard step indices, in display order. */
+const STEP = { category: 0, stack: 1, size: 2, budget: 3, review: 4 } as const;
 
 /** The budget stops the mockup's slider snaps to. `null` is "no maximum". */
 const BUDGET_STOPS: (number | null)[] = [
@@ -78,8 +84,8 @@ export default function SkillsPage() {
         // A reader with a profile is here to change something, not to be
         // walked through onboarding again — open on review, all steps unlocked.
         setProfile(saved);
-        setStep(3);
-        setFurthestReached(3);
+        setStep(STEP.review);
+        setFurthestReached(STEP.review);
       }
       setLoadState("ready");
     } catch {
@@ -99,17 +105,11 @@ export default function SkillsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  /*
-   * `now` is captured once per mount rather than read inline. Called during
-   * render it would differ between the server pass and hydration, and the
-   * deadline arithmetic in `withMatches` would produce mismatched markup.
-   */
-  const [now] = useState(() => Date.now());
-  const matchedTors = useMemo(() => withMatches(MOCK_TORS, now), [now]);
-  const preview = useMemo(
-    () => buildPreview(matchedTors, profile),
-    [matchedTors, profile],
-  );
+  const {
+    preview,
+    error: previewError,
+    isLoading: isPreviewLoading,
+  } = useProfilePreview(profile, loadState === "ready");
 
   /*
    * Autosave. The wizard advertises "Saved automatically", so every edit
@@ -186,7 +186,9 @@ export default function SkillsPage() {
     });
   }
 
+  // Order must match `STEP`.
   const steps = [
+    { title: t.categoryNavTitle, hint: t.categoryNavHint },
     { title: t.stackNavTitle, hint: t.stackNavHint },
     { title: t.sizeNavTitle, hint: t.sizeNavHint },
     { title: t.budgetNavTitle, hint: t.budgetNavHint },
@@ -206,26 +208,58 @@ export default function SkillsPage() {
   })).filter((group) => group.visible.length > 0);
 
   /*
-   * Suggestions: the three unpicked skills that would most widen reach. Derived
-   * from the same preview arithmetic as the nudge, so the two never contradict
-   * each other.
+   * Suggestions: the unpicked skills that would most widen reach, from the
+   * same backend pass as the nudge, so the two never contradict each other.
+   * Filtered locally too, so a chip the reader just picked drops out at once
+   * instead of waiting for the debounced refetch.
    */
-  const suggestions = useMemo(() => {
-    if (profile.skills.length === 0) return [];
+  const suggestions = (preview?.suggestions ?? []).filter(
+    (id) => !profile.skills.includes(id),
+  );
 
-    return ALL_SKILL_IDS.filter((id) => !profile.skills.includes(id))
-      .map((id) => ({
-        id,
-        reach: buildPreview(matchedTors, {
-          ...profile,
-          skills: [...profile.skills, id],
-        }).reachableCount,
-      }))
-      .filter(({ reach }) => reach > preview.reachableCount)
-      .sort((a, b) => b.reach - a.reach || a.id.localeCompare(b.id))
-      .slice(0, 3)
-      .map(({ id }) => id);
-  }, [matchedTors, profile, preview.reachableCount]);
+  /*
+   * Step 1's answers → the skills put first on step 2, one row per chosen
+   * type. A skill two types share is shown once, under the first, so a chip
+   * never appears twice. Cheap enough to derive every render; no memo.
+   */
+  const recommendedRows: { type: TorWorkTypeId; skills: SkillId[] }[] = [];
+  const seenRecommended = new Set<SkillId>();
+  for (const type of profile.workTypes) {
+    if (type === "other") continue;
+    const skills = WORK_TYPE_RECOMMENDED_SKILLS[type].filter(
+      (id) => !seenRecommended.has(id),
+    );
+    skills.forEach((id) => seenRecommended.add(id));
+    if (skills.length > 0) recommendedRows.push({ type, skills });
+  }
+  const recommended = [...seenRecommended];
+  const allRecommendedPicked = recommended.every((id) =>
+    profile.skills.includes(id),
+  );
+
+  /*
+   * "Not sure yet" means "show me everything", so it can't sit beside a real
+   * answer: picking it clears the others, picking any other clears it. Kept in
+   * the cards' display order so the review step reads the same way.
+   */
+  function toggleWorkType(type: TorWorkTypeId) {
+    const current = new Set(profile.workTypes);
+    if (current.has(type)) {
+      current.delete(type);
+    } else if (type === "other") {
+      current.clear();
+      current.add(type);
+    } else {
+      current.delete("other");
+      current.add(type);
+    }
+    update({ workTypes: WORK_TYPE_OPTIONS.filter((id) => current.has(id)) });
+  }
+
+  /** One update, so one autosave; existing picks keep their order. */
+  function addAllRecommended() {
+    update({ skills: [...new Set([...profile.skills, ...recommended])] });
+  }
 
   const isBudgetInvalid =
     profile.budgetMax !== null && profile.budgetMin >= profile.budgetMax;
@@ -277,7 +311,7 @@ export default function SkillsPage() {
             furthestReached={furthestReached}
             onSelect={goToStep}
             skipLabel={t.skipWizard}
-            onSkip={() => goToStep(3)}
+            onSkip={() => goToStep(STEP.review)}
           />
         </div>
 
@@ -297,7 +331,43 @@ export default function SkillsPage() {
             )}
           </div>
 
-          {step === 0 && (
+          {step === STEP.category && (
+            <section>
+              <h1 className="text-3xl tracking-tight text-moss-700">
+                {t.categoryHeading}
+              </h1>
+              <p className="mt-3 max-w-[52ch] text-sm leading-relaxed text-ink-600">
+                {t.categorySubheading}
+              </p>
+
+              <div className="mt-8">
+                <CheckboxCards
+                  name="work-type"
+                  legend={t.categoryLegend}
+                  hint={t.categoryHint}
+                  columns="sm:grid-cols-2 lg:grid-cols-3"
+                  values={profile.workTypes}
+                  options={WORK_TYPE_OPTIONS.map((id) => ({
+                    value: id,
+                    label: t.workTypeOptions[id].label,
+                    description: t.workTypeOptions[id].description,
+                    icon: <WorkTypeIcon type={id} />,
+                  }))}
+                  onToggle={toggleWorkType}
+                />
+              </div>
+
+              <StepFooter
+                savedLabel={t.savedAutomatically}
+                cancelLabel={t.cancel}
+                onCancel={() => router.push("/tor")}
+                nextLabel={t.categoryNext}
+                onNext={() => goToStep(STEP.stack)}
+              />
+            </section>
+          )}
+
+          {step === STEP.stack && (
             <section>
               <h1 className="text-3xl tracking-tight text-moss-700">
                 {t.stackHeading}
@@ -307,6 +377,49 @@ export default function SkillsPage() {
               </p>
 
               <div className="mt-8 rounded-field border border-sage-100 bg-white p-5 sm:p-6">
+                {recommendedRows.length > 0 && !normalizedQuery && (
+                  <div className="mb-7 border-b border-sage-100 pb-6">
+                    <div className="mb-4 flex items-baseline justify-between gap-4">
+                      <h2 className="font-mono text-xs tracking-widest text-ink-500 uppercase">
+                        {t.recommendedHeading}
+                      </h2>
+                      {!allRecommendedPicked && (
+                        <button
+                          type="button"
+                          onClick={addAllRecommended}
+                          className="rounded-full text-xs font-medium text-sage-600 underline-offset-4 outline-none hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600/40"
+                        >
+                          {t.recommendedAddAll}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      {recommendedRows.map((row) => (
+                        <div key={row.type}>
+                          <h3 className="mb-2 flex items-center gap-2 text-xs font-medium text-moss-700">
+                            <WorkTypeIcon
+                              type={row.type}
+                              className="h-4 w-4 text-sage-600"
+                            />
+                            {t.workTypeOptions[row.type].label}
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {row.skills.map((id) => (
+                              <SkillChip
+                                key={id}
+                                label={t.skillNames[id]}
+                                isSelected={profile.skills.includes(id)}
+                                onToggle={() => toggleSkill(id)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <label htmlFor="skill-search" className="sr-only">
                   {t.stackSearchLabel}
                 </label>
@@ -401,13 +514,15 @@ export default function SkillsPage() {
                 savedLabel={t.savedAutomatically}
                 cancelLabel={t.cancel}
                 onCancel={() => router.push("/tor")}
+                backLabel={t.back}
+                onBack={() => goToStep(STEP.category)}
                 nextLabel={t.stackNext}
-                onNext={() => goToStep(1)}
+                onNext={() => goToStep(STEP.size)}
               />
             </section>
           )}
 
-          {step === 1 && (
+          {step === STEP.size && (
             <section>
               <h1 className=" text-3xl tracking-tight text-moss-700">
                 {t.sizeHeading}
@@ -463,16 +578,16 @@ export default function SkillsPage() {
               <StepFooter
                 savedLabel={t.savedAutomatically}
                 backLabel={t.back}
-                onBack={() => goToStep(0)}
+                onBack={() => goToStep(STEP.stack)}
                 cancelLabel={t.cancel}
                 onCancel={() => router.push("/tor")}
                 nextLabel={t.sizeNext}
-                onNext={() => goToStep(2)}
+                onNext={() => goToStep(STEP.budget)}
               />
             </section>
           )}
 
-          {step === 2 && (
+          {step === STEP.budget && (
             <section>
               <h1 className=" text-3xl tracking-tight text-moss-700">
                 {t.budgetHeading}
@@ -516,17 +631,17 @@ export default function SkillsPage() {
               <StepFooter
                 savedLabel={t.savedAutomatically}
                 backLabel={t.back}
-                onBack={() => goToStep(1)}
+                onBack={() => goToStep(STEP.size)}
                 cancelLabel={t.cancel}
                 onCancel={() => router.push("/tor")}
                 nextLabel={t.budgetNext}
-                onNext={() => goToStep(3)}
+                onNext={() => goToStep(STEP.review)}
                 isNextDisabled={isBudgetInvalid}
               />
             </section>
           )}
 
-          {step === 3 && (
+          {step === STEP.review && (
             <section>
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <h1 className=" text-3xl tracking-tight text-moss-700">
@@ -551,9 +666,34 @@ export default function SkillsPage() {
 
               <div className="mt-8 grid grid-cols-1 items-stretch gap-5 md:grid-cols-2">
                 <ReviewCard
+                  title={t.reviewCategory}
+                  editLabel={t.edit}
+                  onEdit={() => setStep(STEP.category)}
+                >
+                  {profile.workTypes.length > 0 ? (
+                    <ul className="space-y-2">
+                      {profile.workTypes.map((type) => (
+                        <li
+                          key={type}
+                          className="flex items-center gap-2.5 text-sm font-medium text-moss-700"
+                        >
+                          <WorkTypeIcon
+                            type={type}
+                            className="h-5 w-5 text-sage-600"
+                          />
+                          {t.workTypeOptions[type].label}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-ink-500">{t.categoryNone}</p>
+                  )}
+                </ReviewCard>
+
+                <ReviewCard
                   title={t.stackNavTitle}
                   editLabel={t.edit}
-                  onEdit={() => setStep(0)}
+                  onEdit={() => setStep(STEP.stack)}
                 >
                   {profile.skills.length === 0 ? (
                     <p className="text-sm text-ink-500">{t.reviewStackEmpty}</p>
@@ -574,7 +714,7 @@ export default function SkillsPage() {
                 <ReviewCard
                   title={t.sizeNavTitle}
                   editLabel={t.edit}
-                  onEdit={() => setStep(1)}
+                  onEdit={() => setStep(STEP.size)}
                 >
                   <dl className="grid grid-cols-3 gap-4">
                     <Fact
@@ -597,7 +737,7 @@ export default function SkillsPage() {
                 <ReviewCard
                   title={t.budgetNavTitle}
                   editLabel={t.edit}
-                  onEdit={() => setStep(2)}
+                  onEdit={() => setStep(STEP.budget)}
                 >
                   <p className=" text-xl tracking-tight text-moss-700 tabular-nums">
                     {formatBudgetTHB(profile.budgetMin, locale)} —{" "}
@@ -647,15 +787,18 @@ export default function SkillsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <p className="flex items-center gap-3">
                     <span className="flex h-10 min-w-10 items-center justify-center rounded-full bg-mist-50 px-2 font-display text-lg text-moss-700 tabular-nums">
-                      {preview.reachableCount}
+                      {preview ? preview.reachableCount : "–"}
                     </span>
                     <span className="max-w-[30ch] text-xs leading-relaxed text-ink-500">
-                      {t.stickyReach.replace("{count}", String(preview.reachableCount))}
+                      {t.stickyReach.replace(
+                        "{count}",
+                        preview ? String(preview.reachableCount) : "–",
+                      )}
                     </span>
                   </p>
 
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="ghost" onClick={() => setStep(2)}>
+                    <Button type="button" variant="ghost" onClick={() => setStep(STEP.budget)}>
                       {t.back}
                     </Button>
                     <Button
@@ -693,9 +836,16 @@ export default function SkillsPage() {
         </div>
 
         {/* ── Right rail. Below xl it drops under the form rather than
-             squeezing the main column to an unreadable measure. ── */}
-        <div className="xl:sticky xl:top-28 xl:self-start">
-          <PreviewRail preview={preview} />
+             squeezing the main column to an unreadable measure — into the
+             main column's track, so it can't slide under the sticky left
+             rail. ── */}
+        <div className="lg:col-start-2 xl:sticky xl:top-28 xl:col-start-auto xl:self-start">
+          <PreviewRail
+            preview={preview}
+            skillCount={profile.skills.length}
+            isLoading={isPreviewLoading}
+            error={previewError}
+          />
         </div>
       </div>
     </div>
@@ -756,8 +906,22 @@ function ReviewCard({
   onEdit?: () => void;
   children: React.ReactNode;
 }) {
+  /*
+   * A card with an edit target is clickable anywhere. The Edit pill stays the
+   * one real <button>; its ::after stretches over the whole card. Wrapping
+   * the card in a <button> instead would be invalid — buttons may only hold
+   * phrasing content, and these cards hold lists and <dl>s — and would give
+   * screen readers one long run-on label. A card without `onEdit` (the
+   * notifications toggles) stays a plain container.
+   */
   return (
-    <div className="flex h-full flex-col rounded-field border border-sage-100 bg-white p-5 transition duration-200 ease-soft hover:border-sage-400/60">
+    <div
+      className={`relative flex h-full flex-col rounded-field border border-sage-100 bg-white p-5 transition duration-200 ease-soft ${
+        onEdit
+          ? "cursor-pointer hover:-translate-y-px hover:border-sage-600 hover:bg-mist-50/60 hover:shadow-sm has-[button:focus-visible]:ring-2 has-[button:focus-visible]:ring-sage-600/40"
+          : "hover:border-sage-400/60"
+      }`}
+    >
       <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className=" text-lg tracking-tight text-moss-700">
           {title}
@@ -766,7 +930,8 @@ function ReviewCard({
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex items-center gap-1.5 rounded-full border border-sage-400/60 px-2.5 py-1 text-xs font-medium text-sage-600 outline-none transition duration-200 ease-soft hover:border-sage-600 hover:bg-sage-100/60 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600/40"
+            aria-label={`${editLabel} ${title}`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-sage-400/60 px-2.5 py-1 text-xs font-medium text-sage-600 outline-none transition duration-200 ease-soft after:absolute after:inset-0 after:rounded-field after:content-[''] hover:border-sage-600 hover:bg-sage-100/60 hover:text-moss-700"
           >
             <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M11 2.5l2.5 2.5L6 12.5 3 13l.5-3L11 2.5z" strokeLinejoin="round" />

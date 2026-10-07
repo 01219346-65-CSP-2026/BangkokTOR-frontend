@@ -59,6 +59,34 @@ export function TorFilters({
     onChange({ ...filters, [key]: value });
   }
 
+  // Slider positions (0–100, log scale). An open end sits on its edge.
+  const lo =
+    filters.minBudget === null ? 0 : budgetToSlider(filters.minBudget, ceiling);
+  const hi =
+    filters.maxBudget === null ? 100 : budgetToSlider(filters.maxBudget, ceiling);
+
+  /** Both ends at once; the handles can't cross, so min ≤ max always holds. */
+  function setBudget(nextLo: number, nextHi: number) {
+    const low = Math.min(nextLo, nextHi);
+    const high = Math.max(nextHi, low);
+    onChange({
+      ...filters,
+      minBudget: low <= 0 ? null : sliderToBudget(low, ceiling),
+      maxBudget: high >= 100 ? null : sliderToBudget(high, ceiling),
+    });
+  }
+
+  const budgetSummary = (() => {
+    const from =
+      filters.minBudget === null ? null : formatBudgetTHB(filters.minBudget, locale);
+    const to =
+      filters.maxBudget === null ? null : formatBudgetTHB(filters.maxBudget, locale);
+    if (from && to) return t.budgetRange.replace("{from}", from).replace("{to}", to);
+    if (from) return t.budgetFrom.replace("{amount}", from);
+    if (to) return t.budgetUpTo.replace("{amount}", to);
+    return t.budgetAll;
+  })();
+
   /** "e-bidding (24)" — the count is part of the option label. */
   function withCount(label: string, count: number | undefined) {
     return count === undefined ? label : `${label} (${count})`;
@@ -201,44 +229,68 @@ export function TorFilters({
         is logarithmic, so the low end where most records sit stays reachable
         instead of collapsing into the first few pixels.
       */}
-      <div className="mt-3.5 border-t border-sage-100 pt-3.5">
-        <div className="mb-1 flex items-baseline justify-between gap-2">
-          <label
-            htmlFor="tor-budget"
+      <div
+        role="group"
+        aria-labelledby="tor-budget-label"
+        className="mt-3.5 border-t border-sage-100 pt-3.5"
+      >
+        <div className="flex items-baseline justify-between gap-2">
+          <span
+            id="tor-budget-label"
             className="text-xs font-medium text-ink-600"
           >
             {t.budgetLabel}
-          </label>
+          </span>
           <span className="text-xs text-ink-500 tabular-nums">
-            {filters.maxBudget === null
-              ? t.budgetAll
-              : t.budgetUpTo.replace(
-                  "{amount}",
-                  formatBudgetTHB(filters.maxBudget, locale),
-                )}
+            {budgetSummary}
           </span>
         </div>
 
-        <input
-          id="tor-budget"
-          type="range"
-          min={0}
-          max={100}
-          step={1}
-          value={
-            filters.maxBudget === null
-              ? 100
-              : budgetToSlider(filters.maxBudget, ceiling)
-          }
-          onChange={(event) => {
-            const position = Number(event.target.value);
-            update(
-              "maxBudget",
-              position >= 100 ? null : sliderToBudget(position, ceiling),
-            );
-          }}
-          className="w-full accent-sage-600 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
-        />
+        {/*
+          Two range inputs on one track (`.dual-range` in globals.css): only the
+          thumbs take the pointer, so each end drags on its own. Either end at
+          the track's edge is null — open — rather than the edge's baht value,
+          so "from anything" never hides a record below BUDGET_FLOOR.
+        */}
+        <div className="relative h-10">
+          <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-sage-100" />
+          <div
+            className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-sage-600"
+            style={{ left: `${lo}%`, right: `${100 - hi}%` }}
+          />
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={lo}
+            aria-label={t.budgetMinHandle}
+            aria-valuetext={
+              filters.minBudget === null
+                ? t.budgetAll
+                : formatBudgetTHB(filters.minBudget, locale)
+            }
+            onChange={(event) => setBudget(Number(event.target.value), hi)}
+            // Thumbs meeting at the top end would bury the min thumb under the
+            // max one; lift it so the range can still be widened.
+            className={`dual-range ${lo >= 95 ? "z-20" : "z-10"}`}
+          />
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={hi}
+            aria-label={t.budgetMaxHandle}
+            aria-valuetext={
+              filters.maxBudget === null
+                ? t.budgetAll
+                : formatBudgetTHB(filters.maxBudget, locale)
+            }
+            onChange={(event) => setBudget(lo, Number(event.target.value))}
+            className="dual-range z-10"
+          />
+        </div>
       </div>
 
       {/*

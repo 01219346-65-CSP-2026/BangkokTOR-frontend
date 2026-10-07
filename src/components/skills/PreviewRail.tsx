@@ -4,39 +4,55 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAnimatedNumber } from "@/lib/useAnimatedNumber";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
-import type { ProfilePreview } from "@/lib/profilePreview";
+import type { ProfilePreview } from "@/api/profilePreview";
 
 /**
  * The right-hand rail: what the profile currently reaches, the TORs it scores
  * highest against, and one suggestion.
  *
- * The headline count is the number of *ingested* records reached, and the
- * caption says so. The mockup showed a bare "312" against a platform-wide
- * total we do not have — printing that would be inventing a figure, which the
- * placeholder-data rules in `types/tor.ts` forbid.
+ * Every figure is over the TORs open for bidding right now, and the caption
+ * says "of N open" — never a platform-wide total we don't have.
+ *
+ * `preview` is null until the first answer arrives; the rail shows dashes
+ * rather than a 0 that would read as "you reach nothing".
  */
-export function PreviewRail({ preview }: { preview: ProfilePreview }) {
+export function PreviewRail({
+  preview,
+  skillCount,
+  isLoading = false,
+  error = null,
+}: {
+  preview: ProfilePreview | null;
+  skillCount: number;
+  isLoading?: boolean;
+  error?: string | null;
+}) {
   const t = useTranslations("skills");
   const { locale } = useLanguage();
   const skillNames = t.skillNames;
 
   // Counts up to the new reach instead of jumping, so picking a skill visibly
   // moves the number.
-  const shownCount = useAnimatedNumber(preview.reachableCount);
+  const reachableCount = preview?.reachableCount ?? 0;
+  const shownCount = useAnimatedNumber(reachableCount);
 
   // A gain gets a "+N" badge. Derived during render from the previous count
   // (React's "adjust state when a prop changes" pattern) rather than set in an
   // effect; the badge fades itself out with a CSS animation, so no timer.
-  const [lastCount, setLastCount] = useState(preview.reachableCount);
+  const [lastCount, setLastCount] = useState(reachableCount);
   const [gain, setGain] = useState<{ amount: number; id: number } | null>(null);
-  if (preview.reachableCount !== lastCount) {
-    const delta = preview.reachableCount - lastCount;
-    setLastCount(preview.reachableCount);
+  if (reachableCount !== lastCount) {
+    const delta = reachableCount - lastCount;
+    setLastCount(reachableCount);
     setGain(delta > 0 ? { amount: delta, id: (gain?.id ?? 0) + 1 } : null);
   }
 
   return (
-    <aside className="flex flex-col gap-6" aria-live="polite">
+    <aside
+      className={`flex flex-col gap-6 transition-opacity duration-200 ease-soft ${isLoading && preview ? "opacity-60" : ""}`}
+      aria-live="polite"
+      aria-busy={isLoading}
+    >
       <h2 className="font-mono text-xs tracking-widest text-ink-500 uppercase">
         {t.previewHeading}
       </h2>
@@ -51,7 +67,7 @@ export function PreviewRail({ preview }: { preview: ProfilePreview }) {
       <div className="relative overflow-hidden rounded-field border border-sage-400/60 bg-mist-50 p-5">
         <div className="flex items-baseline gap-2">
           <p className="font-display text-4xl leading-none text-moss-700 tabular-nums">
-            {new Intl.NumberFormat(locale).format(shownCount)}
+            {preview ? new Intl.NumberFormat(locale).format(shownCount) : "–"}
           </p>
           {gain && (
             <span
@@ -63,20 +79,35 @@ export function PreviewRail({ preview }: { preview: ProfilePreview }) {
           )}
         </div>
         <p className="mt-2 text-xs leading-relaxed text-ink-500">
-          {t.previewReach.replace("{count}", String(preview.totalCount))}
+          {preview
+            ? t.previewReach
+                .replace("{total}", new Intl.NumberFormat(locale).format(preview.totalCount))
+                .replace("{skills}", new Intl.NumberFormat(locale).format(skillCount))
+            : t.previewLoading}
         </p>
       </div>
 
-      {preview.topMatches.length === 0 ? (
+      {error && (
+        <p role="alert" className="text-xs leading-relaxed text-clay-500">
+          {t.previewError}
+        </p>
+      )}
+
+      {!preview ? null : preview.topMatches.length === 0 ? (
         <p className="text-xs leading-relaxed text-ink-500">{t.previewEmpty}</p>
       ) : (
         <div>
           <h3 className="text-sm font-medium text-moss-700">
-            {t.previewTopMatches}
+            {preview.topMatchesAreRandom ? t.previewOpenNow : t.previewTopMatches}
           </h3>
+          {preview.topMatchesAreRandom && (
+            <p className="mt-1 text-xs leading-relaxed text-ink-500">
+              {skillCount === 0 ? t.previewRandomNoSkills : t.previewRandomNote}
+            </p>
+          )}
 
           <ul className="mt-3 divide-y divide-sage-100 border-t border-sage-100">
-            {preview.topMatches.map(({ tor, fit }) => (
+            {preview.topMatches.map((tor) => (
               <li key={tor.id}>
                 <Link
                   href={`/tor/${tor.id}`}
@@ -90,9 +121,11 @@ export function PreviewRail({ preview }: { preview: ProfilePreview }) {
                   >
                     {tor.title}
                   </span>
-                  <span className="shrink-0 font-mono text-xs text-sage-600">
-                    {new Intl.NumberFormat(locale).format(fit)}
-                  </span>
+                  {!preview.topMatchesAreRandom && (
+                    <span className="shrink-0 font-mono text-xs text-sage-600">
+                      {tor.fit === null ? "–" : new Intl.NumberFormat(locale).format(tor.fit)}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}
@@ -100,7 +133,7 @@ export function PreviewRail({ preview }: { preview: ProfilePreview }) {
         </div>
       )}
 
-      {preview.nudge && (
+      {preview?.nudge && (
         <p className="rounded-field border-l-2 border-sage-400 bg-sage-100/40 py-3 pr-3 pl-3.5 text-xs leading-relaxed text-ink-600">
           {(preview.nudge.fitTo > preview.nudge.fitFrom
             ? t.previewNudge
