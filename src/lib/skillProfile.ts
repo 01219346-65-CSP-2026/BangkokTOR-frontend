@@ -1,4 +1,5 @@
 import type { SkillId } from "@/i18n/Translations";
+import type { TorWorkTypeId } from "@/types/tor";
 import {
   toBackendProfile,
   toProfile,
@@ -26,6 +27,8 @@ export type SkillProfile = {
   budgetMin: number;
   /** `null` means "no maximum" — the top of the slider in the mockup. */
   budgetMax: number | null;
+  /** Step 1's answer — the kinds of TOR they want. Seeds the recommended skills. */
+  workTypes: TorWorkTypeId[];
   notifyOnMatch: boolean;
   notifyOnlyStrongFit: boolean;
   notifyIncludeSignals: boolean;
@@ -219,6 +222,33 @@ export const SKILL_MATCH_NAMES: Record<SkillId, string> = {
   itil: "ITIL / service desk",
 };
 
+/** The work types step 1 offers, in display order. `other` = "not sure". */
+export const WORK_TYPE_OPTIONS = [
+  "development",
+  "aiData",
+  "cloudInfra",
+  "maintenance",
+  "consulting",
+  "learning",
+  "other",
+] as const satisfies readonly TorWorkTypeId[];
+
+/**
+ * The skills step 2 puts first for each answer to step 1. A starting point,
+ * not a filter — every other skill stays one click away below it.
+ */
+export const WORK_TYPE_RECOMMENDED_SKILLS: Record<
+  Exclude<TorWorkTypeId, "other">,
+  readonly SkillId[]
+> = {
+  development: ["react", "nodejs", "postgresql", "restApi", "uxui", "flutter", "docker", "mysql"],
+  aiData: ["aiMl", "llm", "chatbot", "python", "dashboardBi", "dataWarehouse", "bigData", "gisQgis"],
+  cloudInfra: ["govCloud", "publicCloud", "virtualization", "linux", "network", "firewall", "backupDr", "monitoring"],
+  maintenance: ["itil", "monitoring", "linux", "backupDr", "sqlServer", "oracleDb", "network"],
+  consulting: ["iso27001", "pdpa", "itil", "egpApi", "gdx", "digitalSignature"],
+  learning: ["lms", "cms", "uxui", "wcag", "react", "chatbot"],
+};
+
 /** Sensible starting point: nothing claimed, a mid-size team, no budget ceiling. */
 export const DEFAULT_PROFILE: SkillProfile = {
   skills: [],
@@ -227,6 +257,7 @@ export const DEFAULT_PROFILE: SkillProfile = {
   concurrent: 2,
   budgetMin: 1_000_000,
   budgetMax: 8_000_000,
+  workTypes: [],
   notifyOnMatch: true,
   notifyOnlyStrongFit: true,
   notifyIncludeSignals: false,

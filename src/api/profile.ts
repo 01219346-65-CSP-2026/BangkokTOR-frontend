@@ -1,4 +1,5 @@
 import type { SkillId } from "@/i18n/Translations";
+import type { TorWorkTypeId } from "@/types/tor";
 import {
   ALL_SKILL_IDS,
   type DurationId,
@@ -20,6 +21,8 @@ export type BackendProfile = {
   concurrent: number;
   budget_min: number;
   budget_max: number | null;
+  /** The wizard's "what kinds of TOR?" answer; [] = not answered. */
+  work_types?: TorWorkTypeId[];
   notify: {
     on_match: boolean;
     only_strong_fit: boolean;
@@ -43,6 +46,7 @@ export function toProfile(backend: BackendProfile): SkillProfile {
     concurrent: backend.concurrent,
     budgetMin: backend.budget_min,
     budgetMax: backend.budget_max,
+    workTypes: backend.work_types ?? [],
     notifyOnMatch: backend.notify.on_match,
     notifyOnlyStrongFit: backend.notify.only_strong_fit,
     notifyIncludeSignals: backend.notify.include_signals,
@@ -58,6 +62,7 @@ export function toBackendProfile(profile: SkillProfile): BackendProfile {
     concurrent: profile.concurrent,
     budget_min: profile.budgetMin,
     budget_max: profile.budgetMax,
+    work_types: profile.workTypes,
     notify: {
       on_match: profile.notifyOnMatch,
       only_strong_fit: profile.notifyOnlyStrongFit,
