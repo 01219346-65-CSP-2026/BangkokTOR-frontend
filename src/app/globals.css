@@ -18,7 +18,7 @@
   /* Light green wash for the form side, so the brand reads across both columns */
   --color-mist-50: #f4f8f4;
 
-  /* Kept only for the untouched create-next-app landing page (src/app/page.tsx).
+  /* Kept only for the untouched create-next-app landing page (src/app/(public)/page.tsx).
      Delete both once that page is rebuilt. */
   --color-background: #ffffff;
   --color-foreground: #171717;
