@@ -139,8 +139,16 @@ export type TorDocument = {
  * `filename` is null when the point can no longer be traced to a page, which
  * happens if the documents were re-extracted after the summary was written.
  */
+/** The three summary cards, in page order (feat/92). Mirrors the backend's
+ *  SUMMARY_SECTIONS in lib/ai/types.ts. */
+export const TOR_SUMMARY_SECTIONS = ["objective", "scope", "qualifications"] as const;
+export type TorSummarySectionId = (typeof TOR_SUMMARY_SECTIONS)[number];
+
 export type TorSummaryPoint = {
   id: string;
+  /** Which card the point belongs in. Null for summaries written before
+   *  topics existed — those points are left out of the cards. */
+  section: TorSummarySectionId | null;
   text: string;
   filename: string | null;
   pageStart: number;

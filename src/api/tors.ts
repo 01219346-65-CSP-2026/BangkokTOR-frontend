@@ -1,5 +1,6 @@
 import type { SkillId } from "@/i18n/Translations";
 import { ALL_SKILL_IDS } from "@/lib/skillProfile";
+import { toSummaryPoint } from "@/lib/summarySections";
 import type {
   TextLayer,
   Tor,
@@ -83,6 +84,9 @@ export type BackendTor = {
   }>;
   summaryPoints?: Array<{
     id: string;
+    /** objective / scope / qualifications (feat/92). Absent or null on
+     *  summaries written before topics existed. */
+    section?: string | null;
     text: string;
     filename: string | null;
     pageStart: number;
@@ -251,7 +255,7 @@ export function toTor(row: BackendTor): ApiTor {
     torTextLayer: torTextLayer(documents),
     torPages: documents.find((document) => document.kind === "tor")?.pages ?? 0,
     documents,
-    summaryPoints: row.summaryPoints ?? [],
+    summaryPoints: (row.summaryPoints ?? []).map(toSummaryPoint),
 
     status: procurementStatus(row),
     sourceUrl: row.sourceUrl ?? "",
