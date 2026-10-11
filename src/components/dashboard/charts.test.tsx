@@ -80,34 +80,70 @@ describe("step 3: ChartPanel — the frame and its states", () => {
   });
 });
 
-describe("step 4: MethodMixChart — graph 1", () => {
+describe("step 4: MethodMixChart — graph 1 (a filled pie + a by-number/by-budget toggle)", () => {
   const out = html(<MethodMixChart slices={SLICES} labels={METHOD_LABELS} />);
 
-  test("two bars, one segment per method each", () => {
+  test("a real toggle between the two views, defaulting to by number", () => {
     expect(out).toContain("By number");
     expect(out).toContain("By budget");
-    expect(count(out, "data-segment=")).toBe(6);
+    expect(out).toContain('data-chart="byNumber"');
+    // Only one pie is drawn at a time — the toggle picks which.
+    expect(out).not.toContain('data-chart="byBudget"');
+    expect(count(out, "data-segment=")).toBe(3);
   });
 
-  test("segment widths are the shares, laid end to end", () => {
-    // By number: specific 0–75, eBidding 75–92.5, competitive 92.5–100.
-    expect(out).toContain("left:0%;width:75%");
-    expect(out).toContain("left:75%;width:17.5%");
-    expect(out).toContain("left:92.5%;width:7.5%");
+  test("each wedge is a filled path from the shared center, sized by its share", () => {
+    // Every wedge starts "M 18 18 L …" — a line out from the pie's center
+    // (C=18) to the start of its arc.
+    expect(count(out, "M 18 18 L")).toBe(3);
+    // The large-arc-flag is 1 only for a share over half the circle:
+    // specific is 75% (> 50) and gets the large-arc path; e-bidding (17.5%)
+    // and competitive (7.5%) don't.
+    expect(out).toContain("A 16 16 0 1 1");
+    expect(count(out, "A 16 16 0 0 1")).toBe(2);
   });
 
-  test("a zero share draws no segment", () => {
+  test("a single 100% category is a filled circle, not a degenerate wedge", () => {
+    const whole: MethodSlice[] = [{ method: "specific", tors: 10, budget: 10, torShare: 100, budgetShare: 100 }];
+    const out = html(<MethodMixChart slices={whole} labels={METHOD_LABELS} />);
+    expect(out).toMatch(/<circle[^>]*data-segment="specific"/);
+  });
+
+  test("a zero share draws no wedge", () => {
     const withZero: MethodSlice[] = [...SLICES.slice(0, 2), { ...SLICES[2]!, torShare: 0, budgetShare: 0 }];
-    expect(count(html(<MethodMixChart slices={withZero} labels={METHOD_LABELS} />), "data-segment=")).toBe(4);
+    expect(count(html(<MethodMixChart slices={withZero} labels={METHOD_LABELS} />), "data-segment=")).toBe(2);
   });
 
-  test("screen readers get a table with both shares per method", () => {
+  test("the legend names every present method, with no percentage printed until a wedge is hovered", () => {
+    expect(out).toContain("Direct award");
+    expect(out).toContain("e-bidding");
+    expect(out).toContain("Selection");
+    // The hover tooltip is conditionally rendered (absent when nothing is
+    // hovered), not just hidden with opacity — so with nothing hovered the
+    // only "%" in the whole page is the six sr-only table cells.
+    expect(count(out, "%")).toBe(6);
+  });
+
+  test("a method with a flat 0% in the active view doesn't clutter the legend", () => {
+    const withUnstated: MethodSlice[] = [
+      ...SLICES,
+      { method: "unknown", tors: 0, budget: 0, torShare: 0, budgetShare: 0 },
+    ];
+    const out = html(<MethodMixChart slices={withUnstated} labels={METHOD_LABELS} />);
+    // "Not stated" legitimately appears once, in the sr-only table (which
+    // lists every method, present or not) — just not in the visible legend.
+    const legend = out.slice(out.indexOf("<ul"), out.indexOf("</ul>"));
+    expect(legend).not.toContain(METHOD_LABELS.methods.unknown);
+    expect(out).toContain(METHOD_LABELS.methods.unknown);
+  });
+
+  test("screen readers get a table with both shares per method, regardless of the toggle", () => {
     expect(out).toContain('class="sr-only"');
     expect(out).toMatch(/<th scope="row">Direct award<\/th><td>75%<\/td><td>19%<\/td>/);
     expect(out).toMatch(/<th scope="row">e-bidding<\/th><td>17.5%<\/td><td>59.5%<\/td>/);
   });
 
-  test("the drawn bars are hidden from screen readers (the table says it once)", () => {
+  test("the drawn pie is hidden from screen readers (the table says it once)", () => {
     expect(out).toContain('aria-hidden="true"');
   });
 });

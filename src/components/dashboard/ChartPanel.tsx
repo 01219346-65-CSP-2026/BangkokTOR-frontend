@@ -28,9 +28,29 @@ export function ChartPanel({
   className?: string;
   children?: ReactNode;
 }) {
-  // TODO(116) step 3. A <section> with aria-busy={isLoading}, an <h2> title,
-  // the caption, then ONE of: loading skeleton / error (role="alert") /
-  // emptyLabel / children. Look at the placeholder panel in the current
-  // dashboard page for the frame's classes.
-  return null;
+  return (
+    <section
+      aria-busy={isLoading}
+      className={`flex min-h-[19rem] flex-col rounded-field border border-sage-100 bg-white p-6 shadow-[0_1px_2px_rgba(47,71,57,0.04)] ${className}`}
+    >
+      <h2 className="text-[0.9rem] font-semibold tracking-tight text-moss-700">{title}</h2>
+      {caption && (
+        <p className="mt-1 max-w-prose text-xs leading-relaxed text-ink-500">{caption}</p>
+      )}
+
+      {isLoading ? (
+        <div className="mt-5 flex flex-1 animate-pulse items-center justify-center rounded-field border border-dashed border-sage-400/60 bg-mist-50" />
+      ) : error ? (
+        <p role="alert" className="mt-5 flex flex-1 items-center justify-center text-center text-xs text-clay-500">
+          {error}
+        </p>
+      ) : isEmpty ? (
+        <p className="mt-5 flex flex-1 items-center justify-center text-center text-xs text-ink-500">
+          {emptyLabel}
+        </p>
+      ) : (
+        <div className="mt-5 flex-1">{children}</div>
+      )}
+    </section>
+  );
 }

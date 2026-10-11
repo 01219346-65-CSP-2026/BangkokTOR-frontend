@@ -15,8 +15,9 @@ export type InsightScope = "bangkok" | "all";
 
 /** The proxy URL for a scope. Bangkok is a province filter; "all" is none. */
 export function insightsPath(scope: InsightScope): string {
-  // TODO(116) step 2. Hint: encodeURIComponent — Thai is not URL-safe as-is.
-  throw new Error("TODO(116): insightsPath");
+  if (scope === "all") return "/api/tors/insights";
+  const params = new URLSearchParams({ province: BANGKOK_PROVINCE });
+  return `/api/tors/insights?${params.toString()}`;
 }
 
 /**
@@ -26,9 +27,13 @@ export function insightsPath(scope: InsightScope): string {
  * reader came for.
  */
 export function formatBahtCompact(amount: number, locale: Locale): string {
-  // TODO(116) step 2. Start from formatBudgetTHB and look up two more
-  // Intl.NumberFormat options: `notation` and `maximumFractionDigits`.
-  throw new Error("TODO(116): formatBahtCompact");
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "THB",
+    currencyDisplay: "narrowSymbol",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(amount);
 }
 
 export type Segment<K extends string> = { key: K; share: number; offset: number };
@@ -40,10 +45,19 @@ export type Segment<K extends string> = { key: K; share: number; offset: number 
  * always exactly full. All zero → all zero (an empty bar, not a full one).
  */
 export function stackSegments<K extends string>(slices: Array<{ key: K; share: number }>): Segment<K>[] {
-  // TODO(116) step 2. A running `offset`, and findLastIndex for "the last
-  // non-zero one". Floating point: 33.3 + 33.3 is 66.6 only after rounding to
-  // one decimal (Math.round(x * 10) / 10) — print it and see.
-  throw new Error("TODO(116): stackSegments");
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+
+  const lastNonZero = slices.reduce((last, s, i) => (s.share > 0 ? i : last), -1);
+  const total = round1(slices.reduce((sum, s) => sum + s.share, 0));
+  const diff = round1(100 - total);
+
+  let offset = 0;
+  return slices.map((s, i) => {
+    const share = i === lastNonZero ? round1(s.share + diff) : s.share;
+    const segment: Segment<K> = { key: s.key, share, offset };
+    offset = round1(offset + share);
+    return segment;
+  });
 }
 
 /** Smallest visible bar, in percent — so "some" never reads as "none". */
@@ -51,14 +65,14 @@ export const MIN_BAR = 2;
 
 /** Each value as a percent of the largest. Zero stays zero; tiny becomes MIN_BAR. */
 export function scaleToMax(values: number[]): number[] {
-  // TODO(116) step 2. Careful: Math.max() of nothing is -Infinity, and
-  // anything divided by 0 is NaN or Infinity. The tests check both.
-  throw new Error("TODO(116): scaleToMax");
+  const max = Math.max(...values, 0);
+  if (max === 0) return values.map(() => 0);
+  return values.map((v) => (v === 0 ? 0 : Math.max((v / max) * 100, MIN_BAR)));
 }
 
 /** "2026-03" → "Mar" / "มี.ค.". Read as UTC so no timezone shifts the month. */
 export function monthLabel(month: string, locale: Locale): string {
-  // TODO(116) step 2. Intl.DateTimeFormat with { month: "short", timeZone: "UTC" },
-  // formatting a Date built with Date.UTC (months are 0-based there).
-  throw new Error("TODO(116): monthLabel");
+  const [year, m] = month.split("-").map(Number);
+  const date = new Date(Date.UTC(year!, m! - 1, 1));
+  return new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" }).format(date);
 }

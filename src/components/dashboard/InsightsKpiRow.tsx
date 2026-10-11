@@ -26,8 +26,16 @@ export function InsightsKpiRow({
   /** Off when the page is already scoped to Bangkok, where it would read 100%. */
   showBangkokShare: boolean;
 }) {
-  // TODO(116) step 8. A <dl> of four <Stat>s (components/admin/Stat.tsx shows
-  // the wrapper classes). Third tile: Bangkok share when showBangkokShare,
-  // otherwise the biddable TOR count. Numbers through toLocaleString().
-  return null;
+  return (
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-field border border-sage-100 bg-sage-100 shadow-[0_1px_2px_rgba(47,71,57,0.04)] md:grid-cols-4">
+      <Stat label={labels.tors} value={totals.tors.toLocaleString()} />
+      <Stat label={labels.biddableBudget} value={formatBudget(totals.biddableBudget)} />
+      {showBangkokShare ? (
+        <Stat label={labels.bangkokShare} value={`${totals.bangkokShare}%`} />
+      ) : (
+        <Stat label={labels.biddableTors} value={totals.biddableTors.toLocaleString()} />
+      )}
+      <Stat label={labels.openNow} value={totals.openNow.toLocaleString()} />
+    </dl>
+  );
 }

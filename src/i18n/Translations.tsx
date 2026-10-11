@@ -33,11 +33,6 @@ const en = {
     heading: "Dashboard",
     matchesTitle: "Your latest matches",
     editProfile: "Edit skill profile",
-    // TODO(116) step 9: delete placeholderTitle / placeholderBody (here and in
-    // th) once the page stops using them.
-    placeholderTitle: "Not built yet",
-    placeholderBody:
-      "This panel is reserved for a chart that does not exist yet. It is scaffolding, not data.",
     // feat/116 — the insight graphs. Market numbers only; nothing here may
     // read as a judgement about an agency (FR-19).
     insights: {
@@ -1138,9 +1133,6 @@ const th: typeof en = {
     heading: "แดชบอร์ด",
     matchesTitle: "รายการที่ตรงกับคุณล่าสุด",
     editProfile: "แก้ไขโปรไฟล์ทักษะ",
-    placeholderTitle: "ยังไม่ได้พัฒนา",
-    placeholderBody:
-      "ส่วนนี้เตรียมไว้สำหรับกราฟที่ยังไม่มีข้อมูลจริง เป็นเพียงโครงร่างเท่านั้น",
     insights: {
       scopeBangkok: "กรุงเทพฯ",
       scopeAll: "ทั่วประเทศ",
