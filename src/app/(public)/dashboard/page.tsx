@@ -4,24 +4,31 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { TorCard } from "@/components/tor/TorCard";
 import { Tabs } from "@/components/ui/Tabs";
-import { useTranslations } from "@/i18n/LanguageProvider";
+import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { MOCK_TORS } from "@/data/torListings";
 import { withMatches } from "@/lib/torMatching";
+import { useEndpoint } from "@/api/useEndpoint";
+import type { TorInsightsResponse } from "@/api/tors";
+import { formatBahtCompact, insightsPath, monthLabel, type InsightScope } from "@/lib/insights";
+import { ChartPanel } from "@/components/dashboard/ChartPanel";
+import { MethodMixChart } from "@/components/dashboard/MethodMixChart";
+import { BudgetBandsChart } from "@/components/dashboard/BudgetBandsChart";
+import { TopAgenciesChart } from "@/components/dashboard/TopAgenciesChart";
+import { MonthlyTrendChart } from "@/components/dashboard/MonthlyTrendChart";
+import { InsightsKpiRow } from "@/components/dashboard/InsightsKpiRow";
 
 /**
- * ⚠ This page is scaffolding.
+ * ⚠ The match list is scaffolding.
  *
- * The match list is real scraped records wearing FABRICATED match data: the fit
- * score is an FNV-1a hash of the record id scored against a hardcoded fictional
- * profile, and the closing date is invented because the source portal publishes
- * none. See src/lib/torMatching.ts, which is marked for deletion once real
- * matching exists.
+ * It is real scraped records wearing FABRICATED match data: the fit score is
+ * an FNV-1a hash of the record id scored against a hardcoded fictional
+ * profile, and the closing date is invented because the source portal
+ * publishes none. See src/lib/torMatching.ts, which is marked for deletion
+ * once real matching exists. The notice next to the list says so.
  *
- * Every other panel is an empty placeholder. They say so on screen rather than
- * showing a fake chart, and the notice at the top of the page says so about the
- * scores — the other three pages using this layer were all marked in-file and
- * this one was not, which made it the only place the app presented invented
- * numbers as the reader's own matches.
+ * The four graphs beside and below it are real: they read GET
+ * /api/tors/insights (feat/116), backed by the listed TORs — see
+ * src/lib/insights.ts and src/components/dashboard/.
  */
 
 /**
@@ -34,11 +41,44 @@ const TODAY_UTC = (() => {
   return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 })();
 
-type PanelTabId = "week" | "month";
-
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
+  const { locale } = useLanguage();
   const matches = useMemo(() => withMatches(MOCK_TORS, TODAY_UTC), []);
+
+  const [scope, setScope] = useState<InsightScope>("all");
+  const { data, error, isLoading } = useEndpoint<TorInsightsResponse>(insightsPath(scope));
+
+  const formatBudget = (amount: number) => formatBahtCompact(amount, locale);
+  const monthLabelFn = (month: string) => monthLabel(month, locale);
+
+  const isEmpty = data?.totals.tors === 0;
+  const isAgenciesEmpty = isEmpty || data?.topAgencies.length === 0;
+
+  const methodLabels = {
+    byNumber: t.insights.byNumber,
+    byBudget: t.insights.byBudget,
+    method: t.insights.method,
+    methods: t.insights.methods,
+  };
+  const bandsLabels = {
+    band: t.insights.band,
+    bands: t.insights.bands,
+    total: t.insights.total,
+    biddable: t.insights.biddable,
+  };
+  const monthlyLabels = {
+    month: t.insights.month,
+    total: t.insights.total,
+    biddable: t.insights.biddable,
+  };
+  const kpiLabels = {
+    tors: t.insights.kpiTors,
+    biddableBudget: t.insights.kpiBiddableBudget,
+    bangkokShare: t.insights.kpiBangkokShare,
+    biddableTors: t.insights.kpiBiddableTors,
+    openNow: t.insights.kpiOpenNow,
+  };
 
   return (
     // max-w, not a fixed width. This was `w-375`, which Tailwind v4 compiles to
@@ -46,20 +86,48 @@ export default function DashboardPage() {
     // screen narrower than that, including every laptop.
     <div className="flex-1 bg-paper-50 px-6 pt-6 pb-12">
       <div className="mx-auto w-full max-w-[84rem]">
-        <p className="font-mono text-xs tracking-widest text-sage-600 uppercase">
-          {t.eyebrow}
-        </p>
-        <h1 className="mt-2 text-2xl tracking-tight text-moss-700">
-          {t.heading}
-        </h1>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs tracking-widest text-sage-600 uppercase">
+              {t.eyebrow}
+            </p>
+            <h1 className="mt-2 text-2xl tracking-tight text-moss-700">
+              {t.heading}
+            </h1>
+            <p className="mt-1 text-xs text-ink-500">
+              {data
+                ? t.insights.fiscalYear.replace("{year}", String(data.fiscalYear))
+                : " "}
+            </p>
+          </div>
 
-        {/* The scores below are invented. The page says so before the reader
-            reads them, not in a comment they will never see. */}
-        <p className="mt-3 max-w-prose rounded-field border border-clay-500/35 bg-clay-500/[0.06] px-4 py-3 text-xs leading-relaxed text-ink-600">
-          {t.mockNotice}
-        </p>
+          <Tabs
+            tabs={[
+              { id: "all", label: t.insights.scopeAll },
+              { id: "bangkok", label: t.insights.scopeBangkok },
+            ]}
+            activeTab={scope}
+            onChange={setScope}
+          />
+        </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="mt-5">
+          {data ? (
+            <InsightsKpiRow
+              totals={data.totals}
+              labels={kpiLabels}
+              formatBudget={formatBudget}
+              showBangkokShare={scope === "all"}
+            />
+          ) : (
+            <div
+              aria-hidden="true"
+              className="h-[4.75rem] animate-pulse rounded-field border border-sage-100 bg-sage-100/40"
+            />
+          )}
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <section className="rounded-field border border-sage-100 bg-white p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <h2 className="text-sm font-medium text-moss-700">
@@ -73,6 +141,12 @@ export default function DashboardPage() {
               </Link>
             </div>
 
+            {/* The scores below are invented. The page says so before the
+                reader reads them, not in a comment they will never see. */}
+            <p className="mt-3 max-w-prose rounded-field border border-clay-500/35 bg-clay-500/[0.06] px-4 py-3 text-xs leading-relaxed text-ink-600">
+              {t.mockNotice}
+            </p>
+
             <ul className="mt-4 flex max-h-[25rem] flex-col gap-2.5 overflow-y-auto border-t border-sage-100 pt-4">
               {matches.map((tor) => (
                 <li key={tor.id}>
@@ -82,59 +156,61 @@ export default function DashboardPage() {
             </ul>
           </section>
 
-          <ChartPlaceholder title={t.placeholderTitle} body={t.placeholderBody} />
+          <ChartPanel
+            title={t.insights.methodTitle}
+            caption={t.insights.methodCaption}
+            isLoading={isLoading}
+            error={error}
+            isEmpty={isEmpty}
+            emptyLabel={t.insights.empty}
+          >
+            {data && <MethodMixChart slices={data.byMethod} labels={methodLabels} />}
+          </ChartPanel>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Three identical panels, rendered from one component. They were
-              four copy-pasted blocks differing only in width, which is how the
-              token violations all ended up in this file. */}
-          {[0, 1, 2].map((index) => (
-            <ChartPlaceholder
-              key={index}
-              title={t.placeholderTitle}
-              body={t.placeholderBody}
-            />
-          ))}
+          <ChartPanel
+            title={t.insights.bandsTitle}
+            caption={t.insights.bandsCaption}
+            isLoading={isLoading}
+            error={error}
+            isEmpty={isEmpty}
+            emptyLabel={t.insights.empty}
+          >
+            {data && <BudgetBandsChart bands={data.budgetBands} labels={bandsLabels} />}
+          </ChartPanel>
+
+          <ChartPanel
+            title={t.insights.agenciesTitle}
+            caption={t.insights.agenciesCaption}
+            isLoading={isLoading}
+            error={error}
+            isEmpty={isAgenciesEmpty}
+            emptyLabel={t.insights.empty}
+          >
+            {data && (
+              <TopAgenciesChart
+                agencies={data.topAgencies}
+                formatBudget={formatBudget}
+                torsLabel={(n) => t.insights.agencyTors.replace("{count}", String(n))}
+              />
+            )}
+          </ChartPanel>
+
+          <ChartPanel
+            title={t.insights.monthsTitle}
+            caption={t.insights.monthsCaption}
+            isLoading={isLoading}
+            error={error}
+            isEmpty={isEmpty}
+            emptyLabel={t.insights.empty}
+          >
+            {data && (
+              <MonthlyTrendChart months={data.byMonth} monthLabel={monthLabelFn} labels={monthlyLabels} />
+            )}
+          </ChartPanel>
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * An empty panel that admits it is empty.
- *
- * The tab control is the shared `ui/Tabs`, which already carries
- * `type="button"`, `aria-pressed` and a focus ring — the hand-rolled buttons
- * this replaces had none of the three, against CLAUDE.md §4's "every
- * interactive element ships a focus-visible ring. No exceptions".
- */
-function ChartPlaceholder({ title, body }: { title: string; body: string }) {
-  const [tab, setTab] = useState<PanelTabId>("week");
-
-  return (
-    <section className="flex min-h-[14rem] flex-col rounded-field border border-sage-100 bg-white p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-sm font-medium text-moss-700">{title}</h2>
-          <p className="mt-1 max-w-prose text-xs leading-relaxed text-ink-500">
-            {body}
-          </p>
-        </div>
-        <Tabs
-          tabs={[
-            { id: "week", label: "7d" },
-            { id: "month", label: "30d" },
-          ]}
-          activeTab={tab}
-          onChange={setTab}
-        />
-      </div>
-
-      {/* A dashed well reads as "nothing here yet"; an empty white box reads as
-          a chart that failed to load. */}
-      <div className="mt-4 flex flex-1 items-center justify-center rounded-field border border-dashed border-sage-400/60 bg-mist-50" />
-    </section>
   );
 }
