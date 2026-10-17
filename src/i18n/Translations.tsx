@@ -476,18 +476,12 @@ const en = {
     emptyViewed: "Nothing viewed yet.",
     emptySaved:
       "You haven't saved any notifications yet. Tap the bookmark icon to save one for later.",
-    newJobMatchTitle: "New Job Match",
     unreadAriaLabel: "Unread",
     saveAriaLabel: "Save notification",
     removeSavedAriaLabel: "Remove from saved",
-    jobTitles: {
-      seniorFrontendDeveloper: "Senior Frontend Developer",
-      productDesigner: "Product Designer",
-    },
-    timeAgo: {
-      twoHoursAgo: "2h ago",
-      oneDayAgo: "1d ago",
-    },
+    signInRequired: "Sign in to see your notifications.",
+    loadFailed: "Couldn't load your notifications.",
+    retry: "Try again",
   },
   profile: {
     metaTitle: "My profile",
@@ -1556,18 +1550,12 @@ const th: typeof en = {
     emptyViewed: "ยังไม่มีรายการที่ดูแล้ว",
     emptySaved:
       "คุณยังไม่ได้บันทึกการแจ้งเตือนใดๆ แตะไอคอนคั่นหน้าเพื่อบันทึกไว้ดูภายหลัง",
-    newJobMatchTitle: "งานใหม่ที่ตรงกับคุณ",
     unreadAriaLabel: "ยังไม่ได้อ่าน",
     saveAriaLabel: "บันทึกการแจ้งเตือน",
     removeSavedAriaLabel: "ลบออกจากรายการที่บันทึกไว้",
-    jobTitles: {
-      seniorFrontendDeveloper: "นักพัฒนาฟรอนต์เอนด์อาวุโส",
-      productDesigner: "นักออกแบบผลิตภัณฑ์",
-    },
-    timeAgo: {
-      twoHoursAgo: "2 ชม.ที่แล้ว",
-      oneDayAgo: "1 วันที่แล้ว",
-    },
+    signInRequired: "เข้าสู่ระบบเพื่อดูการแจ้งเตือนของคุณ",
+    loadFailed: "ไม่สามารถโหลดการแจ้งเตือนได้",
+    retry: "ลองใหม่",
   },
   profile: {
     metaTitle: "โปรไฟล์ของฉัน",
@@ -2167,8 +2155,6 @@ export const translations = { en, th };
 
 export type Locale = keyof typeof translations;
 export type SkillId = keyof typeof en.skills.skillNames;
-export type JobTitleId = keyof typeof en.notifications.jobTitles;
-export type TimeAgoId = keyof typeof en.notifications.timeAgo;
 export type FrequencyId = keyof typeof en.admin.sources.frequencyLabels;
 export type TorStatusId = keyof typeof en.tor.statusLabels;
 export type TorMethodId = keyof typeof en.tor.methodLabels;
