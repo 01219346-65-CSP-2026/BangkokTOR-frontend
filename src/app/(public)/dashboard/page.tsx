@@ -16,6 +16,8 @@ import { BudgetBandsChart } from "@/components/dashboard/BudgetBandsChart";
 import { TopAgenciesChart } from "@/components/dashboard/TopAgenciesChart";
 import { MonthlyTrendChart } from "@/components/dashboard/MonthlyTrendChart";
 import { InsightsKpiRow } from "@/components/dashboard/InsightsKpiRow";
+import { DistrictMap } from "@/components/dashboard/DistrictMap";
+import { khetName } from "@/lib/bangkokDistricts";
 
 /**
  * The left panel is "Recommended for you": real open TORs scored against the
@@ -32,6 +34,7 @@ const RECOMMEND_ON_DASHBOARD = 5;
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
+  const tTor = useTranslations("tor");
   const { locale } = useLanguage();
 
   // `null` while loading; `[]` for a guest or a reader with no skills saved.
@@ -94,6 +97,22 @@ export default function DashboardPage() {
     bangkokShare: t.insights.kpiBangkokShare,
     biddableTors: t.insights.kpiBiddableTors,
     openNow: t.insights.kpiOpenNow,
+  };
+
+  const districts = data?.byDistrict ?? [];
+  const unmatchedDistrictTors = data?.unmatchedDistrictTors ?? 0;
+  const mapLabels = {
+    district: t.insights.mapDistrict,
+    tors: t.insights.mapTors,
+    budget: t.insights.mapBudget,
+    dominant: t.insights.mapDominant,
+    topWinners: t.insights.mapTopWinners,
+    wins: (n: number) => t.insights.mapWins.replace("{count}", String(n)),
+    torsCount: (n: number) => t.insights.mapTorsCount.replace("{count}", String(n)),
+    fewTors: t.insights.mapFewTors,
+    noTors: t.insights.mapNoTors,
+    otherKinds: t.insights.mapOtherKinds,
+    workTypes: tTor.workTypes,
   };
 
   return (
@@ -232,6 +251,29 @@ export default function DashboardPage() {
             )}
           </ChartPanel>
         </div>
+        {/* Graph 5 is always Bangkok — the khet map — whichever scope is on. */}
+        <ChartPanel
+          className="mt-4"
+          title={t.insights.mapTitle}
+          caption={t.insights.mapCaption}
+          isLoading={isLoading}
+          error={error}
+          isEmpty={districts.length === 0}
+          emptyLabel={t.insights.empty}
+        >
+          <DistrictMap
+            districts={districts}
+            labels={mapLabels}
+            khetName={(code) => khetName(code, locale)}
+            formatBudget={formatBudget}
+          />
+          {unmatchedDistrictTors > 0 && (
+            <p className="mt-3 text-center text-xs text-ink-500">
+              {t.insights.mapUnmatched.replace("{count}", String(unmatchedDistrictTors))}
+            </p>
+          )}
+        </ChartPanel>
+
       </div>
     </div>
   );
