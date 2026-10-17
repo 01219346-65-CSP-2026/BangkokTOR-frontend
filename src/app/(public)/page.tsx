@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import { TorPreviewCard } from "@/components/tor/TorPreviewCard";
 import { ScanPreview } from "@/components/tor/ScanPreview";
@@ -14,6 +16,8 @@ import {
   LANDING_RECORD,
   PRICE_GAP_PERCENT,
 } from "@/data/landingRecord";
+import refineryNight from "@/assets/landing/refinery-night.jpg";
+import refineryDusk from "@/assets/landing/refinery-dusk.jpg";
 
 /**
  * `{token}` interpolation, the same shape the admin pages use inline. Kept
@@ -25,6 +29,9 @@ function fill(template: string, values: Record<string, string | number>) {
     template
   );
 }
+
+/** Declares the entrance order in the markup, as AuthShell and /tor do. */
+const delay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperties;
 
 /** How many records the hero rail shows. */
 const HERO_COUNT = 3;
@@ -67,28 +74,58 @@ export default function Home() {
     // <main id="main">, which the NavBar's skip link targets.
     <div className="flex w-full flex-col">
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className={`${SECTION} pt-16`}>
+      {/*
+        The photo is the infrastructure these tenders build and maintain. A
+        moss wash keeps the headline at AA contrast over its brightest lights,
+        and fades into the paper canvas so the record rail lands on the page
+        ground rather than on the photo's busiest edge.
+      */}
+      <section className={`relative isolate overflow-hidden ${SECTION} pt-20 sm:pt-28`}>
+        <Image
+          src={refineryNight}
+          alt=""
+          priority
+          placeholder="blur"
+          sizes="100vw"
+          className="settle absolute inset-0 -z-20 h-full w-full object-cover object-center"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-linear-to-b from-moss-700/90 via-moss-700/75 via-55% to-paper-50"
+        />
+
         <div className={`${SHELL} flex flex-col items-center text-center`}>
           {/* No hero logo: the shared NavBar already carries it directly above. */}
-          <h1 className="max-w-4xl text-4xl leading-tight font-semibold text-balance text-moss-700 sm:text-5xl lg:text-6xl">
+          <h1
+            className="rise max-w-4xl text-4xl leading-tight font-semibold text-balance text-white drop-shadow-sm sm:text-5xl lg:text-6xl"
+            style={delay(40)}
+          >
             {t.heroTitleLead}{" "}
-            <span className="text-sage-600">{t.heroTitleAccent}</span>
+            <span className="text-mint-400">{t.heroTitleAccent}</span>
           </h1>
 
-          <p className="mt-6 max-w-2xl text-base leading-7 text-ink-600 sm:text-lg">
+          <p
+            className="rise mt-6 max-w-2xl text-base leading-7 text-sage-100 sm:text-lg"
+            style={delay(110)}
+          >
             {t.heroSub}
           </p>
 
-          <Link
-            href="/tor"
-            className="mt-10 rounded-field bg-moss-700 px-8 py-4 text-white shadow-md transition duration-300 ease-soft hover:-translate-y-1 hover:bg-sage-600"
+          <div
+            className="rise mt-10 flex flex-col items-center"
+            style={delay(180)}
           >
-            {t.heroCta} →
-          </Link>
-          <p className="mt-5 text-sm text-ink-600">{t.heroFreeNote}</p>
+            <Link
+              href="/tor"
+              className="rounded-field bg-white px-8 py-4 font-medium text-moss-700 shadow-lg transition duration-300 ease-soft hover:-translate-y-1 hover:bg-sage-100 active:scale-[0.985]"
+            >
+              {t.heroCta} →
+            </Link>
+            <p className="mt-5 text-sm text-sage-100/90">{t.heroFreeNote}</p>
+          </div>
 
           {/*
-            The sample rail, sitting on the brand gradient.
+            The sample rail, as frosted glass over the photo's lower edge.
 
             The caption counts what the rail is actually showing — the live
             endpoint's own total — not the manifest's 50/134/1,224. Those
@@ -96,15 +133,18 @@ export default function Home() {
             printing them over three backend rows would caption the rail with
             numbers from a different dataset.
           */}
-          <div className="mt-16 w-full rounded-field bg-linear-to-br from-sage-400 to-moss-700 p-4 sm:p-8">
-            <p className="mb-4 text-sm text-sage-100">
+          <div
+            className="rise mt-16 w-full rounded-field border border-white/25 bg-white/15 p-4 shadow-[0_30px_60px_-30px_rgba(47,71,57,0.55)] backdrop-blur-md sm:p-6"
+            style={delay(260)}
+          >
+            <p className="mb-4 text-left text-sm font-medium text-moss-700">
               {total > 0
                 ? fill(t.heroIngestNote, { records: total })
                 : t.heroIngestLoading}
             </p>
 
             {torDisplay.length > 0 ? (
-              <ul className="flex flex-col gap-2.5 rounded-field bg-white p-3">
+              <ul className="flex flex-col gap-2.5 rounded-field bg-white p-3 text-left">
                 {torDisplay.map((tor) => (
                   <li key={tor.id}>
                     <TorPreviewCard tor={tor} />
@@ -362,6 +402,44 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Closing call to action ───────────────────────────── */}
+      <section className="relative isolate overflow-hidden px-6 py-24 sm:py-28">
+        <Image
+          src={refineryDusk}
+          alt=""
+          placeholder="blur"
+          sizes="100vw"
+          className="absolute inset-0 -z-20 h-full w-full object-cover object-[center_40%]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-linear-to-r from-moss-700/95 via-moss-700/80 to-moss-700/40"
+        />
+
+        <div className={`${SHELL} flex flex-col items-start gap-6 sm:flex-row sm:items-end sm:justify-between`}>
+          <div className="max-w-xl">
+            <h2 className="text-3xl font-semibold text-balance text-white sm:text-4xl">
+              {t.ctaBandTitle}
+            </h2>
+            <p className="mt-3 leading-7 text-sage-100">{t.ctaBandSub}</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/tor"
+              className="rounded-field bg-white px-6 py-3 font-medium text-moss-700 shadow-lg transition duration-300 ease-soft hover:-translate-y-0.5 hover:bg-sage-100 active:scale-[0.985]"
+            >
+              {t.heroCta} →
+            </Link>
+            <Link
+              href="/skills"
+              className="rounded-field border border-white/50 px-6 py-3 font-medium text-white transition duration-300 ease-soft hover:-translate-y-0.5 hover:bg-white/10 active:scale-[0.985]"
+            >
+              {t.ctaBandSkills}
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── Footer ───────────────────────────────────────────── */}
       <footer className="bg-moss-700 px-6 py-12 text-sage-100">
         <div className={SHELL}>
@@ -401,7 +479,7 @@ export default function Home() {
                 {t.footerSources}
               </p>
               <ul className="mt-3 space-y-2 text-sm">
-                {["egp2.bangkok.go.th", "gprocurement.go.th"].map((host) => (
+                {["egp2.bangkok.go.th", "www.gprocurement.go.thd"].map((host) => (
                   <li key={host}>
                     <a
                       href={`https://${host}`}

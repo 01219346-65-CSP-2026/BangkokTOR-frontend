@@ -71,6 +71,14 @@
   --color-data-1: #1b5e3a; /* forest green */
   --color-data-2: #3c9142; /* grass green */
   --color-data-3: #8bc34a; /* spring green */
+  /* A fourth series (dashboard/DistrictMap's work types), added 2026-10-16.
+     The greens alone can't carry four identities, so the fourth is a hue
+     away from them: indigo. Validated with the three greens above, all
+     pairs: CVD worst ΔE 16.3 (still the existing data-1↔data-2 pair, deutan),
+     tritan 7.1 — the best of the blues tried (#3b6fb6 5.5, #2f6db5 5.8,
+     #3f7fbf 3.6). data-1's chroma-floor FAIL and data-3's contrast WARN
+     are the existing ones described above. */
+  --color-data-4: #5a63c8; /* indigo */
 
   /* Shape — one radius, everywhere. Cards and controls share it so a chip
      inside a panel can never look mismatched against the panel's own corner.

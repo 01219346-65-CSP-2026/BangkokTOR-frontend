@@ -42,9 +42,13 @@ describe("feat/116 checklist", () => {
     expect(page).not.toContain("placeholderTitle");
   });
 
-  test("step 9: the match list still admits its scores are invented", () => {
-    // The graphs are real now; the matches are not. Don't lose the notice.
-    expect(source(PAGE)).toContain("mockNotice");
+  test("step 9: the match panel is real recommendations, not mock scores", () => {
+    // The mock list (hashed fit scores) was replaced by RecommendedTors. If
+    // mock data ever comes back, so must its notice.
+    const page = source(PAGE);
+    expect(page).toContain("RecommendedTors");
+    expect(page).not.toContain("withMatches");
+    expect(page).not.toContain("MOCK_TORS");
   });
 
   test("step 9: Thai and English have exactly the same dashboard keys", async () => {
