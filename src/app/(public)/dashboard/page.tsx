@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { TorCard } from "@/components/tor/TorCard";
+import { RecommendedTors } from "@/components/tor/RecommendedTors";
 import { Tabs } from "@/components/ui/Tabs";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
-import { MOCK_TORS } from "@/data/torListings";
-import { withMatches } from "@/lib/torMatching";
+import type { SkillId } from "@/i18n/Translations";
+import { loadProfile, saveProfile, type SkillProfile } from "@/lib/skillProfile";
 import { useEndpoint } from "@/api/useEndpoint";
 import type { TorInsightsResponse } from "@/api/tors";
 import { formatBahtCompact, insightsPath, monthLabel, type InsightScope } from "@/lib/insights";
@@ -18,33 +18,49 @@ import { MonthlyTrendChart } from "@/components/dashboard/MonthlyTrendChart";
 import { InsightsKpiRow } from "@/components/dashboard/InsightsKpiRow";
 
 /**
- * ⚠ The match list is scaffolding.
+ * The left panel is "Recommended for you": real open TORs scored against the
+ * reader's saved skills (src/components/tor/RecommendedTors.tsx). It replaced
+ * a mock match list whose scores were hashed from record ids.
  *
- * It is real scraped records wearing FABRICATED match data: the fit score is
- * an FNV-1a hash of the record id scored against a hardcoded fictional
- * profile, and the closing date is invented because the source portal
- * publishes none. See src/lib/torMatching.ts, which is marked for deletion
- * once real matching exists. The notice next to the list says so.
- *
- * The four graphs beside and below it are real: they read GET
- * /api/tors/insights (feat/116), backed by the listed TORs — see
- * src/lib/insights.ts and src/components/dashboard/.
+ * The four graphs beside and below it read GET /api/tors/insights (feat/116),
+ * backed by the listed TORs — see src/lib/insights.ts and
+ * src/components/dashboard/.
  */
 
-/**
- * Day-resolution clock. Flooring to midnight UTC keeps the server render and
- * hydration in agreement about "in N days" — the same reason the listings page
- * does it, see src/app/(public)/tor/page.tsx.
- */
-const TODAY_UTC = (() => {
-  const now = new Date();
-  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-})();
+/** Panel height holds about this many cards without scrolling the page. */
+const RECOMMEND_ON_DASHBOARD = 5;
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const { locale } = useLanguage();
-  const matches = useMemo(() => withMatches(MOCK_TORS, TODAY_UTC), []);
+
+  // `null` while loading; `[]` for a guest or a reader with no skills saved.
+  const [profile, setProfile] = useState<SkillProfile | null>(null);
+  const [skills, setSkills] = useState<SkillId[] | null>(null);
+  useEffect(() => {
+    loadProfile()
+      .then((loaded) => {
+        setProfile(loaded);
+        setSkills(loaded?.skills ?? []);
+      })
+      .catch(() => setSkills([]));
+  }, []);
+
+  // A suggested skill, added from the card. Shown at once; rolled back if the
+  // save fails, so the card never claims a skill the profile does not hold.
+  async function addSkill(skill: SkillId) {
+    if (!profile || profile.skills.includes(skill)) return;
+    const previous = profile;
+    const next = { ...profile, skills: [...profile.skills, skill] };
+    setProfile(next);
+    setSkills(next.skills);
+    try {
+      await saveProfile(next);
+    } catch {
+      setProfile(previous);
+      setSkills(previous.skills);
+    }
+  }
 
   const [scope, setScope] = useState<InsightScope>("all");
   const { data, error, isLoading } = useEndpoint<TorInsightsResponse>(insightsPath(scope));
@@ -129,31 +145,37 @@ export default function DashboardPage() {
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <section className="rounded-field border border-sage-100 bg-white p-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <h2 className="text-sm font-medium text-moss-700">
-                {t.matchesTitle}
-              </h2>
-              <Link
-                href="/skills"
-                className="rounded-field text-sm text-sage-600 transition duration-200 ease-soft hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
-              >
-                {t.editProfile} →
-              </Link>
-            </div>
-
-            {/* The scores below are invented. The page says so before the
-                reader reads them, not in a comment they will never see. */}
-            <p className="mt-3 max-w-prose rounded-field border border-clay-500/35 bg-clay-500/[0.06] px-4 py-3 text-xs leading-relaxed text-ink-600">
-              {t.mockNotice}
-            </p>
-
-            <ul className="mt-4 flex max-h-[25rem] flex-col gap-2.5 overflow-y-auto border-t border-sage-100 pt-4">
-              {matches.map((tor) => (
-                <li key={tor.id}>
-                  <TorCard tor={tor} />
-                </li>
-              ))}
-            </ul>
+            {skills === null ? (
+              <div aria-hidden="true" className="h-64 animate-pulse rounded-field bg-sage-100/40" />
+            ) : skills.length === 0 ? (
+              <div className="flex h-full flex-col items-start justify-center gap-3 py-8">
+                <h2 className="text-sm font-medium text-moss-700">{t.recommendTitle}</h2>
+                <p className="max-w-prose text-sm text-ink-500">{t.recommendNoSkills}</p>
+                <Link
+                  href="/skills"
+                  className="rounded-field bg-sage-600 px-4 py-2 text-sm font-medium text-white transition duration-200 ease-soft hover:bg-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                >
+                  {t.editProfile} →
+                </Link>
+              </div>
+            ) : (
+              <div className="max-h-[32rem] overflow-y-auto">
+                <RecommendedTors
+                  skills={skills}
+                  layout="list"
+                  count={RECOMMEND_ON_DASHBOARD}
+                  onAddSkill={profile ? (skill) => void addSkill(skill) : undefined}
+                  action={
+                    <Link
+                      href="/skills"
+                      className="rounded-field text-sm text-sage-600 transition duration-200 ease-soft hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                    >
+                      {t.editProfile} →
+                    </Link>
+                  }
+                />
+              </div>
+            )}
           </section>
 
           <ChartPanel

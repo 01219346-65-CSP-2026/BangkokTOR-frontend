@@ -9,6 +9,7 @@ import { TorFilters } from "@/components/tor/TorFilters";
 import { TorActiveFilters } from "@/components/tor/TorActiveFilters";
 import { TorSortSelect } from "@/components/tor/TorSortSelect";
 import { TorPagination } from "@/components/tor/TorPagination";
+import { RecommendedTors } from "@/components/tor/RecommendedTors";
 import { useEndpoint } from "@/api/useEndpoint";
 import {
   toTors,
@@ -355,6 +356,11 @@ export default function TorListingsPage() {
             </>
           )}
         </p>
+
+        {/* Open TORs that fit the reader's skills — only with a profile. */}
+        {hasProfile && (
+          <RecommendedTors skills={profileSkills} className="rise mt-5" />
+        )}
 
         <div className="mt-5 grid items-start gap-6 lg:grid-cols-[15rem_1fr]">
           {/*

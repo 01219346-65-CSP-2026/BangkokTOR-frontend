@@ -32,6 +32,8 @@ const en = {
     eyebrow: "Your workspace",
     heading: "Dashboard",
     matchesTitle: "Your latest matches",
+    recommendTitle: "Recommended for you",
+    recommendNoSkills: "Add the skills your team delivers and this panel will recommend open tenders you can win, with time left to bid.",
     editProfile: "Edit skill profile",
     // feat/116 — the insight graphs. Market numbers only; nothing here may
     // read as a judgement about an agency (FR-19).
@@ -830,6 +832,17 @@ const en = {
       contract: "Contract signed",
       cancelled: "Cancelled",
     },
+    recommended: {
+      heading: "Recommended for you",
+      sub: "Open tenders that fit your skills, with at least {days} days left to bid.",
+      empty: "No open tender fits your skills with enough time left to bid right now.",
+      suggestLabel: "Add a skill to unlock more matches:",
+      suggestGain: "+{count}",
+      suggestAdd: "Add {skill} to your skills",
+      tooSoon: "{count} matching tenders close within {days} days",
+      browseAll: "Browse all {count} open tenders",
+      editSkills: "Edit skills",
+    },
     sortOptions: {
       mostTimeLeft: "Most time to bid",
       closingSoon: "Closing soonest",
@@ -1133,6 +1146,8 @@ const th: typeof en = {
     eyebrow: "พื้นที่ทำงานของคุณ",
     heading: "แดชบอร์ด",
     matchesTitle: "รายการที่ตรงกับคุณล่าสุด",
+    recommendTitle: "แนะนำสำหรับคุณ",
+    recommendNoSkills: "เพิ่มทักษะที่ทีมของคุณทำได้ แล้วระบบจะแนะนำโครงการที่เปิดรับข้อเสนอและมีโอกาสชนะ พร้อมเวลาเหลือพอสำหรับยื่น",
     editProfile: "แก้ไขโปรไฟล์ทักษะ",
     insights: {
       scopeBangkok: "กรุงเทพฯ",
@@ -1886,6 +1901,17 @@ const th: typeof en = {
       awarded: "ประกาศผู้ชนะการเสนอราคา",
       contract: "จัดทำสัญญา/บริหารสัญญา",
       cancelled: "ยกเลิกโครงการ",
+    },
+    recommended: {
+      heading: "แนะนำสำหรับคุณ",
+      sub: "โครงการที่เปิดรับข้อเสนอและตรงกับทักษะของคุณ เหลือเวลายื่นอย่างน้อย {days} วัน",
+      empty: "ตอนนี้ยังไม่มีโครงการที่เปิดรับและตรงกับทักษะของคุณโดยมีเวลาเหลือพอสำหรับยื่น",
+      suggestLabel: "เพิ่มทักษะเพื่อพบโครงการที่ตรงกันมากขึ้น:",
+      suggestGain: "+{count}",
+      suggestAdd: "เพิ่ม {skill} ในทักษะของคุณ",
+      tooSoon: "มี {count} โครงการที่ตรงกันแต่จะปิดรับภายใน {days} วัน",
+      browseAll: "ดูโครงการที่เปิดรับทั้งหมด {count} รายการ",
+      editSkills: "แก้ไขทักษะ",
     },
     sortOptions: {
       mostTimeLeft: "เหลือเวลายื่นมากที่สุด",

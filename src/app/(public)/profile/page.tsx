@@ -12,6 +12,7 @@ import { toTor, type ApiTor } from "@/api/tors";
 import { KpiChip, KpiIcons } from "@/components/profile/KpiChip";
 import { SavedTorCard } from "@/components/profile/SavedTorCard";
 import { SkillManager } from "@/components/profile/SkillManager";
+import { RecommendedTors } from "@/components/tor/RecommendedTors";
 import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
 import { DEFAULT_PROFILE, loadProfile, saveProfile, type SkillProfile } from "@/lib/skillProfile";
 import type { CardTor } from "@/types/tor";
@@ -186,6 +187,9 @@ export default function ProfilePage() {
     [rows, budgetBand, matchBand, sort],
   );
 
+  // Recommendations skip what is already on the watchlist.
+  const savedIds = useMemo(() => new Set((saved ?? []).map((tor) => tor.id)), [saved]);
+
   const scored = rows.filter((row) => row.fitScore !== null);
   const avgMatch = scored.length
     ? Math.round(scored.reduce((sum, row) => sum + (row.fitScore ?? 0), 0) / scored.length)
@@ -258,6 +262,15 @@ export default function ProfilePage() {
             </div>
           </div>
         </header>
+
+        <RecommendedTors
+          skills={profileState === "ready" && saved ? profile.skills : null}
+          exclude={savedIds}
+          onAddSkill={(skill) => {
+            if (!profile.skills.includes(skill)) toggleSkill(skill);
+          }}
+          className="mt-6"
+        />
 
         <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           {/* ── saved TORs ─────────────────────────────────────────────── */}
