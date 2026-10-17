@@ -104,10 +104,11 @@ export default function TorListingsPage() {
   }, []);
   const hasProfile = (profileSkills?.length ?? 0) > 0;
 
-  // Deadline first, for everyone: what can still be bid on, soonest first.
-  // Best match stays one click away for a reader with skills.
+  // Deadline first, for everyone: what can still be bid on, with the most
+  // time to prepare a bid first — a three-day deadline is rarely one a team
+  // can meet. Best match stays one click away for a reader with skills.
   const [chosenSort, setSort] = useState<SortId | null>(null);
-  const sort: SortId = chosenSort ?? "closingSoon";
+  const sort: SortId = chosenSort ?? "mostTimeLeft";
 
   // Open / upcoming / closed. Starts on what a team can still act on; closed
   // (awarded) TORs are history, kept one click away.

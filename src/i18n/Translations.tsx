@@ -831,6 +831,7 @@ const en = {
       cancelled: "Cancelled",
     },
     sortOptions: {
+      mostTimeLeft: "Most time to bid",
       closingSoon: "Closing soonest",
       bestMatch: "Best match",
       newest: "Newest first",
@@ -1887,6 +1888,7 @@ const th: typeof en = {
       cancelled: "ยกเลิกโครงการ",
     },
     sortOptions: {
+      mostTimeLeft: "เหลือเวลายื่นมากที่สุด",
       closingSoon: "ใกล้ปิดรับก่อน",
       bestMatch: "ตรงกันมากที่สุด",
       newest: "ใหม่ที่สุดก่อน",
