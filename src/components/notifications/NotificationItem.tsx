@@ -9,8 +9,7 @@ import { useTranslations } from "@/i18n/LanguageProvider";
 export type Notification = {
   id: string;
   title: string;
-  company: string;
-  jobTitle: string;
+  detail: string | null;
   timestamp: string;
   isUnread: boolean;
   isSaved: boolean;
@@ -28,7 +27,7 @@ export function NotificationItem({
   onToggleSave,
 }: NotificationItemProps) {
   const t = useTranslations("notifications");
-  const { title, company, jobTitle, timestamp, isUnread, isSaved } = notification;
+  const { title, detail, timestamp, isUnread, isSaved } = notification;
 
 function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Enter" || event.key === " ") {
@@ -68,10 +67,11 @@ function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
             {timestamp}
           </span>
         </span>
-        <span className="mt-1 block text-sm text-ink-600">{company}</span>
-        <span className="mt-0.5 block text-sm font-medium text-sage-600">
-          {jobTitle}
-        </span>
+        {detail && (
+          <span className="mt-1 block text-sm font-medium text-sage-600">
+            {detail}
+          </span>
+        )}
       </span>
 
       <span className="flex flex-none items-center gap-1 self-center">
