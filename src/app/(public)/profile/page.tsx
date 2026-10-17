@@ -34,6 +34,16 @@ type Row = CardTor & { bookmarkedAt: string };
 type SortId = "savedNewest" | "savedOldest" | "match" | "budgetHigh" | "budgetLow" | "announced";
 type BudgetBand = "all" | "under1m" | "1to10m" | "over10m";
 type MatchBand = "all" | "strong" | "moderate" | "weak";
+/**
+ * The primary filter. Biddable is open or upcoming — a bid can still go in, or
+ * soon will; overdue is closed — the deadline passed or the contract is
+ * awarded. Budget and match are secondary and sit behind "More filters".
+ */
+type BidView = "biddable" | "overdue" | "all";
+const BID_VIEWS: BidView[] = ["biddable", "overdue", "all"];
+
+const inBidView = (row: Row, view: BidView) =>
+  view === "all" || (view === "overdue") === (row.biddingStatus === "closed");
 
 const toSaved = (response: BookmarkListResponse): SavedTor[] =>
   response.items.map((item) => ({ ...toTor(item), bookmarkedAt: item.bookmarkedAt }));
@@ -163,6 +173,8 @@ export default function ProfilePage() {
   const [sort, setSort] = useState<SortId>("savedNewest");
   const [budgetBand, setBudgetBand] = useState<BudgetBand>("all");
   const [matchBand, setMatchBand] = useState<MatchBand>("all");
+  const [bidView, setBidView] = useState<BidView>("biddable");
+  const [moreFilters, setMoreFilters] = useState(false);
 
   // Every saved row, scored against the current skills.
   const rows = useMemo<Row[]>(
@@ -181,11 +193,18 @@ export default function ProfilePage() {
   const visible = useMemo(
     () =>
       rows
+        .filter((row) => inBidView(row, bidView))
         .filter((row) => inBudget(row.budget, budgetBand))
         .filter((row) => matchBand === "all" || (row.fitScore !== null && fitBand(row.fitScore) === matchBand))
         .sort(SORTERS[sort]),
-    [rows, budgetBand, matchBand, sort],
+    [rows, bidView, budgetBand, matchBand, sort],
   );
+
+  const bidCounts: Record<BidView, number> = {
+    biddable: rows.filter((row) => inBidView(row, "biddable")).length,
+    overdue: rows.filter((row) => inBidView(row, "overdue")).length,
+    all: rows.length,
+  };
 
   // Recommendations skip what is already on the watchlist.
   const savedIds = useMemo(() => new Set((saved ?? []).map((tor) => tor.id)), [saved]);
@@ -194,7 +213,8 @@ export default function ProfilePage() {
   const avgMatch = scored.length
     ? Math.round(scored.reduce((sum, row) => sum + (row.fitScore ?? 0), 0) / scored.length)
     : null;
-  const filtersActive = budgetBand !== "all" || matchBand !== "all";
+  const secondaryActive = budgetBand !== "all" || matchBand !== "all";
+  const filtersActive = bidView !== "all" || secondaryActive;
 
   return (
     <div className="flex-1 bg-paper-50">
@@ -288,22 +308,69 @@ export default function ProfilePage() {
               </div>
               <p className="mt-1 max-w-prose text-sm text-ink-500">{t.savedIntro}</p>
 
-              {/* Controls — only once there is something to sort. */}
-              {rows.length > 1 && (
-                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <ControlSelect
-                    label={t.sortLabel}
-                    value={sort}
-                    onChange={(v) => setSort(v as SortId)}
-                    options={[
-                      ["savedNewest", t.sortSavedNewest],
-                      ["savedOldest", t.sortSavedOldest],
-                      ["match", t.sortMatch],
-                      ["budgetHigh", t.sortBudgetHigh],
-                      ["budgetLow", t.sortBudgetLow],
-                      ["announced", t.sortAnnounced],
-                    ]}
-                  />
+              {rows.length > 0 && (
+                <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+                  {/* Biddable / overdue / all — what decides whether a saved TOR is still worth reading. */}
+                  <div
+                    role="group"
+                    aria-label={t.bidViewLabel}
+                    className="inline-flex items-center gap-1 rounded-field border border-sage-100 bg-white p-1"
+                  >
+                    {BID_VIEWS.map((id) => {
+                      const on = bidView === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setBidView(id)}
+                          aria-pressed={on}
+                          title={id === "biddable" ? t.bidViewBiddableHint : undefined}
+                          className={`rounded-field px-3.5 py-1.5 text-sm font-medium transition duration-200 ease-soft focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none ${
+                            on ? "bg-sage-600 text-white" : "text-ink-600 hover:bg-sage-100 hover:text-moss-700"
+                          }`}
+                        >
+                          {t.bidViews[id]}
+                          <span className={`ml-1.5 font-mono text-xs tabular-nums ${on ? "text-white/80" : "text-ink-500"}`}>
+                            {bidCounts[id]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    {rows.length > 1 && (
+                      <ControlSelect
+                        label={t.sortLabel}
+                        value={sort}
+                        onChange={(v) => setSort(v as SortId)}
+                        options={[
+                          ["savedNewest", t.sortSavedNewest],
+                          ["savedOldest", t.sortSavedOldest],
+                          ["match", t.sortMatch],
+                          ["budgetHigh", t.sortBudgetHigh],
+                          ["budgetLow", t.sortBudgetLow],
+                          ["announced", t.sortAnnounced],
+                        ]}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setMoreFilters((v) => !v)}
+                      aria-expanded={moreFilters}
+                      aria-controls="profile-more-filters"
+                      className="rounded-field border border-sage-400/70 px-3 py-2 text-sm text-ink-600 transition duration-200 ease-soft hover:border-sage-600 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600/40 focus-visible:outline-none"
+                    >
+                      {t.moreFilters}
+                      {secondaryActive && <span aria-hidden="true" className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-sage-600 align-middle" />}
+                      <span aria-hidden="true" className="ml-1 text-ink-500">{moreFilters ? "▴" : "▾"}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {rows.length > 0 && moreFilters && (
+                <div id="profile-more-filters" className="mt-3 grid grid-cols-1 gap-2 border-t border-sage-100 pt-3 sm:grid-cols-2">
                   <ControlSelect
                     label={t.filterBudget}
                     value={budgetBand}
@@ -361,6 +428,7 @@ export default function ProfilePage() {
                     <button
                       type="button"
                       onClick={() => {
+                        setBidView("all");
                         setBudgetBand("all");
                         setMatchBand("all");
                       }}
