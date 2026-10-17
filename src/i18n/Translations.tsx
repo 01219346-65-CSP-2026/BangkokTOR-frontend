@@ -234,6 +234,11 @@ const en = {
     step3Body:
       "Where a budget clears its reference price, or a qualification looks written for one predetermined vendor, we say so plainly with the figure or clause quoted — and leave the judgement to you.",
 
+    // Closing band
+    ctaBandTitle: "Your next contract is already published.",
+    ctaBandSub: "Add your team's skills once and every open tender is ranked by how well you fit — with the deadline up front.",
+    ctaBandSkills: "Set up your skills",
+
     // Footer
     footerTagline: "Public procurement records, made findable.",
     footerProduct: "Product",
@@ -1390,6 +1395,11 @@ const th: typeof en = {
     step3Title: "ให้ข้อสังเกต ไม่ใช่กล่าวหา",
     step3Body:
       "เมื่องบประมาณสูงกว่าราคากลาง หรือคุณสมบัติผู้เสนอราคาดูเหมือนเขียนเพื่อผู้ขายรายใดรายหนึ่ง เราระบุไว้ตรงไปตรงมาพร้อมอ้างตัวเลขหรือข้อความนั้น แล้วปล่อยให้คุณเป็นผู้ตัดสิน",
+
+    // Closing band
+    ctaBandTitle: "สัญญางานถัดไปของคุณประกาศไว้แล้ว",
+    ctaBandSub: "เพิ่มทักษะของทีมครั้งเดียว ทุกโครงการที่เปิดรับจะถูกจัดอันดับตามความตรงกัน พร้อมวันปิดรับที่เห็นชัดเจน",
+    ctaBandSkills: "ตั้งค่าทักษะของคุณ",
 
     // Footer
     footerTagline: "ข้อมูลจัดซื้อจัดจ้างภาครัฐ ที่ค้นหาเจอ",
