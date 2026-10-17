@@ -18,6 +18,13 @@ import { MonthlyTrendChart } from "@/components/dashboard/MonthlyTrendChart";
 import { InsightsKpiRow } from "@/components/dashboard/InsightsKpiRow";
 import { DistrictMap } from "@/components/dashboard/DistrictMap";
 import { khetName } from "@/lib/bangkokDistricts";
+import type { BudgetInsightsResponse } from "@/api/budget";
+import { MIN_TIMING_MATCHES, budgetPath, fiscalMonthIndex } from "@/lib/budget";
+import { Badge } from "@/components/ui/Badge";
+import { BudgetPipeline } from "@/components/dashboard/BudgetPipeline";
+import { UpcomingBudgetList } from "@/components/dashboard/UpcomingBudgetList";
+import { AgencyBudgetProgress } from "@/components/dashboard/AgencyBudgetProgress";
+import { BudgetTimingChart } from "@/components/dashboard/BudgetTimingChart";
 
 /**
  * The left panel is "Recommended for you": real open TORs scored against the
@@ -97,6 +104,38 @@ export default function DashboardPage() {
     bangkokShare: t.insights.kpiBangkokShare,
     biddableTors: t.insights.kpiBiddableTors,
     openNow: t.insights.kpiOpenNow,
+  };
+
+  const budget = useEndpoint<BudgetInsightsResponse>(budgetPath());
+  const budgetData = budget.data?.imported ? budget.data : null;
+  const fill = (template: string, values: Record<string, string | number>) =>
+    Object.entries(values).reduce((s, [k, v]) => s.replace(`{${k}}`, String(v)), template);
+  const budgetLabels = {
+    pipeline: {
+      approved: t.insights.budgetApproved,
+      tendered: t.insights.budgetTendered,
+      toCome: t.insights.budgetToCome,
+      projects: (n: number) => fill(t.insights.budgetProjects, { count: n }),
+    },
+    upcoming: {
+      methods: { eBidding: t.insights.budgetMethodEBidding, specific: t.insights.budgetMethodSpecific },
+      projectTotal: (amount: string) => fill(t.insights.budgetProjectTotal, { amount }),
+      more: (n: number) => fill(t.insights.budgetMore, { count: n }),
+      workTypes: tTor.workTypes,
+    },
+    agencies: {
+      ofBudget: (tendered: string, total: string) => fill(t.insights.budgetOfBudget, { tendered, budget: total }),
+      agency: t.insights.budgetAgency,
+      budget: t.insights.mapBudget,
+      tendered: t.insights.budgetTendered,
+    },
+    timing: {
+      month: t.insights.month,
+      share: t.insights.budgetShare,
+      lastYear: (year: number) => fill(t.insights.budgetTimingLastYear, { year }),
+      thisYear: (share: number) => fill(t.insights.budgetTimingThisYear, { share }),
+      basis: (n: number) => fill(t.insights.budgetTimingBasis, { count: n }),
+    },
   };
 
   const districts = data?.byDistrict ?? [];
@@ -251,6 +290,7 @@ export default function DashboardPage() {
             )}
           </ChartPanel>
         </div>
+
         {/* Graph 5 is always Bangkok — the khet map — whichever scope is on. */}
         <ChartPanel
           className="mt-4"
@@ -274,6 +314,132 @@ export default function DashboardPage() {
           )}
         </ChartPanel>
 
+        {/* Bangkok's budget for the fiscal year, against the TORs that spend it. */}
+        <section className="mt-10">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-xl tracking-tight text-moss-700">
+              {fill(t.insights.budgetHeading, { year: budget.data?.year ?? data?.fiscalYear ?? "" })}
+            </h2>
+            {budgetData && (
+              <Badge tone={budgetData.status === "draft" ? "caution" : "accent"} withDot>
+                {budgetData.status === "draft" ? t.insights.budgetDraft : t.insights.budgetEnacted}
+              </Badge>
+            )}
+          </div>
+          <p className="mt-1 max-w-prose text-sm text-ink-500">{t.insights.budgetIntro}</p>
+
+          {budget.data && !budget.data.imported ? (
+            <p className="mt-4 rounded-field border border-dashed border-sage-400/60 bg-mist-50 px-4 py-6 text-center text-sm text-ink-500">
+              {fill(t.insights.budgetNotImported, { year: budget.data.year })}
+            </p>
+          ) : (
+            <>
+              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                <ChartPanel
+                  title={t.insights.budgetPipelineTitle}
+                  caption={t.insights.budgetPipelineCaption}
+                  isLoading={budget.isLoading}
+                  error={budget.error}
+                  isEmpty={budgetData?.totals.lines === 0}
+                  emptyLabel={t.insights.empty}
+                >
+                  {budgetData && (
+                    <BudgetPipeline totals={budgetData.totals} labels={budgetLabels.pipeline} formatBudget={formatBudget} />
+                  )}
+                </ChartPanel>
+
+                <ChartPanel
+                  title={t.insights.budgetUpcomingTitle}
+                  caption={t.insights.budgetUpcomingCaption}
+                  isLoading={budget.isLoading}
+                  error={budget.error}
+                  isEmpty={budgetData?.upcoming.length === 0}
+                  emptyLabel={t.insights.budgetUpcomingEmpty}
+                >
+                  {budgetData && (
+                    <div className="max-h-[26rem] overflow-y-auto pr-1">
+                      <UpcomingBudgetList
+                        items={budgetData.upcoming}
+                        total={budgetData.upcomingTotal}
+                        labels={budgetLabels.upcoming}
+                        formatBudget={formatBudget}
+                      />
+                    </div>
+                  )}
+                </ChartPanel>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <ChartPanel
+                  title={t.insights.budgetAgenciesTitle}
+                  caption={t.insights.budgetAgenciesCaption}
+                  isLoading={budget.isLoading}
+                  error={budget.error}
+                  isEmpty={budgetData?.agencies.length === 0}
+                  emptyLabel={t.insights.empty}
+                >
+                  {budgetData && (
+                    <AgencyBudgetProgress
+                      agencies={budgetData.agencies}
+                      labels={budgetLabels.agencies}
+                      formatBudget={formatBudget}
+                    />
+                  )}
+                </ChartPanel>
+
+                <ChartPanel
+                  title={t.insights.budgetTimingTitle}
+                  caption={t.insights.budgetTimingCaption}
+                  isLoading={budget.isLoading}
+                  error={budget.error}
+                  isEmpty={!!budgetData && (budgetData.timing?.matchedLines ?? 0) < MIN_TIMING_MATCHES}
+                  emptyLabel={
+                    budgetData?.timing
+                      ? fill(t.insights.budgetTimingThin, {
+                          count: budgetData.timing.matchedLines,
+                          min: MIN_TIMING_MATCHES,
+                        })
+                      : t.insights.budgetTimingEmpty
+                  }
+                >
+                  {budgetData?.timing && (
+                    <BudgetTimingChart
+                      timing={budgetData.timing}
+                      currentMonthIndex={fiscalMonthIndex()}
+                      currentShare={budgetData.totals.tenderedShare}
+                      monthLabel={monthLabelFn}
+                      labels={budgetLabels.timing}
+                    />
+                  )}
+                </ChartPanel>
+              </div>
+
+              {budgetData && (
+                <div className="mt-3 space-y-1 text-xs text-ink-500">
+                  {budgetData.status === "draft" && <p>{t.insights.budgetDraftNote}</p>}
+                  {budgetData.coverage.skipped.length > 0 && (
+                    <p>
+                      {fill(t.insights.budgetSkipped, {
+                        count: budgetData.coverage.skipped.length,
+                        names: budgetData.coverage.skipped.join(", "),
+                      })}
+                    </p>
+                  )}
+                  <p>
+                    <a
+                      href={budgetData.source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-field text-sage-600 hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                    >
+                      {t.insights.budgetSource} ↗
+                    </a>
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       </div>
     </div>
   );
