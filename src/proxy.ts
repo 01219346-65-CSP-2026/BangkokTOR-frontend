@@ -15,8 +15,12 @@ export default auth((req) => {
     return NextResponse.redirect(signInUrl);
   }
 
-  // TODO: once the backend can report a role, gate /admin to staff accounts
-  // here too — right now any signed-in Google account can reach it.
+  // Staff only. A signed-in non-admin is sent home rather than to /login —
+  // they're already signed in, asking them to log in again would be a loop.
+  const isAdminRoute = req.nextUrl.pathname.startsWith("/admin");
+  if (isAdminRoute && req.auth?.user?.role !== "admin") {
+    return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+  }
 });
 
 export const config = {
