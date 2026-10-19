@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "@/i18n/LanguageProvider";
+import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
+import { formatRelativeTime } from "@/i18n/format";
 import { useNotifications } from "@/components/notifications/NotificationsProvider";
 
 /**
@@ -22,11 +23,12 @@ const PREVIEW_COUNT = 5;
 export function NotificationBell() {
   const t = useTranslations("notifications");
   const navT = useTranslations("nav");
+  const { locale } = useLanguage();
   const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const { notifications, unreadCount, markRead, markAllRead } =
+  const { notifications, unreadCount, markRead, markAllRead, refresh } =
     useNotifications();
 
   /*
@@ -74,7 +76,12 @@ export function NotificationBell() {
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpenedAt(isOpen ? null : pathname)}
+        onClick={() => {
+          const next = isOpen ? null : pathname;
+          setOpenedAt(next);
+          // Fetch-on-open rather than polling — see useEndpoint.ts.
+          if (next) refresh();
+        }}
         aria-expanded={isOpen}
         aria-haspopup="menu"
         // The badge is decorative, so the count rides on the label — otherwise
@@ -133,7 +140,7 @@ export function NotificationBell() {
                     page, which crowds a 22rem popover.
                   */}
                   <Link
-                    href="/notifications"
+                    href={notification.torId ? `/tor/${notification.torId}` : "/notifications"}
                     role="menuitem"
                     onClick={() => markRead(notification.id)}
                     className="flex gap-3 px-4 py-3 transition duration-200 ease-soft hover:bg-mist-50 focus-visible:bg-mist-50 focus-visible:outline-none"
@@ -145,15 +152,16 @@ export function NotificationBell() {
                       }`}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-moss-700">
-                        {t.newJobMatchTitle}
+                      <span className="block truncate text-sm font-medium text-moss-700">
+                        {notification.title}
                       </span>
-                      <span className="mt-0.5 block truncate text-xs text-ink-600">
-                        {notification.company} ·{" "}
-                        {t.jobTitles[notification.jobTitleId]}
-                      </span>
+                      {notification.detail && (
+                        <span className="mt-0.5 block truncate text-xs text-ink-600">
+                          {notification.detail}
+                        </span>
+                      )}
                       <span className="mt-0.5 block text-[0.6875rem] text-ink-500">
-                        {t.timeAgo[notification.timeAgoId]}
+                        {formatRelativeTime(notification.timestampMs, locale)}
                       </span>
                     </span>
                   </Link>
