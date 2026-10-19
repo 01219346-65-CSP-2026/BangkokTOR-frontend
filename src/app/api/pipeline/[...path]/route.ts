@@ -10,10 +10,9 @@ import { adminFetch, ApiError, authedFetch } from "@/api/client";
 // auth at all, so without this, anything that can reach :8003 can read worker
 // hostnames, pids and failure reasons.
 //
-// NOTE: this only checks that SOMEONE is signed in. There is no admin role in
-// this app yet (see the TODO in src/proxy.ts), so any signed-in Google account
-// passes. That is the same exposure /admin already has, not a new one — but it
-// is the gap to close before this ships anywhere public.
+// Staff only: checks the role the backend reported at sign-in, same as
+// src/proxy.ts's /admin gate. A signed-in non-admin now gets 403 here, not a
+// pass — before this, any signed-in Google account reached the backend.
 
 const ALLOWED = new Set(["status", "queue", "runs"]);
 // (POST controls have their own allowlist below.)
@@ -25,6 +24,9 @@ export async function GET(
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+  if (session.user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { path } = await params;
@@ -58,8 +60,8 @@ export async function GET(
   }
 }
 
-// The three controls. Same session check as GET; the backend additionally
-// requires ADMIN_TOKEN, which adminFetch attaches server-side.
+// The three controls. Same session + role check as GET; the backend
+// additionally requires ADMIN_TOKEN, which adminFetch attaches server-side.
 //
 // Matched by shape rather than a Set because the retry path carries an id. The
 // id is an ObjectId, so the pattern also stops anything else riding along in it.
@@ -72,6 +74,9 @@ export async function POST(
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+  if (session.user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { path } = await params;
