@@ -9,11 +9,13 @@ import type { FitBandId } from "@/lib/torFit";
 
 export type PublishedWindowId = "last30Days" | "last90Days" | "thisYear";
 /**
- * `closingSoon` is the default: open TORs by deadline, soonest first, then
- * upcoming, then closed (backend tor.bidding.ts). `bestMatch` needs the
+ * `mostTimeLeft` is the default: open TORs with the furthest deadline first —
+ * a team needs time to prepare a bid — then upcoming, then closed.
+ * `closingSoon` is the same order with the nearest deadline first (backend
+ * tor.bidding.ts). `bestMatch` needs the
  * reader's profile skills; the page only offers it when there are some.
  */
-export type SortId = "closingSoon" | "bestMatch" | "newest" | "oldest" | "budgetHigh" | "budgetLow";
+export type SortId = "mostTimeLeft" | "closingSoon" | "bestMatch" | "newest" | "oldest" | "budgetHigh" | "budgetLow";
 
 /** What a team can still act on. The toggle's starting state. */
 export const DEFAULT_BIDDING: BiddingStatusId[] = ["open", "upcoming"];
@@ -95,6 +97,7 @@ export function budgetToSlider(budget: number, ceiling: number): number {
 
 /** Every sort is the backend's own — see TOR_SORTS in tor.model.ts there. */
 const SORT_TO_API: Record<SortId, string> = {
+  mostTimeLeft: "mostTimeLeft",
   closingSoon: "closingSoon",
   bestMatch: "bestMatch",
   newest: "newest",
@@ -151,7 +154,7 @@ export function buildTorQuery(
     if (filters.fitBands.length > 0) params.set("fit", filters.fitBands.join(","));
     params.set("sort", SORT_TO_API[sort]);
   } else {
-    params.set("sort", SORT_TO_API[sort === "bestMatch" ? "closingSoon" : sort]);
+    params.set("sort", SORT_TO_API[sort === "bestMatch" ? "mostTimeLeft" : sort]);
   }
 
   params.set("page", String(page));

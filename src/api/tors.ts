@@ -165,6 +165,23 @@ export type TorInsightsResponse = {
   topAgencies: Array<{ agency: string; tors: number; budget: number }>;
   /** Graph 4, twelve months oldest first, "YYYY-MM". */
   byMonth: Array<{ month: string; tors: number; biddable: number }>;
+  /** Graph 5, the Bangkok map: one entry per khet that has any TOR, code order.
+   *  Always Bangkok, whatever the scope. Optional until every backend serves it. */
+  byDistrict?: DistrictSummary[];
+  /** Bangkok TORs with no usable เขต — not on the map. */
+  unmatchedDistrictTors?: number;
+};
+
+/** One Bangkok khet on the map. Where the PROJECT is, not the winner's office. */
+export type DistrictSummary = {
+  /** BMA district code "01"–"50" — the key into src/data/bangkokKhet.json. */
+  code: string;
+  tors: number;
+  budget: number;
+  dominantWorkType: TorWorkTypeId;
+  /** Most TORs first. A TOR can carry several types, so shares can pass 100. */
+  workTypes: Array<{ id: TorWorkTypeId; tors: number; budget: number; share: number }>;
+  topWinners: Array<{ name: string; wins: number; budget: number }>;
 };
 
 /** A `Tor` plus the fields the backend adds that the shared type has no slot for. */

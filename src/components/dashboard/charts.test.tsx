@@ -8,6 +8,8 @@ import { BudgetBandsChart } from "./BudgetBandsChart";
 import { TopAgenciesChart } from "./TopAgenciesChart";
 import { MonthlyTrendChart } from "./MonthlyTrendChart";
 import { InsightsKpiRow } from "./InsightsKpiRow";
+import { DistrictMap, DistrictTooltip, MIN_DISTRICT_TORS, mapGroup, type DistrictMapLabels } from "./DistrictMap";
+import type { DistrictSummary } from "@/api/tors";
 
 // SPEC for feat/116 (frontend) — the UI of each graph.
 // Run with:   bun test src/components/dashboard
@@ -277,5 +279,110 @@ describe("step 8: InsightsKpiRow — the headline numbers", () => {
     expect(out).not.toContain("From Bangkok");
     expect(out).toContain("Biddable TORs");
     expect(out).toContain("1,128");
+  });
+});
+
+describe("graph 5: DistrictMap — the Bangkok khet map", () => {
+  const LABELS: DistrictMapLabels = {
+    district: "District",
+    tors: "TORs",
+    budget: "Budget",
+    dominant: "Most common work",
+    topWinners: "Most contracts won",
+    wins: (n) => `${n} won`,
+    torsCount: (n) => `${n} TORs`,
+    fewTors: "Fewer than 5 TORs",
+    noTors: "No TORs",
+    otherKinds: "Other kinds",
+    workTypes: {
+      development: "Development",
+      aiData: "AI & data",
+      cloudInfra: "Cloud",
+      maintenance: "Maintenance",
+      consulting: "Consulting",
+      learning: "Learning",
+      other: "Other",
+    },
+  };
+  const district = (over: Partial<DistrictSummary>): DistrictSummary => ({
+    code: "41",
+    tors: 456,
+    budget: 1_200_000_000,
+    dominantWorkType: "development",
+    workTypes: [
+      { id: "development", tors: 159, budget: 600_000_000, share: 34.9 },
+      { id: "aiData", tors: 118, budget: 300_000_000, share: 25.9 },
+    ],
+    topWinners: [{ name: "บริษัท ดาต้าเซ็ต จำกัด", wins: 6, budget: 50_000_000 }],
+    ...over,
+  });
+  const DISTRICTS = [
+    district({}),
+    district({ code: "30", dominantWorkType: "maintenance" }),
+    district({ code: "50", tors: MIN_DISTRICT_TORS - 1, dominantWorkType: "cloudInfra" }),
+  ];
+  const render = (districts = DISTRICTS) =>
+    html(
+      <DistrictMap
+        districts={districts}
+        labels={LABELS}
+        khetName={(code) => `khet-${code}`}
+        formatBudget={(n) => `฿${n}`}
+      />,
+    );
+
+  test("draws all 50 districts, keyboard-reachable", () => {
+    const out = render();
+    expect(count(out, "data-district=")).toBe(50);
+    expect(count(out, 'tabindex="0"')).toBe(50);
+  });
+
+  test("fill is the dominant type's token; few TORs and none are neutral", () => {
+    const out = render();
+    expect(out).toMatch(/data-district="41"[^>]*fill="var\(--color-data-1\)"/);
+    expect(out).toMatch(/data-district="30"[^>]*fill="var\(--color-data-2\)"/);
+    expect(out).toMatch(/data-district="50"[^>]*fill="var\(--color-sage-100\)"/);
+    expect(out).toMatch(/data-district="01"[^>]*fill="var\(--color-paper-100\)"/);
+  });
+
+  test("legend shows only the groups on the map, plus few/none", () => {
+    const legend = render().match(/<ul aria-hidden="true".*?<\/ul>/)![0];
+    expect(legend).toContain("Development");
+    expect(legend).toContain("Maintenance");
+    expect(legend).not.toContain("Cloud"); // only on a district below the threshold
+    expect(legend).toContain("Fewer than 5 TORs");
+    expect(legend).toContain("No TORs");
+  });
+
+  test("screen readers get every district with data in a table", () => {
+    const out = render();
+    expect(out).toContain('<table class="sr-only">');
+    expect(out).toContain("<th scope=\"row\">khet-41</th>");
+    expect(out).toContain("บริษัท ดาต้าเซ็ต จำกัด (6 won)");
+  });
+
+  test("the minor work types fold into one map group", () => {
+    expect(mapGroup("consulting")).toBe("otherKinds");
+    expect(mapGroup("other")).toBe("otherKinds");
+    expect(mapGroup("aiData")).toBe("aiData");
+  });
+
+  test("tooltip: name, count, budget, shares and winners", () => {
+    const out = html(
+      <DistrictTooltip name="Lak Si" district={district({})} labels={LABELS} formatBudget={(n) => `฿${n}`} />,
+    );
+    expect(out).toContain("Lak Si");
+    expect(out).toContain("456 TORs");
+    expect(out).toContain("฿1200000000");
+    expect(out).toContain("AI &amp; data");
+    expect(out).toContain("26%");
+    expect(out).toContain("บริษัท ดาต้าเซ็ต จำกัด");
+    expect(out).toContain("6 won");
+  });
+
+  test("tooltip for a district with no TORs", () => {
+    const out = html(<DistrictTooltip name="Nong Chok" district={null} labels={LABELS} formatBudget={String} />);
+    expect(out).toContain("No TORs");
+    expect(out).not.toContain("Most contracts won");
   });
 });
