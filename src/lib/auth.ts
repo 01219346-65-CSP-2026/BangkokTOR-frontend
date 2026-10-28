@@ -94,7 +94,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             // Dynamic for the same reason client.ts imports this file lazily:
             // keep the two modules off each other's static graph.
             const { syncBackendUser } = await import("@/api/client");
-            token.userId = (await syncBackendUser(payload)).id;
+            const synced = await syncBackendUser(payload);
+            token.userId = synced.id;
+            token.role = synced.role;
           } catch (error) {
             // A backend outage must not lock people out. The next sign-in
             // retries the sync.
@@ -107,6 +109,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.googleId) session.user.id = token.googleId as string;
       if (session.user && token.userId) session.user.dbId = token.userId as string;
+      if (session.user && token.role) session.user.role = token.role as string;
       return session;
     },
   },

@@ -127,6 +127,67 @@ export type TorStatsResponse = {
   maxBudget: number | null;
 };
 
+/**
+ * `GET /api/tors/insights` — the dashboard graphs (feat/116).
+ *
+ * Mirrors InsightsJSON in the backend's tor.insights.ts. Shares are percents
+ * with one decimal; money is whole baht. Market numbers only: no grade, no
+ * signal, nothing that ranks an agency by anything but what it spends (FR-19).
+ */
+export type InsightMethodId = TorMethodId | "unknown";
+export type BudgetBandId = "under500k" | "500kTo5m" | "5mTo50m" | "over50m";
+
+export type MethodSlice = {
+  method: InsightMethodId;
+  tors: number;
+  budget: number;
+  torShare: number;
+  budgetShare: number;
+};
+
+export type TorInsightsResponse = {
+  /** Buddhist era, like TorStatsResponse.fiscalYear. */
+  fiscalYear: number;
+  /** The จังหวัด the numbers are scoped to; null for all of Thailand. */
+  province: string | null;
+  totals: {
+    tors: number;
+    provinces: number;
+    budget: number;
+    biddableTors: number;
+    biddableBudget: number;
+    openNow: number;
+    bangkokTors: number;
+    bangkokShare: number;
+  };
+  /** Graph 1, in the order specific → eBidding → competitive (→ unknown). */
+  byMethod: MethodSlice[];
+  /** Graph 2, every band in order, even at zero. */
+  budgetBands: Array<{ band: BudgetBandId; tors: number; biddable: number }>;
+  unpricedTors: number;
+  /** Graph 3, biddable TORs only, most money first, at most 8. */
+  topAgencies: Array<{ agency: string; tors: number; budget: number }>;
+  /** Graph 4, twelve months oldest first, "YYYY-MM". */
+  byMonth: Array<{ month: string; tors: number; biddable: number }>;
+  /** Graph 5, the Bangkok map: one entry per khet that has any TOR, code order.
+   *  Always Bangkok, whatever the scope. Optional until every backend serves it. */
+  byDistrict?: DistrictSummary[];
+  /** Bangkok TORs with no usable เขต — not on the map. */
+  unmatchedDistrictTors?: number;
+};
+
+/** One Bangkok khet on the map. Where the PROJECT is, not the winner's office. */
+export type DistrictSummary = {
+  /** BMA district code "01"–"50" — the key into src/data/bangkokKhet.json. */
+  code: string;
+  tors: number;
+  budget: number;
+  dominantWorkType: TorWorkTypeId;
+  /** Most TORs first. A TOR can carry several types, so shares can pass 100. */
+  workTypes: Array<{ id: TorWorkTypeId; tors: number; budget: number; share: number }>;
+  topWinners: Array<{ name: string; wins: number; budget: number }>;
+};
+
 /** A `Tor` plus the fields the backend adds that the shared type has no slot for. */
 export type ApiTor = Tor & {
   /** Neutral observations from the grader. Empty until a TOR has been graded. */

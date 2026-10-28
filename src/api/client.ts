@@ -148,7 +148,7 @@ export type SyncUserPayload = {
  * Takes no session: it runs mid-sign-in, before one exists. The route is gated
  * by the backend's shared ADMIN_TOKEN, which is why this must stay server-only.
  */
-export function syncBackendUser(payload: SyncUserPayload): Promise<{ id: string }> {
+export function syncBackendUser(payload: SyncUserPayload): Promise<{ id: string; role?: string }> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (process.env.ADMIN_TOKEN) headers["X-Admin-Token"] = process.env.ADMIN_TOKEN;
 

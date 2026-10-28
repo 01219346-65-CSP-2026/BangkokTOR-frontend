@@ -48,6 +48,38 @@
      Dark-ground only; light-surface accents stay sage-600. */
   --color-mint-400: #5cc9b0;
 
+  /* Categorical chart data (dashboard/MethodMixChart) — a nominal identity
+     palette, not a brand ramp. Sage/moss are three steps of ONE green hue, so
+     reusing them for "which category" reads as "how dark", not "which one" —
+     the chroma floor and CVD-separation checks in the dataviz skill's
+     validator both fail on them.
+     (Re-picked three times, 2026-10-11. Pass 1 — slate blue/terracotta/teal
+     — read too close to the brand's own cool-muted mood. Pass 2 —
+     violet/coral/gold — had no green in it at all. Pass 3 — two real greens
+     plus a blue accent for the third slot — wasn't "shades of green"
+     either. This pass is three genuine greens, picked for it on request:
+     a deep forest, a grass green and a spring-green/lime, spaced apart in
+     BOTH lightness and chroma rather than just lightness (which is what
+     made the very first all-green attempt — sage-400/600/moss-700 —
+     unreadable: three steps of one unchanging hue). CVD separation clears
+     the target (worst ΔE 16.3, deutan); the lime sits under 3:1 contrast on
+     white, which the legend's always-visible text label covers — direct
+     labels are exactly the relief channel the dataviz skill's contrast rule
+     asks for, same as clay/ochre's "never color alone". No ordering of
+     three mutually-distinct greens found in several passes cleared chroma,
+     CVD and contrast all three at once; this is the best of those. */
+  --color-data-1: #1b5e3a; /* forest green */
+  --color-data-2: #3c9142; /* grass green */
+  --color-data-3: #8bc34a; /* spring green */
+  /* A fourth series (dashboard/DistrictMap's work types), added 2026-10-16.
+     The greens alone can't carry four identities, so the fourth is a hue
+     away from them: indigo. Validated with the three greens above, all
+     pairs: CVD worst ΔE 16.3 (still the existing data-1↔data-2 pair, deutan),
+     tritan 7.1 — the best of the blues tried (#3b6fb6 5.5, #2f6db5 5.8,
+     #3f7fbf 3.6). data-1's chroma-floor FAIL and data-3's contrast WARN
+     are the existing ones described above. */
+  --color-data-4: #5a63c8; /* indigo */
+
   /* Shape — one radius, everywhere. Cards and controls share it so a chip
      inside a panel can never look mismatched against the panel's own corner.
      Named --radius-* so Tailwind generates the `rounded-field` utility. */

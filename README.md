@@ -7,6 +7,9 @@ The source portal publishes a Thai title and a stack of PDFs. This app reads
 that record back — what kind of contract it is, who is buying, what it is
 worth, and whether the documents can be read at all — in Thai or English.
 
+Working on `feat/SCRUM-116/graph-dashboard`? Start with [`LEARNING.md`](LEARNING.md) — the
+tests are the spec (`bun test`).
+
 ---
 
 ## Stack
