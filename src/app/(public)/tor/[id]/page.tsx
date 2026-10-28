@@ -12,10 +12,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FitDial } from "@/components/tor/FitDial";
 import { BookmarkButton } from "@/components/tor/BookmarkButton";
+import { SummarySections } from "@/components/tor/SummarySections";
 import { useDeadline } from "@/components/tor/DeadlineBadge";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
 import { loadProfile, type SkillProfile } from "@/lib/skillProfile";
+import { groupSummary } from "@/lib/summarySections";
 
 /** Documents shown before the list folds behind "show all". */
 const COLLAPSED_DOCUMENTS = 4;
@@ -100,7 +102,7 @@ export default function TorDetailPage({
   const requiredSkills = requirementsFor(tor.requiredSkillIds, profileSkills, skillNames);
   const matchedSkillCount = requiredSkills.filter((skill) => skill.matched).length;
   const fitScore = hasProfile ? fitFor(tor.requiredSkillIds, profileSkills) : null;
-  const summaryPoints = tor.summaryPoints ?? [];
+  const summaryGroups = groupSummary(tor.summaryPoints ?? []);
 
   // Many e-GP records carry no announcement date, so publishedAt is "". That
   // parses to NaN, and Intl.DateTimeFormat throws on NaN — taking the whole
@@ -284,58 +286,27 @@ export default function TorDetailPage({
               </p>
             </section>
 
-            {/*
-              What the documents say, as points rather than as the documents.
-              The PDFs are linked in the card below.
-            */}
-            <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
-              <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="text-xl tracking-tight text-moss-700">
-                  {t.detailExtractedDetails}
-                </h2>
-                {summaryPoints.length > 0 && (
-                  <span className="font-mono text-[0.6875rem] tracking-widest text-ink-500 uppercase">
-                    {t.summaryPointCount.replace(
-                      "{count}",
-                      String(summaryPoints.length),
-                    )}
-                  </span>
-                )}
+            <section className="mt-6">
+              <p className="font-mono text-xs tracking-widest text-sage-600 uppercase">
+                {t.summaryEyebrow}
+              </p>
+              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-moss-700">
+                {t.summaryHeading}
+              </h2>
+              <div className="mt-4">
+                <SummarySections
+                  groups={summaryGroups}
+                  labels={{
+                    titles: t.summarySections,
+                    empty: t.summarySectionEmpty,
+                    notGenerated: t.summaryPointsEmpty,
+                  }}
+                />
               </div>
-
-              {summaryPoints.length === 0 ? (
-                <p className="mt-3 rounded-field bg-mist-50 px-4 py-3 text-sm leading-relaxed text-ink-500">
-                  {t.summaryPointsEmpty}
+              {summaryGroups.some((group) => group.points.length > 0) && (
+                <p className="mt-4 max-w-prose border-t border-sage-100 pt-3 text-xs leading-relaxed text-ink-500">
+                  {t.summaryProvenanceNote}
                 </p>
-              ) : (
-                <>
-                  <ul className="mt-4 divide-y divide-sage-100 border-t border-sage-100">
-                    {summaryPoints.map((point) => (
-                      <li key={point.id} className="flex gap-3 py-3.5">
-                        <span
-                          aria-hidden="true"
-                          className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sage-600"
-                        />
-                        <p
-                          lang="th"
-                          className="min-w-0 flex-1 text-[0.9375rem] leading-relaxed text-ink-600"
-                        >
-                          {point.text}
-                        </p>
-                        {point.filename && point.pageStart > 0 && (
-                          <span className="shrink-0 pt-0.5 font-mono text-[0.6875rem] tracking-wide whitespace-nowrap text-ink-500">
-                            {t.pageRange
-                              .replace("{from}", String(point.pageStart))
-                              .replace("{to}", String(point.pageEnd))}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-4 max-w-prose border-t border-sage-100 pt-3 text-xs leading-relaxed text-ink-500">
-                    {t.summaryProvenanceNote}
-                  </p>
-                </>
               )}
             </section>
 

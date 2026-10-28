@@ -30,6 +30,49 @@ export function SummarySections({ groups, labels }: { groups: SummaryGroup[]; la
   //     labels.empty when it has none
   // Copy the bullet dot and text classes from the old flat list in
   // src/app/(public)/tor/[id]/page.tsx.
-  void [groups, labels];
-  return null;
+  const hasNoPoints = groups.every((group) => group.points.length === 0);
+  
+  if (hasNoPoints) {
+    return <p>{labels.notGenerated}</p>;
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {groups.map((group) => {
+        const headingId = `summary-${group.section}`;
+
+        return (
+          <section
+            key={group.section}
+            data-section={group.section}
+            aria-labelledby={headingId}
+          >
+            <h3 id={headingId}>{labels.titles[group.section]}</h3>
+
+            {group.points.length === 0 ? (
+              <p className="mt-3 rounded-field bg-mist-50 px-4 py-3 text-sm leading-relaxed text-ink-500">
+                {labels.empty}
+              </p>
+
+            ) : (
+              <ul className="mt-4 divide-y divide-sage-100 border-t border-sage-100">
+                {group.points.map((point) => (
+                  <li key={point.id} className="flex gap-3 py-3.5">
+                    <span
+                      aria-hidden="true"
+                      className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sage-600"
+                    />
+
+                    <p lang="th" className="min-w-0 flex-1 text-[0.9375rem] leading-relaxed text-ink-600">
+                      {point.text}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
 }

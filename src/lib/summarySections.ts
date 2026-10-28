@@ -19,7 +19,14 @@ export function toSummaryPoint(point: BackendSummaryPoint): TorSummaryPoint {
   // TOR_SUMMARY_SECTIONS; otherwise null. A Set makes the check one line —
   // see how src/api/tors.ts narrows METHODS / STATUSES with oneOf().
   // (Returns null for every point until you do, so the page keeps working.)
-  return { ...point, section: null };
+  const section = point.section
+  const sectionType = section as (typeof TOR_SUMMARY_SECTIONS) [number];
+  const isKnownSection = typeof section === "string" &&
+                         TOR_SUMMARY_SECTIONS.includes(sectionType);
+  return { 
+    ...point, 
+    section: isKnownSection ? sectionType : null 
+  };
 }
 
 export type SummaryGroup = { section: TorSummarySectionId; points: TorSummaryPoint[] };
@@ -32,6 +39,8 @@ export type SummaryGroup = { section: TorSummarySectionId; points: TorSummaryPoi
 export function groupSummary(points: TorSummaryPoint[]): SummaryGroup[] {
   // TODO(92) step 2. Map over TOR_SUMMARY_SECTIONS (that gives the order AND
   // the empty cards for free), filtering `points` for each one.
-  void TOR_SUMMARY_SECTIONS;
-  throw new Error("TODO(92): groupSummary");
+  return TOR_SUMMARY_SECTIONS.map((section) => ({
+    section,
+    points: points.filter((point) => point.section === section)
+  }));
 }
