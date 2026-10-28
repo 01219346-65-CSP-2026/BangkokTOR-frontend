@@ -63,7 +63,7 @@ export function SummarySections({ groups, labels }: { groups: SummaryGroup[]; la
                       className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sage-600"
                     />
 
-                    <p lang="th" className="min-w-0 flex-1 text-[0.9375rem] leading-relaxed text-ink-600">
+                    <p lang="th" className="min-w-0 flex-1 text-[0.8125rem] leading-relaxed text-ink-600">
                       {point.text}
                     </p>
                   </li>

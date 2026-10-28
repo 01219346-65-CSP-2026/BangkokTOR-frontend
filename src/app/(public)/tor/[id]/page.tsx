@@ -286,7 +286,7 @@ export default function TorDetailPage({
               </p>
             </section>
 
-            <section className="mt-6">
+            <section className="mt-6 rounded-field border border-sage-100 bg-white p-6">
               <p className="font-mono text-xs tracking-widest text-sage-600 uppercase">
                 {t.summaryEyebrow}
               </p>
