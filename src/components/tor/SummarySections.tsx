@@ -33,7 +33,7 @@ export function SummarySections({ groups, labels }: { groups: SummaryGroup[]; la
   const hasNoPoints = groups.every((group) => group.points.length === 0);
   
   if (hasNoPoints) {
-    return <p>{labels.notGenerated}</p>;
+    return <p className="text-[0.8125rem] text-ink-500">{labels.notGenerated}</p>;
   }
 
   return (
