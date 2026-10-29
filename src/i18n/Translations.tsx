@@ -752,6 +752,15 @@ const en = {
     detailFacts: "Record",
     detailDocuments: "Documents",
     detailExtractedDetails: "Extracted details",
+    // feat/92 — the summary as three cards, one per topic.
+    summaryEyebrow: "From the announcement",
+    summaryHeading: "Project details",
+    summarySections: {
+      objective: "Objective",
+      scope: "Scope of work",
+      qualifications: "Bidder qualifications",
+    },
+    summarySectionEmpty: "The procurement documents don't cover this yet.",
     summaryPointCount: "{count} points",
     pageRange: "pages {from}–{to}",
     summaryPointsEmpty:
@@ -1875,6 +1884,14 @@ const th: typeof en = {
     detailFacts: "ข้อมูลโครงการ",
     detailDocuments: "เอกสาร",
     detailExtractedDetails: "รายละเอียดจากเอกสาร",
+    summaryEyebrow: "ข้อมูลจากประกาศ",
+    summaryHeading: "รายละเอียดโครงการ",
+    summarySections: {
+      objective: "วัตถุประสงค์",
+      scope: "ขอบเขตงาน",
+      qualifications: "คุณสมบัติผู้เสนอราคา",
+    },
+    summarySectionEmpty: "ยังไม่มีข้อมูลส่วนนี้จาก Procurement",
     summaryPointCount: "{count} ข้อ",
     pageRange: "หน้า {from}–{to}",
     summaryPointsEmpty:
