@@ -903,6 +903,11 @@ const en = {
       browseAll: "Browse all {count} open tenders",
       editSkills: "Edit skills",
     },
+    similar: {
+      eyebrow: "Similar scope",
+      heading: "Similar opportunities",
+      sub: "TORs with a related scope, category or tags.",
+    },
     sortOptions: {
       mostTimeLeft: "Most time to bid",
       closingSoon: "Closing soonest",
@@ -2030,6 +2035,11 @@ const th: typeof en = {
       tooSoon: "มี {count} โครงการที่ตรงกันแต่จะปิดรับภายใน {days} วัน",
       browseAll: "ดูโครงการที่เปิดรับทั้งหมด {count} รายการ",
       editSkills: "แก้ไขทักษะ",
+    },
+    similar: {
+      eyebrow: "ขอบเขตใกล้เคียง",
+      heading: "โครงการที่ใกล้เคียง",
+      sub: "โครงการที่มีขอบเขต หมวดหมู่ หรือแท็กใกล้เคียงกัน",
     },
     sortOptions: {
       mostTimeLeft: "เหลือเวลายื่นมากที่สุด",
