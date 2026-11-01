@@ -11,6 +11,7 @@ import { QueueInspector } from "./QueueInspector";
 import { KpiBanner } from "./KpiBanner";
 import { StageFlow, type FlowNode } from "./StageFlow";
 import { ErrorTable } from "./ErrorTable";
+import { CsvImport } from "./CsvImport";
 import {
   REFRESH_CHOICES,
   REFRESH_STORAGE_KEY,
@@ -297,6 +298,8 @@ function PipelineBody({
       />
 
       <StageFlow nodes={flow} />
+
+      <CsvImport onImported={refresh} />
 
       <WorkersPanel workers={data.workers} now={now} onChanged={refresh} />
 

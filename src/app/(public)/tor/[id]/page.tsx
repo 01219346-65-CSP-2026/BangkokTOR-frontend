@@ -2,9 +2,10 @@
 
 import { use, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { useEndpoint } from "@/api/useEndpoint";
-import { toTor, type ApiTor, type TorDetailResponse } from "@/api/tors";
+import { toTor, type ApiTor, type TorAdvisory, type TorDetailResponse } from "@/api/tors";
 import { formatBudgetTHB, formatBytes, formatDate } from "@/i18n/format";
 import type { Locale } from "@/i18n/Translations";
 import type { TextLayer, TorDocument } from "@/types/tor";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { FitDial } from "@/components/tor/FitDial";
 import { BookmarkButton } from "@/components/tor/BookmarkButton";
 import { SummarySections } from "@/components/tor/SummarySections";
+import { AdvisorySection } from "@/components/tor/AdvisorySection";
 import { useDeadline } from "@/components/tor/DeadlineBadge";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
@@ -63,6 +65,14 @@ export default function TorDetailPage({
     TorDetailResponse,
     ApiTor
   >(`/api/tors/${encodeURIComponent(id)}`, { select: toTor });
+
+  // FR-20: fired rules and their quotes are for signed-in readers, so a guest
+  // never makes this request.
+  const { status: sessionStatus } = useSession();
+  const signedIn = sessionStatus === "authenticated";
+  const { data: ruleAdvisory, error: ruleAdvisoryError } = useEndpoint<TorAdvisory>(
+    signedIn ? `/api/tors/${encodeURIComponent(id)}/advisory` : null,
+  );
 
   if (isLoading && !record) {
     return (
@@ -368,6 +378,48 @@ export default function TorDetailPage({
                 {t.documentsNote}
               </p>
             </section>
+
+            {/* In the reading column, not the rail: quotes run long, and the
+                rail's width turned them into a very tall, narrow panel. */}
+            {signedIn ? (
+              <AdvisorySection
+                advisory={ruleAdvisory}
+                failed={Boolean(ruleAdvisoryError)}
+                labels={{
+                  heading: t.advisoryHeading,
+                  level: t.advisoryLevel,
+                  levelDescriptions: t.advisoryLevelDescriptions,
+                  levelNote: t.advisoryLevelNote,
+                  evidenceHint: t.advisoryEvidenceHint,
+                  countOne: t.advisoryCountOne,
+                  countOther: t.advisoryCountOther,
+                  laterPhaseSkipped: t.advisoryLaterPhaseSkipped,
+                  none: t.advisoryNone,
+                  notReviewed: t.advisoryNotReviewed,
+                  noQuote: t.advisoryNoQuote,
+                  loadError: t.advisoryLoadError,
+                  note: t.advisoryNote,
+                  fileLabel: t.advisoryFileLabel,
+                  fallbackTitle: t.advisoryFallbackTitle,
+                  fallbackBody: t.advisoryFallbackBody,
+                  phases: t.advisoryPhases,
+                  ruleTitles: t.advisoryRuleTitles,
+                  ruleBodies: t.advisoryRuleBodies,
+                }}
+              />
+            ) : (
+              sessionStatus === "unauthenticated" && (
+                <p className="mt-6 px-1 text-xs leading-relaxed text-ink-500">
+                  {t.advisorySignInPrompt}{" "}
+                  <Link
+                    href="/login"
+                    className="rounded-field font-medium text-sage-600 underline underline-offset-4 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
+                  >
+                    {t.advisorySignInLink}
+                  </Link>
+                </p>
+              )
+            )}
           </div>
 
           {/* The rail: actions first, then reference material. */}
@@ -522,7 +574,8 @@ export default function TorDetailPage({
                 </p>
               </section>
             ) : (
-              blocking.length === 0 && (
+              // Not beside fired rules, where "nothing stood out" would contradict them.
+              blocking.length === 0 && !ruleAdvisory?.patternCount && (
                 <p className="mt-6 flex items-baseline gap-2 px-1 text-xs leading-relaxed text-ink-500">
                   <span aria-hidden="true" className="text-sage-600">
                     ✓

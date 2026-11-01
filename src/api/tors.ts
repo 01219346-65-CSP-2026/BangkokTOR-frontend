@@ -28,7 +28,28 @@ import type {
  * findings — the backend strips them (see tor.serialize.ts there). What arrives
  * is `signalCount` and a neutral `signals[]` of translation keys. Do not add a
  * grade to this type "for convenience": the omission is the requirement.
+ *
+ * Fired rules and their quotes come from `GET /api/tors/:id/advisory` instead,
+ * for signed-in readers only (`TorAdvisory`). Even there the grade is a neutral
+ * level, never the letter or the score.
  */
+
+/** One rule that fired. `evidence` is null when there is nothing to quote. */
+export type TorAdvisoryFinding = {
+  code: string;
+  evidence: string | null;
+  filename: string | null;
+};
+
+export type TorAdvisoryPhase = "legitimacy" | "fairness";
+
+/** The Advisory section's data. `level` is null until the TOR has been reviewed. */
+export type TorAdvisory = {
+  level: 1 | 2 | 3 | null;
+  patternCount: number;
+  laterPhaseSkipped: boolean;
+  phases: Array<{ phase: TorAdvisoryPhase; findings: TorAdvisoryFinding[] }>;
+};
 
 /** One neutral observation. Advisory vocabulary only — never an accusation. */
 export type TorSignalRef = {
