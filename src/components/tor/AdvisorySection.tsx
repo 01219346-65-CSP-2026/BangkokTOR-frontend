@@ -109,10 +109,13 @@ function AdvisoryBody({
           <h3 className="border-b border-sage-100 pb-2 text-base font-semibold text-moss-700">
             {labels.phases[group.phase]}
           </h3>
-          <ul className="divide-y divide-sage-100">
+          <ul className="ml-4 divide-y divide-sage-100">
             {group.findings.map((finding) => (
-              <li key={finding.code} className="py-4">
-                <FindingRow finding={finding} labels={labels} />
+              <li key={finding.code} className="flex gap-3 py-4">
+                <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sage-600" />
+                <div className="min-w-0">
+                  <FindingRow finding={finding} labels={labels} />
+                </div>
               </li>
             ))}
           </ul>
