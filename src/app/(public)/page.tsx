@@ -182,7 +182,7 @@ export default function Home() {
             </div>
 
             {/* Four figures, one row each — a small table of fact. */}
-            <dl className="divide-y divide-zinc-200 border-y border-zinc-200">
+            <dl className="divide-y divide-zinc-200 border-y border-zinc-200 text-white">
               {[
                 [CORPUS.records, t.statRecords],
                 [`${CORPUS.scannedPercent}%`, t.statScanned],
@@ -190,10 +190,10 @@ export default function Home() {
                 [CORPUS.agencies, t.statAgencies],
               ].map(([figure, label]) => (
                 <div key={String(label)} className="py-5">
-                  <dt className="text-3xl font-semibold text-moss-700">
+                  <dt className="text-3xl font-semibold text-white">
                     {figure}
                   </dt>
-                  <dd className="mt-1 text-sm text-ink-600">{label}</dd>
+                  <dd className="mt-1 text-sm text-white">{label}</dd>
                 </div>
               ))}
             </dl>
