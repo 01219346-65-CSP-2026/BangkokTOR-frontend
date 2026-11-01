@@ -13,6 +13,7 @@ import type {
   TorDocumentKindId,
   BiddingStageId,
   BiddingStatusId,
+  SimilarTor,
 } from "@/types/tor";
 
 /**
@@ -340,4 +341,45 @@ export function toTor(row: BackendTor): ApiTor {
 
 export function toTors(response: TorListResponse): ApiTor[] {
   return response.items.map(toTor);
+}
+
+/**
+ * FR-15. `GET /api/tors/:id/similar` — not yet implemented by the backend.
+ * Intentionally a trimmed slice of `BackendTor`'s own field names (not a new
+ * shape) so the backend can reuse its existing TOR serializer rather than
+ * invent one just for this. Already excludes the TOR it was requested for,
+ * and already capped at 3 — both the backend's job, same as the sort/filter
+ * work `GET /api/tors` does.
+ */
+export type BackendSimilarTor = Pick<
+  BackendTor,
+  | "id"
+  | "projectName"
+  | "agency"
+  | "budget"
+  | "workTypes"
+  | "contractType"
+  | "biddingStatus"
+  | "bidClosesAt"
+  | "bidOpensAt"
+>;
+
+export type SimilarTorsResponse = { items: BackendSimilarTor[] };
+
+export function toSimilarTor(row: BackendSimilarTor): SimilarTor {
+  return {
+    id: row.id,
+    title: row.projectName ?? "",
+    agency: row.agency ?? "",
+    budget: row.budget ?? 0,
+    workTypes: workTypes(row.workTypes),
+    contractType: oneOf(CONTRACTS, row.contractType, "purchase"),
+    biddingStatus: oneOf(BIDDING, row.biddingStatus, "closed"),
+    closesAt: row.bidClosesAt ?? null,
+    opensAt: row.bidOpensAt ?? null,
+  };
+}
+
+export function toSimilarTors(response: SimilarTorsResponse): SimilarTor[] {
+  return response.items.map(toSimilarTor);
 }

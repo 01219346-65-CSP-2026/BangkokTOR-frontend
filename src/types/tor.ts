@@ -237,6 +237,25 @@ export type TorMatch = {
 export type MatchedTor = Tor & TorMatch;
 
 /**
+ * FR-15: one entry in "Similar opportunities" on the TOR detail page. Only
+ * what the card needs to render and link out — not a full `Tor`, since the
+ * similar-TORs endpoint has no reason to carry documents, summary points, or
+ * anything else only the single-record fetch uses.
+ */
+export type SimilarTor = Pick<
+  Tor,
+  | "id"
+  | "title"
+  | "agency"
+  | "budget"
+  | "workTypes"
+  | "contractType"
+  | "biddingStatus"
+  | "closesAt"
+  | "opensAt"
+>;
+
+/**
  * What a listing card or table row needs. Real records (src/lib/torFit.ts)
  * and the mock ones (src/lib/torMatching.ts) both satisfy it.
  *

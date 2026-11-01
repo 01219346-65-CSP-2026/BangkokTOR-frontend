@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { FitDial } from "@/components/tor/FitDial";
 import { BookmarkButton } from "@/components/tor/BookmarkButton";
 import { SummarySections } from "@/components/tor/SummarySections";
+import { SimilarTors } from "@/components/tor/SimilarTors";
 import { useDeadline } from "@/components/tor/DeadlineBadge";
 import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
@@ -368,6 +369,15 @@ export default function TorDetailPage({
                 {t.documentsNote}
               </p>
             </section>
+
+            {/*
+              In the reading column, not after the whole grid: the rail's
+              height varies with how much it has to show (fit panel, signals),
+              and anchoring here means this section always starts right where
+              the reading column's own content ends, instead of waiting on
+              whichever column happens to be taller.
+            */}
+            <SimilarTors torId={tor.id} />
           </div>
 
           {/* The rail: actions first, then reference material. */}
