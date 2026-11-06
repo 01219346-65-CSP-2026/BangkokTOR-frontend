@@ -429,7 +429,6 @@ export default function TorDetailPage({
               the reading column's own content ends, instead of waiting on
               whichever column happens to be taller.
             */}
-            <p>aaa</p>
             <SimilarTors torId={tor.id} />
           </div>
 
