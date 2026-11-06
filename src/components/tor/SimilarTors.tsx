@@ -11,6 +11,8 @@ import type { Locale } from "@/i18n/Translations";
 // import { toSimilarTors, type SimilarTorsResponse } from "@/api/tors";
 import { DeadlineBadge } from "@/components/tor/DeadlineBadge";
 import type { SimilarTor } from "@/types/tor";
+import { useEndpoint } from "@/api/useEndpoint";
+import { BackendSimilarTor, SimilarTorsResponse, toSimilarTors } from "@/api/tors";
 
 // ── TEMP — VISUAL QA, REVERT BEFORE MERGE ──────────────────────────────────
 // Stand-in for a real GET /api/tors/:id/similar response. Delete this once
@@ -73,15 +75,13 @@ export function SimilarTors({ torId }: { torId: string }) {
   const t = useTranslations("tor").similar;
   const tTor = useTranslations("tor");
   const { locale } = useLanguage();
-  void torId; // only used to build the real fetch URL, disabled below
 
-  // const { data, isLoading, error } = useEndpoint<SimilarTorsResponse, SimilarTor[]>(
-  //   `/api/tors/${encodeURIComponent(torId)}/similar`,
-  //   { select: toSimilarTors },
-  // );
-  const data: SimilarTor[] = MOCK_SIMILAR_TORS;
-  const isLoading = false;
-  const error = null;
+  const { data, isLoading, error} = useEndpoint<SimilarTorsResponse, SimilarTor[]>(
+      `/api/tors/${encodeURIComponent(torId)}/similar`,
+      { select: toSimilarTors },
+    );
+
+  console.log(data ? data.length : "none");
 
   if (error) return null;
   if (!isLoading && (data?.length ?? 0) === 0) return null;
