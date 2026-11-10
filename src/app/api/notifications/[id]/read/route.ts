@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/api/client";
+import { rejectCrossOrigin } from "@/lib/sameOrigin";
 import type { BackendNotification } from "@/api/notifications";
 import { notificationFailure } from "../../shared";
 
@@ -14,7 +15,10 @@ type Context = { params: Promise<{ id: string }> };
 // Only an object id reaches the backend path — never a "../" someone typed.
 const NOTIFICATION_ID = /^[a-f0-9]{24}$/i;
 
-export async function PATCH(_request: Request, context: Context) {
+export async function PATCH(request: Request, context: Context) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 

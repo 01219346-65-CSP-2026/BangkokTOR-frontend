@@ -15,12 +15,24 @@ class ApiError extends Error {
 const calls: string[] = [];
 let reply: () => Promise<unknown> = async () => ({ ok: true });
 
+// `mock.module` replaces this specifier for the whole `bun test` run, not
+// just this file (Bun's module registry is process-wide) — so this mock
+// must cover every real export of @/api/client, not just the ones this
+// file uses, or another file importing a route that needs e.g. adminFetch
+// breaks the moment both files run in the same invocation. The others are
+// harmless stubs: nothing in this file calls them.
 mock.module("@/api/client", () => ({
   ApiError,
   publicFetch: (path: string) => {
     calls.push(path);
     return reply();
   },
+  publicRaw: async () => new Response(null),
+  authedFetch: async () => ({}),
+  meFetch: async () => ({}),
+  adminFetch: async () => ({}),
+  syncBackendUser: async () => ({ id: "stub" }),
+  getBackendUserData: async () => null,
 }));
 
 const { GET } = await import("./route");
