@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { headers } from "next/headers";
 
 /**
  * Server-side transport to the backend. Never import this into a client
@@ -35,12 +36,39 @@ function backendBase(): string {
   return base;
 }
 
+/**
+ * Sec P11 (T19): the backend's rate limiter keys on the leftmost
+ * X-Forwarded-For entry. Without this, every browser request arrived here
+ * looking identical to the backend — all traffic from one caller, this
+ * server's own address. This reads the value Caddy already set on THIS
+ * request (the browser → frontend hop) and forwards it unchanged, so the
+ * backend sees the real originating client, same as if it were talking to
+ * Caddy directly.
+ *
+ * `headers()` throws outside a request context; there's no such caller of
+ * `request()` today, but failing to forward an IP must never fail the
+ * actual API call, so this degrades to "forward nothing" rather than throw.
+ */
+async function clientIp(): Promise<string | null> {
+  try {
+    return (await headers()).get("x-forwarded-for");
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const base = backendBase();
 
+  const outgoing = new Headers(init.headers);
+  const forwardedFor = await clientIp();
+  if (forwardedFor && !outgoing.has("x-forwarded-for")) {
+    outgoing.set("x-forwarded-for", forwardedFor);
+  }
+
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, { ...init, cache: "no-store" });
+    res = await fetch(`${base}${path}`, { ...init, headers: outgoing, cache: "no-store" });
   } catch {
     // A refused connection is the normal case when the backend isn't running
     // locally, and "fetch failed" tells the reader nothing actionable.
