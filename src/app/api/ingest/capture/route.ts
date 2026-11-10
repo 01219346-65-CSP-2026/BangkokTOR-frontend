@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { adminFetch, ApiError } from "@/api/client";
+import { rejectCrossOrigin } from "@/lib/sameOrigin";
 
 // The admin panel's e-GP CSV import (admin/pipeline/CsvImport.tsx).
 //
@@ -14,6 +15,9 @@ import { adminFetch, ApiError } from "@/api/client";
 const MAX_PROJECTS = 2_000;
 
 export async function POST(request: Request) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });

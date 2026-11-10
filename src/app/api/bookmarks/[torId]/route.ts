@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/api/client";
+import { rejectCrossOrigin } from "@/lib/sameOrigin";
 import { bookmarkFailure } from "../shared";
 
 // One TOR's saved state for the signed-in reader: GET reads it, PUT saves,
@@ -34,7 +35,10 @@ export async function GET(_request: Request, context: Context) {
   }
 }
 
-export async function PUT(_request: Request, context: Context) {
+export async function PUT(request: Request, context: Context) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const target = await resolve(context);
   if (target instanceof NextResponse) return target;
 
@@ -46,7 +50,10 @@ export async function PUT(_request: Request, context: Context) {
   }
 }
 
-export async function DELETE(_request: Request, context: Context) {
+export async function DELETE(request: Request, context: Context) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const target = await resolve(context);
   if (target instanceof NextResponse) return target;
 
