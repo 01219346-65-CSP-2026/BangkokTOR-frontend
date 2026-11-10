@@ -118,6 +118,22 @@ export async function authedFetch<T>(path: string, init: RequestInit = {}): Prom
 }
 
 /**
+ * Re-checks role and session_version directly against the backend, by
+ * subject/email rather than through `auth()`.
+ *
+ * Used only from inside the NextAuth `jwt` callback (lib/auth.ts) on every
+ * request that isn't a fresh sign-in — at that point the session this
+ * callback is building doesn't exist yet, so going through `authedFetch`'s
+ * `auth()` call would be circular. This lets a demoted role or a revoked
+ * session (T03/T05, NFR-10) take effect on the very next request instead of
+ * waiting out the full session lifetime.
+ */
+export function meFetch<T>(subject: string, email?: string | null): Promise<T> {
+  const headers = new Headers({ Authorization: `Bearer ${internalToken(subject, email)}` });
+  return request<T>("/api/me", { headers });
+}
+
+/**
  * `authedFetch` plus the backend's shared ADMIN_TOKEN, for the routes gated by
  * requireAdminToken (pipeline controls). Server-only for the same reason as
  * `syncBackendUser`: the token must never reach the browser.
@@ -148,11 +164,13 @@ export type SyncUserPayload = {
  * Takes no session: it runs mid-sign-in, before one exists. The route is gated
  * by the backend's shared ADMIN_TOKEN, which is why this must stay server-only.
  */
-export function syncBackendUser(payload: SyncUserPayload): Promise<{ id: string; role?: string }> {
+export function syncBackendUser(
+  payload: SyncUserPayload,
+): Promise<{ id: string; role?: string; session_version?: number }> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (process.env.ADMIN_TOKEN) headers["X-Admin-Token"] = process.env.ADMIN_TOKEN;
 
-  return request<{ id: string }>("/api/user/sync", {
+  return request<{ id: string; role?: string; session_version?: number }>("/api/user/sync", {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
