@@ -6,6 +6,7 @@ import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatBudgetTHB } from "@/i18n/format";
 import { fitBand } from "@/lib/torFit";
 import { DeadlineBadge } from "@/components/tor/DeadlineBadge";
+import { safeHref } from "@/lib/safeHref";
 import type { CardTor } from "@/types/tor";
 
 const MATCH_TONE = {
@@ -120,7 +121,9 @@ export function SavedTorCard({
         label={t.cardMenu.replace("{title}", tor.title)}
         items={[
           { label: t.cardOpen, href: `/tor/${tor.id}` },
-          ...(tor.sourceUrl ? [{ label: `${t.cardOpenSource} ↗`, href: tor.sourceUrl, external: true }] : []),
+          ...(safeHref(tor.sourceUrl)
+            ? [{ label: `${t.cardOpenSource} ↗`, href: safeHref(tor.sourceUrl)!, external: true }]
+            : []),
           { label: `${t.remove}`, onSelect: onRemove, danger: true },
         ]}
       />

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useLanguage, useTranslations } from "@/i18n/LanguageProvider";
 import { formatRelativeTime } from "@/i18n/format";
+import { safeHref } from "@/lib/safeHref";
 import type { Source } from "./types";
 
 export function SourceDetailsModal({
@@ -72,7 +73,7 @@ export function SourceDetailsModal({
             <dt className="text-xs text-ink-500">{t.sources.urlLabel}</dt>
             <dd className="mt-1 break-all font-mono text-xs text-moss-700">
               <a
-                href={source.url}
+                href={safeHref(source.url)}
                 target="_blank"
                 rel="noreferrer"
                 className="underline underline-offset-4 hover:text-sage-600"

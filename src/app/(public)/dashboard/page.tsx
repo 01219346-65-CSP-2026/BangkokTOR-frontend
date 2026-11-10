@@ -18,6 +18,7 @@ import { MonthlyTrendChart } from "@/components/dashboard/MonthlyTrendChart";
 import { InsightsKpiRow } from "@/components/dashboard/InsightsKpiRow";
 import { DistrictMap } from "@/components/dashboard/DistrictMap";
 import { khetName } from "@/lib/bangkokDistricts";
+import { safeHref } from "@/lib/safeHref";
 import type { BudgetInsightsResponse } from "@/api/budget";
 import { MIN_TIMING_MATCHES, budgetPath, fiscalMonthIndex } from "@/lib/budget";
 import { Badge } from "@/components/ui/Badge";
@@ -427,7 +428,7 @@ export default function DashboardPage() {
                   )}
                   <p>
                     <a
-                      href={budgetData.source.url}
+                      href={safeHref(budgetData.source.url)}
                       target="_blank"
                       rel="noreferrer"
                       className="rounded-field text-sage-600 hover:text-moss-700 hover:underline focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
