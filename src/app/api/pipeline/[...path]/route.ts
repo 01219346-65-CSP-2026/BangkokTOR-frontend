@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { adminFetch, ApiError, authedFetch } from "@/api/client";
+import { rejectCrossOrigin } from "@/lib/sameOrigin";
 
 // Server-side proxy for the pipeline monitoring endpoints.
 //
@@ -71,6 +72,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
