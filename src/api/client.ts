@@ -1,5 +1,9 @@
 import jwt from "jsonwebtoken";
 
+// Keep upstream details and the internal backend address out of browser errors.
+const UPSTREAM_ERROR_MESSAGE = "The request could not be completed.";
+const UNAVAILABLE_MESSAGE = "Service temporarily unavailable.";
+
 /**
  * Server-side transport to the backend. Never import this into a client
  * component: `authedFetch` signs a token with INTERNAL_JWT_SECRET, which must
@@ -18,11 +22,9 @@ import jwt from "jsonwebtoken";
  */
 
 export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
+  constructor(readonly status: number) {
+    // Expose only a generic message; the status remains useful to proxy routes.
+    super(status === 503 ? UNAVAILABLE_MESSAGE : UPSTREAM_ERROR_MESSAGE);
     this.name = "ApiError";
   }
 }
@@ -30,7 +32,8 @@ export class ApiError extends Error {
 function backendBase(): string {
   const base = process.env.BACKEND_URL;
   if (!base) {
-    throw new ApiError(500, "BACKEND_URL is not set — see .env.example.");
+    // Missing server configuration is an availability error, not a client error.
+    throw new ApiError(503);
   }
   return base;
 }
@@ -42,20 +45,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     res = await fetch(`${base}${path}`, { ...init, cache: "no-store" });
   } catch {
-    // A refused connection is the normal case when the backend isn't running
-    // locally, and "fetch failed" tells the reader nothing actionable.
-    throw new ApiError(503, `Cannot reach the backend at ${base}. Is it running?`);
+    // Do not leak fetch errors, which may contain the private backend hostname.
+    throw new ApiError(503);
   }
 
   if (!res.ok) {
-    // The backend answers errors as `{ error }`. Pass that on when it is there:
-    // a 400 like "Unknown skills: foo" is actionable, "responded 400" is not.
-    const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
-    const message =
-      typeof body?.error === "string"
-        ? body.error
-        : `Backend responded ${res.status} for ${path}`;
-    throw new ApiError(res.status, message);
+    // Upstream error bodies may include internal details or sensitive data.
+    throw new ApiError(res.status);
   }
 
   // 204 is a real answer on some routes ("no profile yet"), not an error.
@@ -83,7 +79,8 @@ export async function publicRaw(path: string): Promise<Response> {
   try {
     return await fetch(`${base}${path}`, { cache: "no-store" });
   } catch {
-    throw new ApiError(503, `Cannot reach the backend at ${base}. Is it running?`);
+    // Match request() so raw-response callers also receive a safe error.
+    throw new ApiError(503);
   }
 }
 
