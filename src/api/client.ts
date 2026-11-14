@@ -91,6 +91,8 @@ export async function publicRaw(path: string): Promise<Response> {
 function internalToken(subject: string, email?: string | null): string {
   return jwt.sign({ sub: subject, email }, process.env.INTERNAL_JWT_SECRET!, {
     expiresIn: "60s",
+    issuer: "bangkoktor-frontend",
+    audience: "bangkoktor-backend",
   });
 }
 
