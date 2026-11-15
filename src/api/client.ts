@@ -3,8 +3,8 @@ import { headers } from "next/headers";
 
 /**
  * Server-side transport to the backend. Never import this into a client
- * component: `authedFetch` signs a token with INTERNAL_JWT_SECRET, which must
- * not reach the browser.
+ * component: `authedFetch` signs a token with INTERNAL_JWT_SECRET for a
+ * signed-in user, and the secret must not reach the browser.
  *
  * ── Why `auth` is imported dynamically ──
  * `@/lib/auth` throws at module scope when NEXT_PUBLIC_AUTH_BYPASS=true in a
@@ -119,11 +119,14 @@ export async function publicRaw(path: string): Promise<Response> {
 function internalToken(subject: string, email?: string | null): string {
   return jwt.sign({ sub: subject, email }, process.env.INTERNAL_JWT_SECRET!, {
     expiresIn: "60s",
+    issuer: "bangkoktor-frontend",
+    audience: "bangkoktor-backend",
   });
 }
 
 /**
- * Call the backend as the signed-in user.
+ * Call the backend as the signed-in user. Fails with 401 when there is no
+ * authenticated user; public endpoints must use `publicFetch` instead.
  *
  * The backend's `/api/me/*` routes verify this token (requireUser there) and
  * resolve the user from its `sub`; older routes still ignore it. Pass `init`
@@ -132,11 +135,13 @@ function internalToken(subject: string, email?: string | null): string {
 export async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { auth } = await import("@/lib/auth");
   const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) throw new ApiError(401, "Not signed in");
 
   const headers = new Headers(init.headers);
   headers.set(
     "Authorization",
-    `Bearer ${internalToken(session?.user?.id ?? "anonymous", session?.user?.email)}`,
+    `Bearer ${internalToken(userId, session.user.email)}`,
   );
   if (init.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
