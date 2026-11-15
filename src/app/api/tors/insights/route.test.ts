@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 // records the path it was asked for and answers with whatever `reply` says.
 
 class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
+  constructor(readonly status: number) {
+    super(status === 503 ? "Service temporarily unavailable." : "The request could not be completed.");
   }
 }
 
@@ -64,13 +64,13 @@ describe("step 1: GET /api/tors/insights", () => {
     expect(calls).toEqual(["/api/tors/insights"]);
   });
 
-  test("a backend error keeps its status and message", async () => {
+  test("a backend error keeps its status but returns a generic message", async () => {
     reply = async () => {
-      throw new ApiError("Backend unavailable", 503);
+      throw new ApiError(503);
     };
     const res = await GET(new Request("http://app/api/tors/insights"));
     expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Backend unavailable" });
+    expect(await res.json()).toEqual({ error: "Service temporarily unavailable." });
   });
 
   test("anything else is a 500 with a readable message, not a stack trace", async () => {
