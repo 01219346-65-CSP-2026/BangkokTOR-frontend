@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { ApiError, authedFetch } from "@/api/client";
+import { rejectCrossOrigin } from "@/lib/sameOrigin";
 import type { BackendProfile } from "@/api/profile";
 
 // The signed-in reader's skill profile (FR-15), proxied to the backend's
@@ -40,6 +41,9 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   if (!(await signedIn())) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
