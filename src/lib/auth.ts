@@ -74,7 +74,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         ]
       : []),
   ],
-  session: { strategy: "jwt" },
+  // T05/NFR-10: the default (30 days) is how long a demoted admin or a
+  // revoked session used to stay valid. Shortened to the ticket's range —
+  // the real freshness guarantee is the per-request re-check below; this is
+  // just the outer bound if that check is ever skipped (e.g. the bypass
+  // provider's token shape).
+  session: { strategy: "jwt", maxAge: 60 * 60 * 12 },
   callbacks: {
     async signIn({ account, profile }) {
       if (account?.provider === "bypass") return AUTH_BYPASS;
@@ -85,8 +90,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account?.provider === "bypass" && user) token.googleId = user.id;
       else if (account && profile) token.googleId = profile.sub;
 
-      // `account` is only present on the sign-in request itself, so this runs
-      // once per login, not on every session read.
+      // `account` is only present on the sign-in request itself.
       if (account) {
         const payload = syncPayload(token.googleId, profile, user);
         if (payload) {
@@ -97,11 +101,39 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             const synced = await syncBackendUser(payload);
             token.userId = synced.id;
             token.role = synced.role;
+            token.sessionVersion = synced.session_version;
           } catch (error) {
             // A backend outage must not lock people out. The next sign-in
             // retries the sync.
             console.error("Could not sync user to backend:", error);
           }
+        }
+        return token;
+      }
+
+      // Every other invocation — i.e. every time a session is read, not just
+      // at sign-in (T05, NFR-10). Re-reads role and session_version from the
+      // backend instead of trusting what sign-in cached. A mismatched
+      // session_version means a newer sign-in, or an explicit revocation,
+      // superseded this token: returning null here is NextAuth's documented
+      // way to invalidate the session, so the next request to src/proxy.ts
+      // sees no session at all rather than a stale one (T03).
+      //
+      // Fails closed: a backend that can't be reached is treated the same as
+      // a revoked session, not as "keep the cached role" — the whole point
+      // of this check is that a cached role cannot be trusted.
+      if (typeof token.googleId === "string") {
+        try {
+          const { meFetch } = await import("@/api/client");
+          const me = await meFetch<{ role: string; session_version: number }>(
+            token.googleId,
+            token.email,
+          );
+          if (me.session_version !== token.sessionVersion) return null;
+          token.role = me.role;
+        } catch (error) {
+          console.error("Could not re-validate session:", error);
+          return null;
         }
       }
       return token;

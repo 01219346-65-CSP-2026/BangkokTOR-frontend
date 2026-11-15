@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { headers } from "next/headers";
 
 // Keep upstream details and the internal backend address out of browser errors.
 const UPSTREAM_ERROR_MESSAGE = "The request could not be completed.";
@@ -6,8 +7,8 @@ const UNAVAILABLE_MESSAGE = "Service temporarily unavailable.";
 
 /**
  * Server-side transport to the backend. Never import this into a client
- * component: `authedFetch` signs a token with INTERNAL_JWT_SECRET, which must
- * not reach the browser.
+ * component: `authedFetch` signs a token with INTERNAL_JWT_SECRET for a
+ * signed-in user, and the secret must not reach the browser.
  *
  * ── Why `auth` is imported dynamically ──
  * `@/lib/auth` throws at module scope when NEXT_PUBLIC_AUTH_BYPASS=true in a
@@ -38,12 +39,39 @@ function backendBase(): string {
   return base;
 }
 
+/**
+ * Sec P11 (T19): the backend's rate limiter keys on the leftmost
+ * X-Forwarded-For entry. Without this, every browser request arrived here
+ * looking identical to the backend — all traffic from one caller, this
+ * server's own address. This reads the value Caddy already set on THIS
+ * request (the browser → frontend hop) and forwards it unchanged, so the
+ * backend sees the real originating client, same as if it were talking to
+ * Caddy directly.
+ *
+ * `headers()` throws outside a request context; there's no such caller of
+ * `request()` today, but failing to forward an IP must never fail the
+ * actual API call, so this degrades to "forward nothing" rather than throw.
+ */
+async function clientIp(): Promise<string | null> {
+  try {
+    return (await headers()).get("x-forwarded-for");
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const base = backendBase();
 
+  const outgoing = new Headers(init.headers);
+  const forwardedFor = await clientIp();
+  if (forwardedFor && !outgoing.has("x-forwarded-for")) {
+    outgoing.set("x-forwarded-for", forwardedFor);
+  }
+
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, { ...init, cache: "no-store" });
+    res = await fetch(`${base}${path}`, { ...init, headers: outgoing, cache: "no-store" });
   } catch {
     // Do not leak fetch errors, which may contain the private backend hostname.
     throw new ApiError(503);
@@ -88,11 +116,14 @@ export async function publicRaw(path: string): Promise<Response> {
 function internalToken(subject: string, email?: string | null): string {
   return jwt.sign({ sub: subject, email }, process.env.INTERNAL_JWT_SECRET!, {
     expiresIn: "60s",
+    issuer: "bangkoktor-frontend",
+    audience: "bangkoktor-backend",
   });
 }
 
 /**
- * Call the backend as the signed-in user.
+ * Call the backend as the signed-in user. Fails with 401 when there is no
+ * authenticated user; public endpoints must use `publicFetch` instead.
  *
  * The backend's `/api/me/*` routes verify this token (requireUser there) and
  * resolve the user from its `sub`; older routes still ignore it. Pass `init`
@@ -101,17 +132,35 @@ function internalToken(subject: string, email?: string | null): string {
 export async function authedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { auth } = await import("@/lib/auth");
   const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) throw new ApiError(401, "Not signed in");
 
   const headers = new Headers(init.headers);
   headers.set(
     "Authorization",
-    `Bearer ${internalToken(session?.user?.id ?? "anonymous", session?.user?.email)}`,
+    `Bearer ${internalToken(userId, session.user.email)}`,
   );
   if (init.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
   return request<T>(path, { ...init, headers });
+}
+
+/**
+ * Re-checks role and session_version directly against the backend, by
+ * subject/email rather than through `auth()`.
+ *
+ * Used only from inside the NextAuth `jwt` callback (lib/auth.ts) on every
+ * request that isn't a fresh sign-in — at that point the session this
+ * callback is building doesn't exist yet, so going through `authedFetch`'s
+ * `auth()` call would be circular. This lets a demoted role or a revoked
+ * session (T03/T05, NFR-10) take effect on the very next request instead of
+ * waiting out the full session lifetime.
+ */
+export function meFetch<T>(subject: string, email?: string | null): Promise<T> {
+  const headers = new Headers({ Authorization: `Bearer ${internalToken(subject, email)}` });
+  return request<T>("/api/me", { headers });
 }
 
 /**
@@ -145,11 +194,13 @@ export type SyncUserPayload = {
  * Takes no session: it runs mid-sign-in, before one exists. The route is gated
  * by the backend's shared ADMIN_TOKEN, which is why this must stay server-only.
  */
-export function syncBackendUser(payload: SyncUserPayload): Promise<{ id: string; role?: string }> {
+export function syncBackendUser(
+  payload: SyncUserPayload,
+): Promise<{ id: string; role?: string; session_version?: number }> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (process.env.ADMIN_TOKEN) headers["X-Admin-Token"] = process.env.ADMIN_TOKEN;
 
-  return request<{ id: string }>("/api/user/sync", {
+  return request<{ id: string; role?: string; session_version?: number }>("/api/user/sync", {
     method: "POST",
     headers,
     body: JSON.stringify(payload),

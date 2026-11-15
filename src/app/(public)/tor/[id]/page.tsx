@@ -21,6 +21,7 @@ import { deriveObservations, type TorSignal } from "@/lib/torSignals";
 import { fitBand, fitFor, requirementsFor } from "@/lib/torFit";
 import { loadProfile, type SkillProfile } from "@/lib/skillProfile";
 import { groupSummary } from "@/lib/summarySections";
+import { safeHref } from "@/lib/safeHref";
 
 /** Documents shown before the list folds behind "show all". */
 const COLLAPSED_DOCUMENTS = 4;
@@ -268,7 +269,7 @@ export default function TorDetailPage({
                   <figcaption className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
                     <span>{t.deadline.evidence}</span>
                     <a
-                      href={tor.deadlineEvidence.documentUrl}
+                      href={safeHref(tor.deadlineEvidence.documentUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="rounded-field font-medium text-sage-600 underline underline-offset-4 hover:text-moss-700 focus-visible:ring-2 focus-visible:ring-sage-600 focus-visible:outline-none"
@@ -442,7 +443,7 @@ export default function TorDetailPage({
             <div className="z-10 flex flex-col gap-2.5 rounded-field border border-sage-100 bg-white p-4 lg:sticky lg:top-6">
               {tor.sourceUrl ? (
                 <a
-                  href={tor.sourceUrl}
+                  href={safeHref(tor.sourceUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sage-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition duration-200 ease-soft hover:bg-moss-700 hover:shadow-md focus-visible:ring-2 focus-visible:ring-sage-600/40 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.985]"
@@ -646,7 +647,7 @@ function DocumentRow({
         </span>
         {document.url ? (
           <a
-            href={document.url}
+            href={safeHref(document.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-1.5 rounded-full border border-sage-400 bg-white px-3 py-1.5 text-xs font-medium text-moss-700 transition duration-200 ease-soft hover:border-sage-600 hover:bg-sage-100 focus-visible:ring-2 focus-visible:ring-sage-600/40 focus-visible:outline-none active:scale-[0.985]"
