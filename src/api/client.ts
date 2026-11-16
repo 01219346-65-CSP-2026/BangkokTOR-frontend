@@ -133,7 +133,7 @@ export async function authedFetch<T>(path: string, init: RequestInit = {}): Prom
   const { auth } = await import("@/lib/auth");
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) throw new ApiError(401, "Not signed in");
+  if (!userId) throw new ApiError(401);
 
   const headers = new Headers(init.headers);
   headers.set(

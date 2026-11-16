@@ -1,11 +1,4 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { ApiError, publicFetch, publicRaw } from "./client.ts";
-
-const realFetch = globalThis.fetch;
-const originalBackendUrl = process.env.BACKEND_URL;
-
-beforeEach(() => {
-  process.env.BACKEND_URL = "http://internal-backend:8003";
 
 // Sec P11 (T19) — proves request() actually forwards the real client IP to
 // the backend. The backend's own BangkokTOR-backend/src/middleware/
@@ -22,9 +15,12 @@ mock.module("next/headers", () => ({
   headers: async () => incomingHeaders,
 }));
 
-const { publicFetch } = await import("./client");
+// Imported after the mock above: a static import is hoisted and would load
+// the real `next/headers` before mock.module could replace it.
+const { ApiError, publicFetch, publicRaw } = await import("./client");
 
 const realFetch = globalThis.fetch;
+const originalBackendUrl = process.env.BACKEND_URL;
 let calls: Array<{ url: string; headers: Headers }> = [];
 function fakeFetch(status = 200, body = "{}") {
   calls = [];
@@ -35,7 +31,7 @@ function fakeFetch(status = 200, body = "{}") {
 }
 
 beforeEach(() => {
-  process.env.BACKEND_URL = "http://backend";
+  process.env.BACKEND_URL = "http://internal-backend:8003";
   incomingHeaders = new Headers();
   fakeFetch();
 });
@@ -86,6 +82,7 @@ describe("backend client errors", () => {
       status: 503,
       message: "Service temporarily unavailable.",
     });
+  });
 });
 
 describe("request() — forwarding the real client IP", () => {
