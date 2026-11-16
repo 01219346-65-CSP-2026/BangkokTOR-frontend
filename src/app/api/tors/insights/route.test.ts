@@ -27,7 +27,10 @@ mock.module("@/api/client", () => ({
     calls.push(path);
     return reply();
   },
-  publicRaw: async () => new Response(null),
+  // Mirrors the real publicRaw (a plain fetch to BACKEND_URL), so a route test
+  // that fakes `fetch` — documents/[documentId]/file — still works when this
+  // mock is the one registered.
+  publicRaw: (path: string) => fetch(`${process.env.BACKEND_URL}${path}`, { cache: "no-store" }),
   authedFetch: async () => ({}),
   meFetch: async () => ({}),
   adminFetch: async () => ({}),
