@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import {
   Geist,
   Geist_Mono,
@@ -48,7 +49,12 @@ export const metadata: Metadata = {
     "Search and track Bangkok government procurement terms of reference.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // T13: every page renders per request. Next.js stamps the CSP nonce from
+  // src/proxy.ts onto its scripts at render time; a page prerendered at build
+  // time has no request, so no nonce, and its scripts would be blocked.
+  await connection();
+
   return (
     <html
       // Thai is the default; LanguageProvider updates this when the reader
