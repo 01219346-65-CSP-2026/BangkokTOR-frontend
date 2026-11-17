@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { rejectCrossOrigin } from "./sameOrigin";
 
 // T17 (Sec P8) — the shared CSRF gate every state-changing BFF route calls
@@ -10,8 +10,19 @@ function request(origin: string | null, url = "http://app/api/profile") {
   return new Request(url, { method: "POST", headers });
 }
 
+const savedAuthUrl = process.env.AUTH_URL;
+
+beforeEach(() => {
+  process.env.AUTH_URL = "http://app";
+});
+
+afterEach(() => {
+  if (savedAuthUrl === undefined) delete process.env.AUTH_URL;
+  else process.env.AUTH_URL = savedAuthUrl;
+});
+
 describe("rejectCrossOrigin", () => {
-  test("passes a request whose Origin matches the app's own origin", () => {
+  test("passes a request whose Origin matches the app's public origin", () => {
     expect(rejectCrossOrigin(request("http://app"))).toBeNull();
   });
 
@@ -30,6 +41,36 @@ describe("rejectCrossOrigin", () => {
 
   test("a scheme or port mismatch alone is still a rejection", () => {
     expect(rejectCrossOrigin(request("https://app"))).not.toBeNull();
-    expect(rejectCrossOrigin(request("http://app:81", "http://app:80/api/profile"))).not.toBeNull();
+    expect(rejectCrossOrigin(request("http://app:81"))).not.toBeNull();
+  });
+
+  // The production regression: Caddy terminates TLS and forwards plain HTTP,
+  // so request.url is http:// on an internal host while the browser's Origin
+  // is the public https:// one.
+  test("passes behind a TLS-terminating proxy when Origin matches AUTH_URL", () => {
+    process.env.AUTH_URL = "https://munyin.xyz";
+    const proxied = request("https://munyin.xyz", "http://localhost:3003/api/profile");
+    expect(rejectCrossOrigin(proxied)).toBeNull();
+  });
+
+  test("compares against AUTH_URL's origin, ignoring any path on it", () => {
+    process.env.AUTH_URL = "https://munyin.xyz/api/auth";
+    expect(rejectCrossOrigin(request("https://munyin.xyz"))).toBeNull();
+  });
+
+  test("ignores request.url: a request claiming to be from its own host is still checked", () => {
+    process.env.AUTH_URL = "https://munyin.xyz";
+    const spoofed = request("http://evil.example", "http://evil.example/api/profile");
+    expect(rejectCrossOrigin(spoofed)).not.toBeNull();
+  });
+
+  test("fails closed when AUTH_URL is unset or invalid", () => {
+    const log = spyOn(console, "error").mockImplementation(() => {});
+    delete process.env.AUTH_URL;
+    expect(rejectCrossOrigin(request("http://app"))).not.toBeNull();
+    process.env.AUTH_URL = "not a url";
+    expect(rejectCrossOrigin(request("http://app"))).not.toBeNull();
+    expect(log).toHaveBeenCalledTimes(2);
+    log.mockRestore();
   });
 });

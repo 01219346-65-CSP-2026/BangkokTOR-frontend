@@ -17,11 +17,39 @@ import { NextResponse } from "next/server";
  */
 export function rejectCrossOrigin(request: Request): NextResponse | null {
   const origin = request.headers.get("origin");
-  const expected = new URL(request.url).origin;
+  const expected = appOrigin();
 
-  if (origin !== expected) {
+  if (!expected || origin !== expected) {
     return NextResponse.json({ error: "Cross-origin request rejected" }, { status: 403 });
   }
 
   return null;
+}
+
+/**
+ * The public origin the browser sees, from AUTH_URL — the same value NextAuth
+ * builds its Google callback from, so it is already set correctly per deploy.
+ *
+ * Not `new URL(request.url).origin`: in production TLS ends at Caddy, which
+ * forwards plain HTTP to this container, so request.url reads `http://…` while
+ * the browser's Origin is `https://munyin.xyz`. That mismatch rejected every
+ * profile save, bookmark and notification update from 2026-11-10 on, while
+ * localhost (no proxy) kept working. Not X-Forwarded-Host / Host either: those
+ * are only as trustworthy as every hop in front of us.
+ *
+ * Missing or unparseable → null, and the caller rejects. A misconfigured
+ * deploy must fail closed, not silently drop CSRF protection.
+ */
+function appOrigin(): string | null {
+  const configured = process.env.AUTH_URL;
+  if (!configured) {
+    console.error("rejectCrossOrigin: AUTH_URL is not set; rejecting all state-changing requests");
+    return null;
+  }
+  try {
+    return new URL(configured).origin;
+  } catch {
+    console.error("rejectCrossOrigin: AUTH_URL is not a valid URL; rejecting all state-changing requests");
+    return null;
+  }
 }
