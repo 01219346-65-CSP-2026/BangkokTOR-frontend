@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS base
+FROM oven/bun:1@sha256:1d22548f177f4ff38e0c15baa3c2c46c6c2060ba2d1bc573bb4720b407548f1d AS base
 WORKDIR /app
 
 FROM base AS install
@@ -8,7 +8,7 @@ COPY package.json bun.lock ./
 # hand-edited in the prod checkout, where it broke `git pull --ff-only`.
 RUN bun install --frozen-lockfile --network-concurrency 4
 
-FROM node:22-slim AS build
+FROM node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS build
 WORKDIR /app
 COPY --from=install /app/node_modules ./node_modules
 COPY . .
