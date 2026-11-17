@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 
 // T17 (Sec P8) — proves the CSRF gate actually sits in front of a real,
 // state-changing BFF route, not just the helper in isolation.
@@ -12,6 +12,17 @@ import { describe, expect, mock, test } from "bun:test";
 mock.module("@/lib/auth", () => ({ auth: async () => null }));
 
 const { POST } = await import("./route");
+
+// The CSRF gate compares Origin with AUTH_URL (src/lib/sameOrigin.ts), not
+// with request.url, so the test states the app's public origin explicitly.
+const savedAuthUrl = process.env.AUTH_URL;
+beforeAll(() => {
+  process.env.AUTH_URL = "http://app";
+});
+afterAll(() => {
+  if (savedAuthUrl === undefined) delete process.env.AUTH_URL;
+  else process.env.AUTH_URL = savedAuthUrl;
+});
 
 function post(origin: string | null) {
   const headers = new Headers({ "Content-Type": "application/json" });
