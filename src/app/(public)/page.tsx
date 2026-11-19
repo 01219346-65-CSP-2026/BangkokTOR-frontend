@@ -30,6 +30,9 @@ function fill(template: string, values: Record<string, string | number>) {
   );
 }
 
+/** Thousands separators, the same in both locales (Thai uses Arabic digits). */
+const count = (n: number) => n.toLocaleString("en-US");
+
 /** Declares the entrance order in the markup, as AuthShell and /tor do. */
 const delay = (ms: number) => ({ "--rise-delay": `${ms}ms` }) as CSSProperties;
 
@@ -128,10 +131,8 @@ export default function Home() {
             The sample rail, as frosted glass over the photo's lower edge.
 
             The caption counts what the rail is actually showing — the live
-            endpoint's own total — not the manifest's 50/134/1,224. Those
-            describe the ingest corpus behind the worked example further down;
-            printing them over three backend rows would caption the rail with
-            numbers from a different dataset.
+            endpoint's own total — not the CORPUS snapshot in landingRecord.ts,
+            which can lag the live collection between updates.
           */}
           <div
             className="rise mt-16 w-full rounded-field border border-white/25 bg-white/15 p-4 shadow-[0_30px_60px_-30px_rgba(47,71,57,0.55)] backdrop-blur-md sm:p-6"
@@ -179,15 +180,18 @@ export default function Home() {
               <p className="mt-8 max-w-xl leading-7 text-ink-600">
                 {t.statsNote}
               </p>
+              <p className="mt-4 text-xs text-zinc-500">
+                {fill(t.statsAsOf, { date: CORPUS.asOf })}
+              </p>
             </div>
 
             {/* Four figures, one row each — a small table of fact. */}
             <dl className="divide-y divide-zinc-200 border-y border-zinc-200 text-white">
               {[
-                [CORPUS.records, t.statRecords],
+                [count(total > 0 ? total : CORPUS.records), t.statRecords],
                 [`${CORPUS.scannedPercent}%`, t.statScanned],
                 [`${CORPUS.gapPercent}%`, t.statGap],
-                [CORPUS.agencies, t.statAgencies],
+                [count(CORPUS.agencies), t.statAgencies],
               ].map(([figure, label]) => (
                 <div key={String(label)} className="py-5">
                   <dt className="text-3xl font-semibold text-white">
@@ -247,7 +251,7 @@ export default function Home() {
 
               <div className="px-6 pt-3 pb-5">
                 <div className="flex flex-wrap gap-2">
-                  {[t.tagNotSearchable, t.tagNoTextLayer, t.tagFiledNotPublished].map(
+                  {[t.tagNotSearchable, t.tagNoTextLayer, t.tagInZip].map(
                     (tag) => (
                       <span
                         key={tag}
@@ -273,7 +277,7 @@ export default function Home() {
                   {t.extractedLabel}
                 </span>
                 <span className="text-sm text-zinc-500">
-                  {fill(t.extractedFields, { count: LANDING_RECORD.fieldCount })}
+                  {fill(t.extractedFields, { count: LANDING_RECORD.fields.length })}
                 </span>
               </div>
               <hr className="border-zinc-300" />
@@ -330,8 +334,8 @@ export default function Home() {
                 </p>
                 <p className="mt-4 text-sm leading-6 text-ink-600">
                   {fill(t.gapNote, {
-                    gapRecords: CORPUS.gapRecords,
-                    records: CORPUS.records,
+                    gapRecords: count(CORPUS.gapRecords),
+                    records: count(CORPUS.pricedRecords),
                   })}
                 </p>
               </div>
@@ -479,7 +483,7 @@ export default function Home() {
                 {t.footerSources}
               </p>
               <ul className="mt-3 space-y-2 text-sm">
-                {["egp2.bangkok.go.th", "www.gprocurement.go.thd"].map((host) => (
+                {["egp2.bangkok.go.th", "www.gprocurement.go.th"].map((host) => (
                   <li key={host}>
                     <a
                       href={`https://${host}`}
