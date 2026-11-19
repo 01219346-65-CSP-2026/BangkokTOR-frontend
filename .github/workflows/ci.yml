@@ -34,6 +34,9 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
       - run: bun install --frozen-lockfile
       - run: bun run lint
+      # next-env.d.ts and .next/types are gitignored. Without them a clean
+      # checkout can't resolve image imports or Next's LayoutProps.
+      - run: bunx next typegen
       - run: bunx tsc --noEmit
 
   test:
