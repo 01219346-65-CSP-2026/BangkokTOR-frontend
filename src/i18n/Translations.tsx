@@ -166,10 +166,10 @@ const en = {
     heroTitleLead: "Find the tender you",
     heroTitleAccent: "can actually win.",
     heroSub:
-      "BangkokTOR reads every terms-of-reference published across Bangkok's procurement portals, structures the Thai PDFs, and tells you which tender your team can actually win.",
+      "BangkokTOR collects this fiscal year's software tenders from Thailand's national e-GP open data and Bangkok's own procurement portal, structures the Thai listings, and ranks them by how well they fit your team's skills.",
     heroCta: "Browse TORs",
     heroFreeNote: "Free to read. No account needed until you want matches.",
-    heroIngestNote: "{records} records read and structured",
+    heroIngestNote: "{records} software tenders indexed",
     heroIngestLoading: "Loading records…",
     heroRailLoading: "Loading records…",
     heroRailError: "Records could not be loaded just now.",
@@ -182,31 +182,32 @@ const en = {
 
     // Corpus figures
     statsEyebrow: "WHAT THIS IS",
-    statRecords: "records read and structured",
-    statScanned: "of documents arrive as scans and are read back with OCR",
-    statGap: "carry a price gap worth scrutinising",
-    statAgencies: "agencies covered so far",
+    statRecords: "software tenders indexed",
+    statScanned: "of downloaded documents are scans with no text layer — flagged, not yet read",
+    statGap: "of priced tenders have a budget more than 15% above the reference price",
+    statAgencies: "buying agencies in the index",
     statsNote:
-      "The documents are already public. They are also scattered across portals, published as scans, and written to be filed rather than read. Every record keeps the link back to the original listing, so nothing here replaces the source — it just makes the source findable.",
+      "The documents are already public. They are also scattered across portals, sometimes published as scans, and written to be filed rather than read. Every record keeps the link back to the original listing, so nothing here replaces the source — it just makes the source findable.",
+    statsAsOf: "Figures as of {date}. The tender count is live.",
 
     // Worked example
     exampleEyebrow: "ONE REAL RECORD",
-    exampleTitle: "A {pages}-page Thai scan, read into fields.",
+    exampleTitle: "A {pages}-page Thai scan, and the record built around it.",
     exampleSub:
-      "Project {projectNumber}, start to finish. The source file carries no text layer — everything on the right was read out of it.",
+      "Project {projectNumber}, as it sits in the index. The TOR is a scan with no text layer, so we flag it rather than guess at it — the fields on the right come from the portal's own listing.",
     sourceLabel: "Source document",
     sourcePages: "{pages} pages",
-    sourceCompanion: "Plus a {pages}-page notice on the same project",
+    sourceCompanion: "Plus {pages} pages of born-digital documents in the same download",
     tagNotSearchable: "Not searchable",
     tagNoTextLayer: "No text layer",
-    tagFiledNotPublished: "Filed, not published",
-    extractedLabel: "Extracted record",
-    extractedFields: "{count} fields",
+    tagInZip: "Packed in a zip",
+    extractedLabel: "Structured record",
+    extractedFields: "{count} fields shown",
     fieldLabels: {
       budget: "Budget",
       referencePrice: "Reference price",
       method: "Method",
-      category: "Category",
+      type: "Procurement type",
     },
     sourceLink: "Link to the original listing kept on every record",
 
@@ -217,26 +218,26 @@ const en = {
     gapReference: "Reference",
     gapBudget: "Budget",
     gapNote:
-      "A gap above 15% is uncommon in the corpus — {gapRecords} of {records} records — so it is stated rather than filed away.",
+      "A gap above 15% is uncommon in the index — {gapRecords} of {records} priced tenders — so it is stated rather than filed away.",
 
     // Pipeline
-    pipelineHeading: "Three passes over every document.",
+    pipelineHeading: "Three passes over each tender.",
     step1Label: "01 / INGEST",
-    step1Title: "Every portal, once a day",
+    step1Title: "Two sources, twice a day",
     step1Body:
-      "Scheduled scrapers watch egp2.bangkok.go.th and gprocurement.go.th, pull the source PDF, and keep the link back to the original listing.",
+      "Discovery runs at 06:00 and 18:00 against Bangkok's e-GP portal and the national e-GP open data, keeps the software tenders, downloads their documents, and keeps the link back to the original listing.",
     step2Label: "02 / EXTRACT",
-    step2Title: "Thai PDFs, structured",
+    step2Title: "Listings structured, PDFs triaged",
     step2Body:
-      "Vertex AI pulls title, agency, budget, reference price, method and category — OCR for the scans, which is most of them.",
+      "Title, agency, budget, reference price and method come from the portal's own listing. Each PDF is triaged: text is extracted from born-digital files; scans are flagged, since there is no OCR yet.",
     step3Label: "03 / SCRUTINISE",
     step3Title: "Advisory, not accusation",
     step3Body:
-      "Where a budget clears its reference price, or a qualification looks written for one predetermined vendor, we say so plainly with the figure or clause quoted — and leave the judgement to you.",
+      "Where a budget clears its reference price, we say so with the figures. Readable TORs can also be checked by Vertex AI for clauses that look written for one vendor, quoted verbatim — and the judgement is left to you.",
 
     // Closing band
     ctaBandTitle: "Your next contract is already published.",
-    ctaBandSub: "Add your team's skills once and every open tender is ranked by how well you fit — with the deadline up front.",
+    ctaBandSub: "Add your team's skills once and tenders are ranked by how well you fit — with the closing date shown where the portal publishes one.",
     ctaBandSkills: "Set up your skills",
 
     // Footer
@@ -248,7 +249,7 @@ const en = {
     footerSources: "Sources",
     footerDisclaimerHeading: "Disclaimer",
     footerDisclaimer:
-      "Records are reproduced from egp2.bangkok.go.th and gprocurement.go.th. Observations are advisory and quote the figure or clause they read.",
+      "Records are reproduced from egp2.bangkok.go.th and the national e-GP (gprocurement.go.th) open data. Observations are advisory and quote the figure or clause they read.",
     footerRights: "© {year} BangkokTOR",
   },
   login: {
@@ -1416,10 +1417,10 @@ const th: typeof en = {
     heroTitleLead: "ค้นหาโครงการที่ทีมคุณ",
     heroTitleAccent: "มีโอกาสชนะจริง",
     heroSub:
-      "BangkokTOR อ่านเอกสาร TOR ทุกฉบับที่ประกาศบนพอร์ทัลจัดซื้อจัดจ้างของกรุงเทพฯ จัดโครงสร้างไฟล์ PDF ภาษาไทย และบอกคุณว่าโครงการไหนที่ทีมของคุณมีโอกาสชนะจริง",
+      "BangkokTOR รวบรวมโครงการจัดจ้างด้านซอฟต์แวร์ของปีงบประมาณนี้จากข้อมูลเปิดของระบบ e-GP ระดับประเทศและพอร์ทัลจัดซื้อจัดจ้างของกรุงเทพฯ จัดโครงสร้างข้อมูลประกาศภาษาไทย และจัดอันดับตามความตรงกับทักษะของทีมคุณ",
     heroCta: "ดูรายการ TOR",
     heroFreeNote: "อ่านได้ฟรี ไม่ต้องสมัครสมาชิกจนกว่าคุณจะต้องการการจับคู่",
-    heroIngestNote: "{records} โครงการที่อ่านและจัดโครงสร้างแล้ว",
+    heroIngestNote: "{records} โครงการด้านซอฟต์แวร์ในดัชนี",
     heroIngestLoading: "กำลังโหลดข้อมูล…",
     heroRailLoading: "กำลังโหลดข้อมูล…",
     heroRailError: "ขณะนี้ไม่สามารถโหลดข้อมูลได้",
@@ -1430,31 +1431,32 @@ const th: typeof en = {
 
     // Corpus figures
     statsEyebrow: "นี่คืออะไร",
-    statRecords: "โครงการที่อ่านและจัดโครงสร้างแล้ว",
-    statScanned: "ของเอกสารมาในรูปแบบสแกน และถูกอ่านกลับด้วย OCR",
-    statGap: "มีส่วนต่างราคาที่ควรตรวจสอบ",
-    statAgencies: "หน่วยงานที่ครอบคลุมแล้ว",
+    statRecords: "โครงการด้านซอฟต์แวร์ในดัชนี",
+    statScanned: "ของเอกสารที่ดาวน์โหลดเป็นไฟล์สแกนไม่มีชั้นข้อความ — ทำเครื่องหมายไว้ ยังไม่ได้อ่าน",
+    statGap: "ของโครงการที่มีราคากลาง มีงบประมาณสูงกว่าราคากลางเกิน 15%",
+    statAgencies: "หน่วยงานจัดซื้อในดัชนี",
     statsNote:
-      "เอกสารเหล่านี้เป็นข้อมูลสาธารณะอยู่แล้ว แต่กระจัดกระจายอยู่หลายพอร์ทัล เผยแพร่เป็นไฟล์สแกน และเขียนขึ้นเพื่อจัดเก็บมากกว่าเพื่ออ่าน ทุกรายการยังคงลิงก์กลับไปยังประกาศต้นฉบับ สิ่งนี้จึงไม่ได้แทนที่แหล่งข้อมูล เพียงแต่ทำให้ค้นหาเจอ",
+      "เอกสารเหล่านี้เป็นข้อมูลสาธารณะอยู่แล้ว แต่กระจัดกระจายอยู่หลายพอร์ทัล บางส่วนเผยแพร่เป็นไฟล์สแกน และเขียนขึ้นเพื่อจัดเก็บมากกว่าเพื่ออ่าน ทุกรายการยังคงลิงก์กลับไปยังประกาศต้นฉบับ สิ่งนี้จึงไม่ได้แทนที่แหล่งข้อมูล เพียงแต่ทำให้ค้นหาเจอ",
+    statsAsOf: "ตัวเลข ณ วันที่ {date} จำนวนโครงการเป็นข้อมูลล่าสุด",
 
     // Worked example
     exampleEyebrow: "ตัวอย่างจริงหนึ่งรายการ",
-    exampleTitle: "เอกสารสแกนภาษาไทย {pages} หน้า อ่านออกมาเป็นข้อมูล",
+    exampleTitle: "เอกสารสแกนภาษาไทย {pages} หน้า และข้อมูลที่จัดโครงสร้างรอบเอกสารนั้น",
     exampleSub:
-      "โครงการเลขที่ {projectNumber} ตั้งแต่ต้นจนจบ ไฟล์ต้นฉบับไม่มีชั้นข้อความ ข้อมูลทางขวาทั้งหมดถูกอ่านออกมาจากไฟล์นั้น",
+      "โครงการเลขที่ {projectNumber} ตามที่อยู่ในดัชนี ไฟล์ TOR เป็นไฟล์สแกนไม่มีชั้นข้อความ เราจึงทำเครื่องหมายไว้แทนการเดา ข้อมูลทางขวามาจากประกาศบนพอร์ทัลเอง",
     sourceLabel: "เอกสารต้นฉบับ",
     sourcePages: "{pages} หน้า",
-    sourceCompanion: "และประกาศเชิญชวนอีก {pages} หน้าในโครงการเดียวกัน",
+    sourceCompanion: "และเอกสารดิจิทัลอีก {pages} หน้าในไฟล์ดาวน์โหลดเดียวกัน",
     tagNotSearchable: "ค้นหาไม่ได้",
     tagNoTextLayer: "ไม่มีชั้นข้อความ",
-    tagFiledNotPublished: "จัดเก็บ ไม่ได้เผยแพร่",
-    extractedLabel: "ข้อมูลที่สกัดได้",
-    extractedFields: "{count} ฟิลด์",
+    tagInZip: "อยู่ในไฟล์ zip",
+    extractedLabel: "ข้อมูลที่จัดโครงสร้างแล้ว",
+    extractedFields: "แสดง {count} ฟิลด์",
     fieldLabels: {
       budget: "งบประมาณ",
       referencePrice: "ราคากลาง",
       method: "วิธีจัดซื้อจัดจ้าง",
-      category: "ประเภทพัสดุ",
+      type: "ประเภทการจัดหา",
     },
     sourceLink: "ทุกรายการเก็บลิงก์กลับไปยังประกาศต้นฉบับ",
 
@@ -1465,26 +1467,26 @@ const th: typeof en = {
     gapReference: "ราคากลาง",
     gapBudget: "งบประมาณ",
     gapNote:
-      "ส่วนต่างเกิน 15% พบไม่บ่อยในชุดข้อมูลนี้ — {gapRecords} จาก {records} รายการ — จึงระบุไว้ให้เห็น ไม่ได้เก็บเงียบ",
+      "ส่วนต่างเกิน 15% พบไม่บ่อยในดัชนี — {gapRecords} จาก {records} โครงการที่มีราคากลาง — จึงระบุไว้ให้เห็น ไม่ได้เก็บเงียบ",
 
     // Pipeline
-    pipelineHeading: "สามรอบการอ่านต่อเอกสารหนึ่งฉบับ",
+    pipelineHeading: "สามขั้นตอนต่อโครงการหนึ่งรายการ",
     step1Label: "01 / เก็บข้อมูล",
-    step1Title: "ทุกพอร์ทัล วันละครั้ง",
+    step1Title: "สองแหล่งข้อมูล วันละสองครั้ง",
     step1Body:
-      "ตัวเก็บข้อมูลตามกำหนดเวลาเฝ้าดู egp2.bangkok.go.th และ gprocurement.go.th ดึงไฟล์ PDF ต้นฉบับ และเก็บลิงก์กลับไปยังประกาศเดิมไว้เสมอ",
+      "ระบบค้นหาโครงการทำงานเวลา 06:00 และ 18:00 กับพอร์ทัล e-GP ของกรุงเทพฯ และข้อมูลเปิด e-GP ระดับประเทศ คัดเฉพาะงานซอฟต์แวร์ ดาวน์โหลดเอกสาร และเก็บลิงก์กลับไปยังประกาศเดิมไว้เสมอ",
     step2Label: "02 / สกัดข้อมูล",
-    step2Title: "จัดโครงสร้าง PDF ภาษาไทย",
+    step2Title: "จัดโครงสร้างประกาศ คัดแยก PDF",
     step2Body:
-      "Vertex AI ดึงชื่อโครงการ หน่วยงาน งบประมาณ ราคากลาง วิธีจัดซื้อ และประเภทพัสดุ พร้อม OCR สำหรับไฟล์สแกน ซึ่งเป็นส่วนใหญ่",
+      "ชื่อโครงการ หน่วยงาน งบประมาณ ราคากลาง และวิธีจัดซื้อ มาจากประกาศบนพอร์ทัลเอง ไฟล์ PDF แต่ละไฟล์ถูกคัดแยก: ไฟล์ดิจิทัลถูกดึงข้อความ ไฟล์สแกนถูกทำเครื่องหมายไว้ เนื่องจากยังไม่มี OCR",
     step3Label: "03 / ตรวจสอบ",
     step3Title: "ให้ข้อสังเกต ไม่ใช่กล่าวหา",
     step3Body:
-      "เมื่องบประมาณสูงกว่าราคากลาง หรือคุณสมบัติผู้เสนอราคาดูเหมือนเขียนเพื่อผู้ขายรายใดรายหนึ่ง เราระบุไว้ตรงไปตรงมาพร้อมอ้างตัวเลขหรือข้อความนั้น แล้วปล่อยให้คุณเป็นผู้ตัดสิน",
+      "เมื่องบประมาณสูงกว่าราคากลาง เราระบุไว้พร้อมตัวเลข TOR ที่อ่านได้ยังสามารถให้ Vertex AI ตรวจหาข้อกำหนดที่ดูเหมือนเขียนเพื่อผู้ขายรายใดรายหนึ่ง โดยอ้างข้อความตามจริง แล้วปล่อยให้คุณเป็นผู้ตัดสิน",
 
     // Closing band
     ctaBandTitle: "สัญญางานถัดไปของคุณประกาศไว้แล้ว",
-    ctaBandSub: "เพิ่มทักษะของทีมครั้งเดียว ทุกโครงการที่เปิดรับจะถูกจัดอันดับตามความตรงกัน พร้อมวันปิดรับที่เห็นชัดเจน",
+    ctaBandSub: "เพิ่มทักษะของทีมครั้งเดียว โครงการจะถูกจัดอันดับตามความตรงกัน พร้อมแสดงวันปิดรับเมื่อพอร์ทัลเผยแพร่ไว้",
     ctaBandSkills: "ตั้งค่าทักษะของคุณ",
 
     // Footer
@@ -1496,7 +1498,7 @@ const th: typeof en = {
     footerSources: "แหล่งข้อมูล",
     footerDisclaimerHeading: "ข้อจำกัดความรับผิด",
     footerDisclaimer:
-      "ข้อมูลนำมาจาก egp2.bangkok.go.th และ gprocurement.go.th ข้อสังเกตทั้งหมดเป็นเพียงคำแนะนำ และอ้างอิงตัวเลขหรือข้อความที่อ่านได้จริง",
+      "ข้อมูลนำมาจาก egp2.bangkok.go.th และข้อมูลเปิด e-GP ระดับประเทศ (gprocurement.go.th) ข้อสังเกตทั้งหมดเป็นเพียงคำแนะนำ และอ้างอิงตัวเลขหรือข้อความที่อ่านได้จริง",
     footerRights: "© {year} BangkokTOR",
   },
   login: {
