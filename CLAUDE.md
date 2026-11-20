@@ -58,6 +58,8 @@ Motion is one orchestrated page-load sequence, not scattered effects.
   the markup. `.settle` is the brand panel's slow scale-in. Both are in `globals.css`.
 - Stagger in ~60–80ms steps. Keep the whole sequence under ~450ms.
 - Hover/press: `transition duration-200 ease-soft`, plus `active:scale-[0.985]` on buttons.
+- Buttons get `cursor: pointer` (and `not-allowed` when disabled) from a base rule in
+  `globals.css`. Don't add `cursor-pointer` to a `<button>`; add `cursor-default` only to opt out.
 - `--ease-soft` is the only easing curve. Named `--ease-*` so Tailwind emits `ease-soft`.
 - Both `.rise` and `.settle` are disabled under `prefers-reduced-motion`.
 
