@@ -113,6 +113,26 @@ body {
 }
 
 /*
+ * Tailwind v4's preflight resets buttons to `cursor: default`. Restore the
+ * pointer for every clickable button app-wide, so no component has to
+ * remember `cursor-pointer`. In @layer base so utilities still win
+ * (`cursor-default`, `disabled:cursor-not-allowed`).
+ */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  input:is([type="button"], [type="submit"], [type="reset"]):not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  input:is([type="button"], [type="submit"], [type="reset"]):disabled {
+    cursor: not-allowed;
+  }
+}
+
+/*
  * Page-load sequence. One orchestrated entrance: the form column rises in order
  * while the brand panel settles behind it. Elements opt in with .rise and stagger
  * via --rise-delay, so the order is declared in the markup, not scattered here.
